@@ -1,0 +1,4 @@
+#!/bin/bash
+
+nosetests brim/test/unit --exe --with-coverage --cover-package brim --cover-erase
+rm -f .coverage
