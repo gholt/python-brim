@@ -1,0 +1,399 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim.conf &mdash; Brim.Net Utility Package v0.0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Utility Package v0.0.0 documentation" href="../../index.html" />
+    <link rel="up" title="brim" href="../brim.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brim.conf</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2012 Gregory Holt</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Provides a simpler way to work with configuration files by</span>
+<span class="sd">translating a ConfigParser-style configuration file into a simpler</span>
+<span class="sd">dict and then wrapping that with a Conf class providing convenient</span>
+<span class="sd">&quot;get&quot; functions that work much like dict&#39;s &quot;get&quot; method (returns None</span>
+<span class="sd">or the default value provided if the section or option is missing).</span>
+
+
+<span class="sd">Simple Example::</span>
+
+<span class="sd">    import sys</span>
+
+<span class="sd">    from brim.conf import read_conf</span>
+
+<span class="sd">    conf = read_conf([&#39;/etc/myco/myapp.conf&#39;, &#39;~/.myapp.conf&#39;])</span>
+<span class="sd">    if not conf.files:</span>
+<span class="sd">        sys.exit(&#39;No configuration found.&#39;)</span>
+<span class="sd">    port = conf.get_int(&#39;server&#39;, &#39;port&#39;, 1234)</span>
+<span class="sd">    print &#39;Using port&#39;, port</span>
+
+<span class="sd">By default, any errors parsing the conf files or converting values</span>
+<span class="sd">will call sys.exit with an explanatory message. But you can override</span>
+<span class="sd">these behaviors by setting exit_on_read_exception to False and</span>
+<span class="sd">setting the Conf.error method to your own method.</span>
+
+<span class="sd">More Complex Example With Overrides::</span>
+
+<span class="sd">    import ConfigParser</span>
+<span class="sd">    import sys</span>
+
+<span class="sd">    from brim.conf import read_conf</span>
+
+<span class="sd">    try:</span>
+<span class="sd">        conf = read_conf([&#39;/etc/myco/myapp.conf&#39;, &#39;~/.myapp.conf&#39;],</span>
+<span class="sd">                         exit_on_read_exception=False)</span>
+<span class="sd">    except ConfigParser.Error, err:</span>
+<span class="sd">        sys.exit(&#39;Config read error: &#39; + str(err))</span>
+<span class="sd">    if not conf.files:</span>
+<span class="sd">        exit(&#39;No configuration found.&#39;)</span>
+
+<span class="sd">    def custom_error(section, option, value, conversion_type, err):</span>
+<span class="sd">        raise Exception(&#39;Configuration value [%s] %s of %r cannot be &#39;</span>
+<span class="sd">                        &#39;converted to %s.&#39; %</span>
+<span class="sd">                        (section, option, value, conversion_type))</span>
+
+<span class="sd">    conf.error = custom_error</span>
+<span class="sd">    try:</span>
+<span class="sd">        port = conf.get_int(&#39;wsgi_server&#39;, &#39;port&#39;, 1234)</span>
+<span class="sd">    except Exception, err:</span>
+<span class="sd">        sys.exit(&#39;Config conversion error: &#39; + str(err))</span>
+<span class="sd">    print &#39;Using port&#39;, port</span>
+
+<span class="sd">Another feature of read_conf is that if a conf file has a [brimconf]</span>
+<span class="sd">additional_confs setting, the files listed there will also be parsed.</span>
+<span class="sd">This lets an end user make a conf file to be included by one or more</span>
+<span class="sd">other conf files. Splitting configuration like this can make</span>
+<span class="sd">deployment to clusters easier. For example::</span>
+
+<span class="sd">    [brimconf]</span>
+<span class="sd">    additional_confs = /etc/common.conf &quot;/another file.conf&quot; ~/.common.conf</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Conf&#39;</span><span class="p">,</span> <span class="s">&#39;read_conf&#39;</span><span class="p">,</span> <span class="s">&#39;TRUE_VALUES&#39;</span><span class="p">,</span> <span class="s">&#39;FALSE_VALUES&#39;</span><span class="p">]</span>
+
+<span class="kn">from</span> <span class="nn">ConfigParser</span> <span class="kn">import</span> <span class="n">SafeConfigParser</span><span class="p">,</span> <span class="n">Error</span>
+<span class="kn">from</span> <span class="nn">csv</span> <span class="kn">import</span> <span class="n">reader</span> <span class="k">as</span> <span class="n">csv_reader</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">expanduser</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="nb">exit</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">wrap</span>
+
+
+<span class="c">#: The list of str values that equate to True, all lowercase.</span>
+<span class="n">TRUE_VALUES</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;1&#39;</span><span class="p">,</span> <span class="s">&#39;on&#39;</span><span class="p">,</span> <span class="s">&#39;t&#39;</span><span class="p">,</span> <span class="s">&#39;true&#39;</span><span class="p">,</span> <span class="s">&#39;y&#39;</span><span class="p">,</span> <span class="s">&#39;yes&#39;</span><span class="p">]</span>
+
+<span class="c">#: The list of str values that equate to False, all lowercase.</span>
+<span class="n">FALSE_VALUES</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;0&#39;</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">,</span> <span class="s">&#39;false&#39;</span><span class="p">,</span> <span class="s">&#39;n&#39;</span><span class="p">,</span> <span class="s">&#39;no&#39;</span><span class="p">,</span> <span class="s">&#39;off&#39;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="Conf"><a class="viewcode-back" href="../../brim.html#brim.conf.Conf">[docs]</a><span class="k">class</span> <span class="nc">Conf</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wraps a dict of conf sections, each value a dict of conf options,</span>
+<span class="sd">    each value the actual value of the section/option within the</span>
+<span class="sd">    conf. The list of file names the configuration was read from may</span>
+<span class="sd">    optionally be stored.</span>
+
+<span class="sd">    The usual way to use Conf after instantiation is just through the</span>
+<span class="sd">    &quot;get&quot; methods, but direct access to the store dict and the files</span>
+<span class="sd">    list is also supported.</span>
+
+<span class="sd">    Normally Conf instances are created with the global func</span>
+<span class="sd">    :py:func:`read_conf` but you can construct Conf instances</span>
+<span class="sd">    directly as well::</span>
+
+<span class="sd">        # Normally...</span>
+<span class="sd">        conf = read_conf([&#39;/etc/myco/myapp.conf&#39;, &#39;~/.myapp.conf&#39;])</span>
+
+<span class="sd">        # Directly...</span>
+<span class="sd">        conf = Conf({</span>
+<span class="sd">            &#39;section1&#39;: {&#39;option1.1&#39;: &#39;a&#39;, &#39;option1.2&#39;: &#39;b&#39;},</span>
+<span class="sd">            &#39;section2&#39;: {&#39;option2.1&#39;: &#39;c&#39;, &#39;option2.2&#39;: &#39;d&#39;}})</span>
+
+<span class="sd">    :param store: A dict representing the configuration, as described</span>
+<span class="sd">                  above.</span>
+<span class="sd">    :param files: Optional list of file names the configuration was</span>
+<span class="sd">                  read from.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c">#: A dict of conf sections, each value a dict of conf</span>
+        <span class="c">#: options, each value the actual value of the section/option</span>
+        <span class="c">#: within the conf.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="o">=</span> <span class="n">store</span>
+        <span class="c">#: A list of source conf file names the conf was read from.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="n">files</span>
+
+<div class="viewcode-block" id="Conf.get"><a class="viewcode-back" href="../../brim.html#brim.conf.Conf.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the value of the section/option in the conf store or</span>
+<span class="sd">        the default value given (or None) if the section/option does</span>
+<span class="sd">        not exist.</span>
+
+<span class="sd">        :param section: The section name within the conf to read.</span>
+<span class="sd">        :param option: The option name within the section to read.</span>
+<span class="sd">        :param default: The default value to return if the section or</span>
+<span class="sd">                        option does not exist or is set to None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">option</span><span class="p">)</span> <span class="ow">or</span> <span class="n">default</span>
+</div>
+<div class="viewcode-block" id="Conf.get_boolean"><a class="viewcode-back" href="../../brim.html#brim.conf.Conf.get_boolean">[docs]</a>    <span class="k">def</span> <span class="nf">get_boolean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the boolean value of the section/option in the conf</span>
+<span class="sd">        store or the default value given if the section/option does</span>
+<span class="sd">        not exist.</span>
+
+<span class="sd">        This will call :py:func:`error` if the value cannot be</span>
+<span class="sd">        converted to a boolean.</span>
+
+<span class="sd">        :param section: The section name within the conf to read.</span>
+<span class="sd">        :param option: The option name within the section to read.</span>
+<span class="sd">        :param default: The default value to return if the section or</span>
+<span class="sd">                        option does not exist or is set to None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">True</span> <span class="ow">or</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TRUE_VALUES</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">FALSE_VALUES</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="s">&#39;boolean&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Conf.get_int"><a class="viewcode-back" href="../../brim.html#brim.conf.Conf.get_int">[docs]</a>    <span class="k">def</span> <span class="nf">get_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the int value of the section/option in the conf store</span>
+<span class="sd">        or the default value given if the section/option does not</span>
+<span class="sd">        exist.</span>
+
+<span class="sd">        This will call :py:func:`error` if the value cannot be</span>
+<span class="sd">        converted to an int.</span>
+
+<span class="sd">        :param section: The section name within the conf to read.</span>
+<span class="sd">        :param option: The option name within the section to read.</span>
+<span class="sd">        :param default: The default value to return if the section or</span>
+<span class="sd">                        option does not exist or is set to None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="s">&#39;int&#39;</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Conf.get_float"><a class="viewcode-back" href="../../brim.html#brim.conf.Conf.get_float">[docs]</a>    <span class="k">def</span> <span class="nf">get_float</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the float value of the section/option in the conf</span>
+<span class="sd">        store or the default value given if the section/option does</span>
+<span class="sd">        not exist.</span>
+
+<span class="sd">        This will call :py:func:`error` if the value cannot be</span>
+<span class="sd">        converted to a float.</span>
+
+<span class="sd">        :param section: The section name within the conf to read.</span>
+<span class="sd">        :param option: The option name within the section to read.</span>
+<span class="sd">        :param default: The default value to return if the section or</span>
+<span class="sd">                        option does not exist or is set to None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="s">&#39;float&#39;</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Conf.error"><a class="viewcode-back" href="../../brim.html#brim.conf.Conf.error">[docs]</a>    <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This function is called when one of the &quot;get&quot; methods cannot</span>
+<span class="sd">        convert a value. By default, this method will call sys.exit</span>
+<span class="sd">        with an explanatory message, but you can override it by</span>
+<span class="sd">        setting Conf.error to another method.</span>
+
+<span class="sd">        An example of overriding to raise an Exception::</span>
+
+<span class="sd">            def _error(section, option, value, conversion_type, err):</span>
+<span class="sd">                raise Exception(&#39;Configuration value [%s] %s of %r &#39;</span>
+<span class="sd">                                &#39;cannot be converted to %s.&#39; %</span>
+<span class="sd">                                (section, option, value,</span>
+<span class="sd">                                 conversion_type))</span>
+
+<span class="sd">            conf = read_conf([&#39;some.conf&#39;])</span>
+<span class="sd">            conf.error = _error</span>
+
+<span class="sd">        :param section: The section name within the conf that was</span>
+<span class="sd">                        read.</span>
+<span class="sd">        :param option: The option name within the section that was</span>
+<span class="sd">                       read.</span>
+<span class="sd">        :param value: The str value read and failed conversion.</span>
+<span class="sd">        :param conversion_type: The name of the type of conversion</span>
+<span class="sd">                                that failed, such as ``&#39;boolean&#39;``,</span>
+<span class="sd">                                ``&#39;int&#39;``, or ``&#39;float&#39;``.</span>
+<span class="sd">        :param err: The Exception that was raised, if any, during the</span>
+<span class="sd">                    conversion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">exit</span><span class="p">(</span><span class="s">&#39;Configuration value [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s"> of </span><span class="si">%r</span><span class="s"> cannot be converted to </span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span>
+             <span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">))</span>
+</div>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;Conf based on </span><span class="si">%r</span><span class="s">: </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> \
+               <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="ow">or</span> <span class="s">&#39;unknown files&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+</div>
+<span class="k">def</span> <span class="nf">_read_conf</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">conf_files_read</span><span class="p">,</span> <span class="n">conf_file</span><span class="p">,</span> <span class="n">exit_on_read_exception</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">conf_files_read</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;Tried to read more than 50 conf files.</span><span class="se">\n</span><span class="s">&#39;</span> \
+              <span class="s">&#39;Recursion with [brim_conf] additional_confs?</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> \
+              <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">wrap</span><span class="p">(</span><span class="s">&#39;Files read so far: &#39;</span> <span class="o">+</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">conf_files_read</span><span class="p">),</span>
+                             <span class="n">width</span><span class="o">=</span><span class="mi">79</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">exit_on_read_exception</span><span class="p">:</span>
+            <span class="nb">exit</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">exit_on_read_exception</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">conf_files_read</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">read</span><span class="p">([</span><span class="n">expanduser</span><span class="p">(</span><span class="n">conf_file</span><span class="p">)]))</span>
+        <span class="k">except</span> <span class="n">Error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="nb">exit</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">conf_files_read</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">read</span><span class="p">([</span><span class="n">expanduser</span><span class="p">(</span><span class="n">conf_file</span><span class="p">)]))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">additional_confs</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;brimconf&#39;</span><span class="p">,</span> <span class="s">&#39;additional_confs&#39;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">remove_option</span><span class="p">(</span><span class="s">&#39;brimconf&#39;</span><span class="p">,</span> <span class="s">&#39;additional_confs&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">conf_file</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">csv_reader</span><span class="p">([</span><span class="n">additional_confs</span><span class="p">],</span>
+                              <span class="n">delimiter</span><span class="o">=</span><span class="s">&#39; &#39;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">_read_conf</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">conf_files_read</span><span class="p">,</span> <span class="n">conf_file</span><span class="p">,</span>
+                       <span class="n">exit_on_read_exception</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">Error</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="read_conf"><a class="viewcode-back" href="../../brim.html#brim.conf.read_conf">[docs]</a><span class="k">def</span> <span class="nf">read_conf</span><span class="p">(</span><span class="n">conf_files</span><span class="p">,</span> <span class="n">exit_on_read_exception</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a new Conf instance based on the results from reading the</span>
+<span class="sd">    conf_files into a ConfigParser.SafeConfigParser.</span>
+
+<span class="sd">    Note that if the parser does not have access to read a given file</span>
+<span class="sd">    it will act as if it did not exist.</span>
+
+<span class="sd">    If a conf file has a [brimconf] additional_confs setting, the</span>
+<span class="sd">    files listed there will also be parsed.</span>
+
+<span class="sd">    You may wish to check the Conf.files list to determine which</span>
+<span class="sd">    files, if any, were read to form the Conf instance.</span>
+
+<span class="sd">    On a parser error, this will call sys.exit with an explanatory</span>
+<span class="sd">    message by default. If you set exit_on_read_exception to False,</span>
+<span class="sd">    the ConfigParser.Error will be raised instead.</span>
+
+<span class="sd">    :param conf_files: A list of conf files to read and translate, in</span>
+<span class="sd">                       order. Therefore, values in files further into</span>
+<span class="sd">                       the list will override any values from prior</span>
+<span class="sd">                       files. File names may use the ~/filename or</span>
+<span class="sd">                       ~user/filename format and will be expanded</span>
+<span class="sd">                       with os.path.expanduser.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">SafeConfigParser</span><span class="p">()</span>
+    <span class="n">conf_files_read</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">conf_file</span> <span class="ow">in</span> <span class="n">conf_files</span><span class="p">:</span>
+        <span class="n">_read_conf</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">conf_files_read</span><span class="p">,</span> <span class="n">conf_file</span><span class="p">,</span> <span class="n">exit_on_read_exception</span><span class="p">)</span>
+    <span class="n">store</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">parser</span><span class="o">.</span><span class="n">sections</span><span class="p">():</span>
+        <span class="n">store</span><span class="p">[</span><span class="n">section</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">items</span><span class="p">(</span><span class="n">section</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">Conf</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="n">conf_files_read</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" >brim</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

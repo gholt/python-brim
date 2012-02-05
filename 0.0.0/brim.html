@@ -1,0 +1,637 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim &mdash; Brim.Net Utility Package v0.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Utility Package v0.0.0 documentation" href="index.html" />
+    <link rel="prev" title="LICENSE" href="license.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="LICENSE"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-brim">
+<span id="brim"></span><span id="brim-package"></span><h1>brim<a class="headerlink" href="#module-brim" title="Permalink to this headline">¶</a></h1>
+<p>This package contains general utility modules.</p>
+<dl class="data">
+<dt id="brim.version_info">
+<tt class="descclassname">brim.</tt><tt class="descname">version_info</tt><a class="headerlink" href="#brim.version_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Version information <tt class="docutils literal"><span class="pre">(major,</span> <span class="pre">minor,</span> <span class="pre">revision)</span></tt>.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.version">
+<tt class="descclassname">brim.</tt><tt class="descname">version</tt><a class="headerlink" href="#brim.version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Version string <tt class="docutils literal"><span class="pre">'major.minor.revision'</span></tt>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.conf">
+<span id="brim-conf"></span><h1>brim.conf<a class="headerlink" href="#module-brim.conf" title="Permalink to this headline">¶</a></h1>
+<p>Provides a simpler way to work with configuration files by
+translating a ConfigParser-style configuration file into a simpler
+dict and then wrapping that with a Conf class providing convenient
+&#8220;get&#8221; functions that work much like dict&#8217;s &#8220;get&#8221; method (returns None
+or the default value provided if the section or option is missing).</p>
+<p>Simple Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">brim.conf</span> <span class="kn">import</span> <span class="n">read_conf</span>
+
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;/etc/myco/myapp.conf&#39;</span><span class="p">,</span> <span class="s">&#39;~/.myapp.conf&#39;</span><span class="p">])</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">conf</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;No configuration found.&#39;</span><span class="p">)</span>
+<span class="n">port</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;server&#39;</span><span class="p">,</span> <span class="s">&#39;port&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+<span class="k">print</span> <span class="s">&#39;Using port&#39;</span><span class="p">,</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>By default, any errors parsing the conf files or converting values
+will call sys.exit with an explanatory message. But you can override
+these behaviors by setting exit_on_read_exception to False and
+setting the Conf.error method to your own method.</p>
+<p>More Complex Example With Overrides:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">ConfigParser</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">brim.conf</span> <span class="kn">import</span> <span class="n">read_conf</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;/etc/myco/myapp.conf&#39;</span><span class="p">,</span> <span class="s">&#39;~/.myapp.conf&#39;</span><span class="p">],</span>
+                     <span class="n">exit_on_read_exception</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">ConfigParser</span><span class="o">.</span><span class="n">Error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;Config read error: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">conf</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+    <span class="nb">exit</span><span class="p">(</span><span class="s">&#39;No configuration found.&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">custom_error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Configuration value [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s"> of </span><span class="si">%r</span><span class="s"> cannot be &#39;</span>
+                    <span class="s">&#39;converted to </span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">))</span>
+
+<span class="n">conf</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">custom_error</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;wsgi_server&#39;</span><span class="p">,</span> <span class="s">&#39;port&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;Config conversion error: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+<span class="k">print</span> <span class="s">&#39;Using port&#39;</span><span class="p">,</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>Another feature of read_conf is that if a conf file has a [brimconf]
+additional_confs setting, the files listed there will also be parsed.
+This lets an end user make a conf file to be included by one or more
+other conf files. Splitting configuration like this can make
+deployment to clusters easier. For example:</p>
+<div class="highlight-python"><pre>[brimconf]
+additional_confs = /etc/common.conf "/another file.conf" ~/.common.conf</pre>
+</div>
+<dl class="class">
+<dt id="brim.conf.Conf">
+<em class="property">class </em><tt class="descclassname">brim.conf.</tt><tt class="descname">Conf</tt><big>(</big><em>store</em>, <em>files=None</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Wraps a dict of conf sections, each value a dict of conf options,
+each value the actual value of the section/option within the
+conf. The list of file names the configuration was read from may
+optionally be stored.</p>
+<p>The usual way to use Conf after instantiation is just through the
+&#8220;get&#8221; methods, but direct access to the store dict and the files
+list is also supported.</p>
+<p>Normally Conf instances are created with the global func
+<a class="reference internal" href="#brim.conf.read_conf" title="brim.conf.read_conf"><tt class="xref py py-func docutils literal"><span class="pre">read_conf()</span></tt></a> but you can construct Conf instances
+directly as well:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># Normally...</span>
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;/etc/myco/myapp.conf&#39;</span><span class="p">,</span> <span class="s">&#39;~/.myapp.conf&#39;</span><span class="p">])</span>
+
+<span class="c"># Directly...</span>
+<span class="n">conf</span> <span class="o">=</span> <span class="n">Conf</span><span class="p">({</span>
+    <span class="s">&#39;section1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;option1.1&#39;</span><span class="p">:</span> <span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="s">&#39;option1.2&#39;</span><span class="p">:</span> <span class="s">&#39;b&#39;</span><span class="p">},</span>
+    <span class="s">&#39;section2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;option2.1&#39;</span><span class="p">:</span> <span class="s">&#39;c&#39;</span><span class="p">,</span> <span class="s">&#39;option2.2&#39;</span><span class="p">:</span> <span class="s">&#39;d&#39;</span><span class="p">}})</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>store</strong> &#8211; A dict representing the configuration, as described
+above.</li>
+<li><strong>files</strong> &#8211; Optional list of file names the configuration was
+read from.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="brim.conf.Conf.error">
+<tt class="descname">error</tt><big>(</big><em>section</em>, <em>option</em>, <em>value</em>, <em>conversion_type</em>, <em>err</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is called when one of the &#8220;get&#8221; methods cannot
+convert a value. By default, this method will call sys.exit
+with an explanatory message, but you can override it by
+setting Conf.error to another method.</p>
+<p>An example of overriding to raise an Exception:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">_error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Configuration value [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s"> of </span><span class="si">%r</span><span class="s"> &#39;</span>
+                    <span class="s">&#39;cannot be converted to </span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span>
+                     <span class="n">conversion_type</span><span class="p">))</span>
+
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;some.conf&#39;</span><span class="p">])</span>
+<span class="n">conf</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">_error</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf that was
+read.</li>
+<li><strong>option</strong> &#8211; The option name within the section that was
+read.</li>
+<li><strong>value</strong> &#8211; The str value read and failed conversion.</li>
+<li><strong>conversion_type</strong> &#8211; The name of the type of conversion
+that failed, such as <tt class="docutils literal"><span class="pre">'boolean'</span></tt>,
+<tt class="docutils literal"><span class="pre">'int'</span></tt>, or <tt class="docutils literal"><span class="pre">'float'</span></tt>.</li>
+<li><strong>err</strong> &#8211; The Exception that was raised, if any, during the
+conversion.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.conf.Conf.files">
+<tt class="descname">files</tt><a class="headerlink" href="#brim.conf.Conf.files" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of source conf file names the conf was read from.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get">
+<tt class="descname">get</tt><big>(</big><em>section</em>, <em>option</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the value of the section/option in the conf store or
+the default value given (or None) if the section/option does
+not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get_boolean">
+<tt class="descname">get_boolean</tt><big>(</big><em>section</em>, <em>option</em>, <em>default</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get_boolean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get_boolean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the boolean value of the section/option in the conf
+store or the default value given if the section/option does
+not exist.</p>
+<p>This will call <a class="reference internal" href="#brim.conf.Conf.error" title="brim.conf.Conf.error"><tt class="xref py py-func docutils literal"><span class="pre">error()</span></tt></a> if the value cannot be
+converted to a boolean.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get_float">
+<tt class="descname">get_float</tt><big>(</big><em>section</em>, <em>option</em>, <em>default</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get_float"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get_float" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the float value of the section/option in the conf
+store or the default value given if the section/option does
+not exist.</p>
+<p>This will call <a class="reference internal" href="#brim.conf.Conf.error" title="brim.conf.Conf.error"><tt class="xref py py-func docutils literal"><span class="pre">error()</span></tt></a> if the value cannot be
+converted to a float.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get_int">
+<tt class="descname">get_int</tt><big>(</big><em>section</em>, <em>option</em>, <em>default</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the int value of the section/option in the conf store
+or the default value given if the section/option does not
+exist.</p>
+<p>This will call <a class="reference internal" href="#brim.conf.Conf.error" title="brim.conf.Conf.error"><tt class="xref py py-func docutils literal"><span class="pre">error()</span></tt></a> if the value cannot be
+converted to an int.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.conf.Conf.store">
+<tt class="descname">store</tt><a class="headerlink" href="#brim.conf.Conf.store" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dict of conf sections, each value a dict of conf
+options, each value the actual value of the section/option
+within the conf.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.conf.read_conf">
+<tt class="descclassname">brim.conf.</tt><tt class="descname">read_conf</tt><big>(</big><em>conf_files</em>, <em>exit_on_read_exception=True</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#read_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.read_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new Conf instance based on the results from reading the
+conf_files into a ConfigParser.SafeConfigParser.</p>
+<p>Note that if the parser does not have access to read a given file
+it will act as if it did not exist.</p>
+<p>If a conf file has a [brimconf] additional_confs setting, the
+files listed there will also be parsed.</p>
+<p>You may wish to check the Conf.files list to determine which
+files, if any, were read to form the Conf instance.</p>
+<p>On a parser error, this will call sys.exit with an explanatory
+message by default. If you set exit_on_read_exception to False,
+the ConfigParser.Error will be raised instead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conf_files</strong> &#8211; A list of conf files to read and translate, in
+order. Therefore, values in files further into
+the list will override any values from prior
+files. File names may use the ~/filename or
+~user/filename format and will be expanded
+with os.path.expanduser.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.conf.TRUE_VALUES">
+<tt class="descclassname">brim.conf.</tt><tt class="descname">TRUE_VALUES</tt><a class="headerlink" href="#brim.conf.TRUE_VALUES" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of str values that equate to True, all lowercase.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.conf.FALSE_VALUES">
+<tt class="descclassname">brim.conf.</tt><tt class="descname">FALSE_VALUES</tt><a class="headerlink" href="#brim.conf.FALSE_VALUES" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of str values that equate to False, all lowercase.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.service">
+<span id="brim-service"></span><h1>brim.service<a class="headerlink" href="#module-brim.service" title="Permalink to this headline">¶</a></h1>
+<p>Provides functions useful for services, such as network daemons,
+background jobs, etc.</p>
+<dl class="function">
+<dt id="brim.service.capture_exceptions_stdout_stderr">
+<tt class="descclassname">brim.service.</tt><tt class="descname">capture_exceptions_stdout_stderr</tt><big>(</big><em>exceptions=None</em>, <em>stdout_func=None</em>, <em>stderr_func=None</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#capture_exceptions_stdout_stderr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.capture_exceptions_stdout_stderr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Captures uncaught exceptions and redirects them to the
+<em>exceptions</em> function and captures standard output and error and
+redirects that data to the stdout_func and stderr_func functions.
+The original standard output and error files will be closed so
+that no output can come from your program to these streams. This
+is useful when writing background daemons that often have no
+connected console.</p>
+<p>The <em>exceptions</em> function will be called with (exctype, value,
+traceback).</p>
+<p>The <em>stdout_func</em> and <em>stderr_func</em> functions will be called with
+(str).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.droppriv">
+<tt class="descclassname">brim.service.</tt><tt class="descname">droppriv</tt><big>(</big><em>user</em>, <em>group=None</em>, <em>umask=18</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#droppriv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.droppriv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drops privileges to the user, group, and umask given, changes the
+process to session leader, and changes working directories to /.
+If a group is not given, the user&#8217;s default group will be used.
+Will raise an Exception with an explanatory message if the user
+or group cannot be found or if permission is denied while
+attempting the switch.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>user</strong> &#8211; The user to switch to.</li>
+<li><strong>group</strong> &#8211; The group to switch to; defaults to the default
+group of the user.</li>
+<li><strong>umask</strong> &#8211; The umask to set; defaults 0022.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.get_listening_tcp_socket">
+<tt class="descclassname">brim.service.</tt><tt class="descname">get_listening_tcp_socket</tt><big>(</big><em>ip</em>, <em>port</em>, <em>backlog=4096</em>, <em>retry=30</em>, <em>certfile=None</em>, <em>keyfile=None</em>, <em>style=None</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#get_listening_tcp_socket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.get_listening_tcp_socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a socket.socket bound to the given ip and tcp port with
+other optional parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ip</strong> &#8211; The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
+translated to <tt class="docutils literal"><span class="pre">'0.0.0.0'</span></tt> which will listen on all
+configured addresses.</li>
+<li><strong>port</strong> &#8211; The tcp port to listen on.</li>
+<li><strong>backlog</strong> &#8211; The amount of system queued connections allowed.</li>
+<li><strong>retry</strong> &#8211; The number seconds to keep trying to bind the
+socket, in case there&#8217;s another process bound but
+exiting soon. This allows near zero-downtime
+process handoffs as you start the new one and kill
+the old.</li>
+<li><strong>certfile</strong> &#8211; The certificate file if you wish the socket to
+be ssl wrapped (see ssl.wrap_socket).</li>
+<li><strong>keyfile</strong> &#8211; The key file if you wish the socket to be ssl
+wrapped (see ssl.wrap_socket).</li>
+<li><strong>style</strong> &#8211; The libraries you&#8217;d like to use in creating the
+socket. The default will use the standard Python
+libraries. <tt class="docutils literal"><span class="pre">'Eventlet'</span></tt> is recognized and will
+use the Eventlet libraries. Other styles may added
+in the future.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.signum2str">
+<tt class="descclassname">brim.service.</tt><tt class="descname">signum2str</tt><big>(</big><em>signum</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#signum2str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.signum2str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates a signal number to a str. Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">signum2str</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">SIGHUP</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signum</strong> &#8211; The signal number to convert.</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body">A str representing the signal.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.sustain_workers">
+<tt class="descclassname">brim.service.</tt><tt class="descname">sustain_workers</tt><big>(</big><em>workers_desired</em>, <em>worker_func</em>, <em>logger=None</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#sustain_workers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.sustain_workers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts and maintains a set of subprocesses. For each worker
+started, it will run the <em>worker_func</em>. If a subprocess exits
+without being requested to, it will be restarted and the
+<em>worker_func</em> called again.</p>
+<p><em>sustain_workers</em> will not return until signaled to do so with
+SIGHUP or SIGTERM to the main process. These signals will be
+relayed to the subprocesses as well.</p>
+<p>SIGHUP generally means the processes should exit as gracefully as
+possible. For instance, a web server might exit after it
+completes any requests already in progress.</p>
+<p>SIGTERM generally means the processes should exit immediately,
+canceling anything they may have been doing at the time.</p>
+<p>If <em>workers_desired</em> is 0, a special &#8220;inproc&#8221; mode will be
+activated where just the <em>worker_func</em> will be called and then
+<em>sustain_workers</em> will return. This can be useful for debugging.</p>
+<p>See the Brim.Net WSGI Server <a class="reference external" href="http://github.com/gholt/brimwsgi">brimwsgi.server.Server</a> for a good example of how to
+use <em>sustain_workers</em>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>workers_desired</strong> &#8211; The number of subprocesses desired to be
+maintained. If 0, no subprocesses will be
+made and <em>worker_func</em> will simply be
+called and then <em>sustain_workers</em> will
+return.</li>
+<li><strong>worker_func</strong> &#8211; The function to be called by each subprocess
+once it starts. <em>worker_func</em> should not
+return except on catastrophic error or when
+signaled to do so. If <em>worker_func</em> exits
+without being signaled, another subprocess
+will be started and the function called
+again.</li>
+<li><strong>logger</strong> &#8211; If set, debug information will be sent to this
+logging.Logger instance.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.util">
+<span id="brim-util"></span><h1>brim.util<a class="headerlink" href="#module-brim.util" title="Permalink to this headline">¶</a></h1>
+<p>Miscellaneous classes and functions.</p>
+<dl class="exception">
+<dt id="brim.util.LockPathTimeout">
+<em class="property">exception </em><tt class="descclassname">brim.util.</tt><tt class="descname">LockPathTimeout</tt><a class="reference internal" href="_modules/brim/util.html#LockPathTimeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.LockPathTimeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>Raised by <a class="reference internal" href="#brim.util.lock_path" title="brim.util.lock_path"><tt class="xref py py-func docutils literal"><span class="pre">lock_path()</span></tt></a> when its timeout is reached
+without gaining its lock.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.util.lock_path">
+<tt class="descclassname">brim.util.</tt><tt class="descname">lock_path</tt><big>(</big><em>*args</em>, <em>**kwds</em><big>)</big><a class="reference internal" href="_modules/brim/util.html#lock_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.lock_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>A context manager that attempts to gain an advisory lock for the
+path given within the timeout given. Raises LockPathTimeout if
+time expires before gaining the lock. If the lock is obtained,
+True is yielded and the lock relinquished with the context ends.</p>
+<p>For example:</p>
+<div class="highlight-python"><pre>with lock_path(path, timeout):
+    # do things inside path knowing others using the same
+    # advisory locking mechanism will be blocked until you're
+    # done.</pre>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> &#8211; The path to gain an advisory lock on.</li>
+<li><strong>timeout</strong> &#8211; The number of seconds to wait to gain the lock
+before raising LockPathTimeout.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.util.make_dirs">
+<tt class="descclassname">brim.util.</tt><tt class="descname">make_dirs</tt><big>(</big><em>path</em>, <em>mode=511</em><big>)</big><a class="reference internal" href="_modules/brim/util.html#make_dirs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.make_dirs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Just like os.makedirs but ignoring errors due to the path already
+existing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> &#8211; The path to create a directory and all parent
+directories for.</li>
+<li><strong>mode</strong> &#8211; The permissions mode (masked with the current umask)
+to create new directories with.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.util.unlink">
+<tt class="descclassname">brim.util.</tt><tt class="descname">unlink</tt><big>(</big><em>path</em><big>)</big><a class="reference internal" href="_modules/brim/util.html#unlink"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.unlink" title="Permalink to this definition">¶</a></dt>
+<dd><p>Just like os.unlink but ignoring errors due to the path already
+not existing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> &#8211; The path to unlink.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">brim</a></li>
+<li><a class="reference internal" href="#module-brim.conf">brim.conf</a></li>
+<li><a class="reference internal" href="#module-brim.service">brim.service</a></li>
+<li><a class="reference internal" href="#module-brim.util">brim.util</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="license.html"
+                        title="previous chapter">LICENSE</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/brim.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="LICENSE"
+             >previous</a> |</li>
+        <li><a href="index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

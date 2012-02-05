@@ -1,0 +1,456 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim.service &mdash; Brim.Net Utility Package v0.0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Utility Package v0.0.0 documentation" href="../../index.html" />
+    <link rel="up" title="brim" href="../brim.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brim.service</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2012 Gregory Holt</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Provides functions useful for services, such as network daemons,</span>
+<span class="sd">background jobs, etc.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">errno</span> <span class="kn">import</span> <span class="n">EADDRINUSE</span><span class="p">,</span> <span class="n">ECHILD</span><span class="p">,</span> <span class="n">EINTR</span><span class="p">,</span> <span class="n">EPERM</span>
+<span class="kn">from</span> <span class="nn">grp</span> <span class="kn">import</span> <span class="n">getgrnam</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">chdir</span><span class="p">,</span> <span class="n">devnull</span><span class="p">,</span> <span class="n">dup2</span><span class="p">,</span> <span class="n">fork</span><span class="p">,</span> <span class="n">getegid</span><span class="p">,</span> <span class="n">geteuid</span><span class="p">,</span> <span class="n">getpid</span><span class="p">,</span> <span class="n">getppid</span><span class="p">,</span> \
+    <span class="n">killpg</span><span class="p">,</span> <span class="n">setgid</span><span class="p">,</span> <span class="n">setsid</span><span class="p">,</span> <span class="n">setuid</span><span class="p">,</span> <span class="n">umask</span> <span class="k">as</span> <span class="n">os_umask</span><span class="p">,</span> <span class="n">wait</span> <span class="k">as</span> <span class="n">os_wait</span><span class="p">,</span> \
+    <span class="n">WIFEXITED</span><span class="p">,</span> <span class="n">WIFSIGNALED</span>
+<span class="kn">from</span> <span class="nn">pwd</span> <span class="kn">import</span> <span class="n">getpwnam</span>
+<span class="kn">from</span> <span class="nn">signal</span> <span class="kn">import</span> <span class="n">SIG_DFL</span><span class="p">,</span> <span class="n">SIGHUP</span><span class="p">,</span> <span class="n">SIG_IGN</span><span class="p">,</span> <span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="p">,</span> <span class="n">SIGTERM</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">platform</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+
+
+<span class="n">_captured_exception</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">_captured_stdout</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">_captured_stderr</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+<span class="k">def</span> <span class="nf">_capture_exception</span><span class="p">(</span><span class="n">exctype</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_captured_exception</span><span class="p">:</span>
+        <span class="n">_captured_exception</span><span class="p">(</span><span class="n">exctype</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">_CaptureFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">stdout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">stderr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buf</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buf</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">out</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">and</span> <span class="n">_captured_stdout</span><span class="p">:</span>
+                    <span class="n">_captured_stdout</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">and</span> <span class="n">_captured_stderr</span><span class="p">:</span>
+                    <span class="n">_captured_stderr</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">lead</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sep</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lead</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sep</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">tail</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">writelines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lines</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="capture_exceptions_stdout_stderr"><a class="viewcode-back" href="../../brim.html#brim.service.capture_exceptions_stdout_stderr">[docs]</a><span class="k">def</span> <span class="nf">capture_exceptions_stdout_stderr</span><span class="p">(</span><span class="n">exceptions</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">stdout_func</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                     <span class="n">stderr_func</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Captures uncaught exceptions and redirects them to the</span>
+<span class="sd">    *exceptions* function and captures standard output and error and</span>
+<span class="sd">    redirects that data to the stdout_func and stderr_func functions.</span>
+<span class="sd">    The original standard output and error files will be closed so</span>
+<span class="sd">    that no output can come from your program to these streams. This</span>
+<span class="sd">    is useful when writing background daemons that often have no</span>
+<span class="sd">    connected console.</span>
+
+<span class="sd">    The *exceptions* function will be called with (exctype, value,</span>
+<span class="sd">    traceback).</span>
+
+<span class="sd">    The *stdout_func* and *stderr_func* functions will be called with</span>
+<span class="sd">    (str).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_captured_exception</span><span class="p">,</span> <span class="n">_captured_stdout</span><span class="p">,</span> <span class="n">_captured_stderr</span>
+    <span class="n">_captured_exception</span> <span class="o">=</span> <span class="n">exceptions</span>
+    <span class="n">_captured_stdout</span> <span class="o">=</span> <span class="n">stdout_func</span>
+    <span class="n">_captured_stderr</span> <span class="o">=</span> <span class="n">stderr_func</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">excepthook</span> <span class="o">=</span> <span class="n">_capture_exception</span>
+    <span class="n">stdo_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">devnull</span><span class="p">,</span> <span class="s">&#39;r+b&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">nullfile</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">stdo_files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&#39;flush&#39;</span><span class="p">):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&#39;fileno&#39;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">dup2</span><span class="p">(</span><span class="n">nullfile</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">f</span><span class="o">.</span><span class="n">fileno</span><span class="p">())</span>
+                <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">_CaptureFile</span><span class="p">(</span><span class="n">stdout</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">_CaptureFile</span><span class="p">(</span><span class="n">stderr</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="droppriv"><a class="viewcode-back" href="../../brim.html#brim.service.droppriv">[docs]</a><span class="k">def</span> <span class="nf">droppriv</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">umask</span><span class="o">=</span><span class="mo">0022</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Drops privileges to the user, group, and umask given, changes the</span>
+<span class="sd">    process to session leader, and changes working directories to /.</span>
+<span class="sd">    If a group is not given, the user&#39;s default group will be used.</span>
+<span class="sd">    Will raise an Exception with an explanatory message if the user</span>
+<span class="sd">    or group cannot be found or if permission is denied while</span>
+<span class="sd">    attempting the switch.</span>
+
+<span class="sd">    :param user: The user to switch to.</span>
+<span class="sd">    :param group: The group to switch to; defaults to the default</span>
+<span class="sd">                  group of the user.</span>
+<span class="sd">    :param umask: The umask to set; defaults 0022.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">user</span> <span class="ow">or</span> <span class="n">group</span><span class="p">:</span>
+        <span class="n">uid</span> <span class="o">=</span> <span class="n">geteuid</span><span class="p">()</span>
+        <span class="n">gid</span> <span class="o">=</span> <span class="n">getegid</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pw</span> <span class="o">=</span> <span class="n">getpwnam</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Cannot switch to unknown user </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="n">user</span><span class="p">)</span>
+            <span class="n">uid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">pw_uid</span>
+            <span class="n">gid</span> <span class="o">=</span> <span class="n">pw</span><span class="o">.</span><span class="n">pw_gid</span>
+        <span class="k">if</span> <span class="n">group</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">gr</span> <span class="o">=</span> <span class="n">getgrnam</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Cannot switch to unknown group </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="n">group</span><span class="p">)</span>
+            <span class="n">gid</span> <span class="o">=</span> <span class="n">gr</span><span class="o">.</span><span class="n">gr_gid</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">setgid</span><span class="p">(</span><span class="n">gid</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s">&#39;Permission denied when switching to group </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="n">group</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">setuid</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s">&#39;Permission denied when switching to user </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="n">user</span><span class="p">)</span>
+    <span class="n">os_umask</span><span class="p">(</span><span class="n">umask</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">setsid</span><span class="p">()</span>  <span class="c"># Become session leader until already so.</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EPERM</span><span class="p">:</span>
+            <span class="k">raise</span>
+    <span class="n">chdir</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="get_listening_tcp_socket"><a class="viewcode-back" href="../../brim.html#brim.service.get_listening_tcp_socket">[docs]</a><span class="k">def</span> <span class="nf">get_listening_tcp_socket</span><span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">backlog</span><span class="o">=</span><span class="mi">4096</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">certfile</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">keyfile</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a socket.socket bound to the given ip and tcp port with</span>
+<span class="sd">    other optional parameters.</span>
+
+<span class="sd">    :param ip: The ip address to listen on. ``&#39;&#39;`` and ``&#39;*&#39;`` are</span>
+<span class="sd">               translated to ``&#39;0.0.0.0&#39;`` which will listen on all</span>
+<span class="sd">               configured addresses.</span>
+<span class="sd">    :param port: The tcp port to listen on.</span>
+<span class="sd">    :param backlog: The amount of system queued connections allowed.</span>
+<span class="sd">    :param retry: The number seconds to keep trying to bind the</span>
+<span class="sd">                  socket, in case there&#39;s another process bound but</span>
+<span class="sd">                  exiting soon. This allows near zero-downtime</span>
+<span class="sd">                  process handoffs as you start the new one and kill</span>
+<span class="sd">                  the old.</span>
+<span class="sd">    :param certfile: The certificate file if you wish the socket to</span>
+<span class="sd">                     be ssl wrapped (see ssl.wrap_socket).</span>
+<span class="sd">    :param keyfile: The key file if you wish the socket to be ssl</span>
+<span class="sd">                    wrapped (see ssl.wrap_socket).</span>
+<span class="sd">    :param style: The libraries you&#39;d like to use in creating the</span>
+<span class="sd">                  socket. The default will use the standard Python</span>
+<span class="sd">                  libraries. ``&#39;Eventlet&#39;`` is recognized and will</span>
+<span class="sd">                  use the Eventlet libraries. Other styles may added</span>
+<span class="sd">                  in the future.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">style</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">AF_INET</span><span class="p">,</span> <span class="n">AF_INET6</span><span class="p">,</span> <span class="n">AF_UNSPEC</span><span class="p">,</span> \
+            <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">getaddrinfo</span><span class="p">,</span> <span class="n">IPPROTO_TCP</span><span class="p">,</span> <span class="n">socket</span><span class="p">,</span> \
+            <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="n">SO_KEEPALIVE</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="n">TCP_KEEPIDLE</span>
+        <span class="kn">from</span> <span class="nn">ssl</span> <span class="kn">import</span> <span class="n">wrap_socket</span>
+        <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+    <span class="k">elif</span> <span class="n">style</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;eventlet&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">eventlet.green.socket</span> <span class="kn">import</span> <span class="n">AF_INET</span><span class="p">,</span> <span class="n">AF_INET6</span><span class="p">,</span> <span class="n">AF_UNSPEC</span><span class="p">,</span> \
+            <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">getaddrinfo</span><span class="p">,</span> <span class="n">IPPROTO_TCP</span><span class="p">,</span> <span class="n">socket</span><span class="p">,</span> \
+            <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="n">SO_KEEPALIVE</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="n">TCP_KEEPIDLE</span>
+        <span class="kn">from</span> <span class="nn">eventlet.green.ssl</span> <span class="kn">import</span> <span class="n">wrap_socket</span>
+        <span class="kn">from</span> <span class="nn">eventlet</span> <span class="kn">import</span> <span class="n">sleep</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span>
+        <span class="k">raise</span> <span class="n">socket_error</span><span class="p">(</span><span class="s">&#39;Socket style </span><span class="si">%r</span><span class="s"> not understood.&#39;</span> <span class="o">%</span> <span class="n">style</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ip</span> <span class="ow">or</span> <span class="n">ip</span> <span class="o">==</span> <span class="s">&#39;*&#39;</span><span class="p">:</span>
+        <span class="n">ip</span> <span class="o">=</span> <span class="s">&#39;0.0.0.0&#39;</span>
+    <span class="n">family</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">getaddrinfo</span><span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">AF_UNSPEC</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">AF_INET6</span><span class="p">):</span>
+            <span class="n">family</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">family</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">socket_error</span><span class="p">(</span><span class="s">&#39;Could not determine address family of </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s"> for &#39;</span>
+                           <span class="s">&#39;binding.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+    <span class="n">good_sock</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">retry_until</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="n">retry</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">good_sock</span> <span class="ow">and</span> <span class="n">time</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">retry_until</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_KEEPALIVE</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">IPPROTO_TCP</span><span class="p">,</span> <span class="n">TCP_KEEPIDLE</span><span class="p">,</span> <span class="mi">600</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">backlog</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">certfile</span> <span class="ow">and</span> <span class="n">keyfile</span><span class="p">:</span>
+                <span class="n">sock</span> <span class="o">=</span> <span class="n">wrap_socket</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">certfile</span><span class="o">=</span><span class="n">certfile</span><span class="p">,</span> <span class="n">keyfile</span><span class="o">=</span><span class="n">keyfile</span><span class="p">)</span>
+            <span class="n">good_sock</span> <span class="o">=</span> <span class="n">sock</span>
+        <span class="k">except</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EADDRINUSE</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">good_sock</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">socket_error</span><span class="p">(</span><span class="s">&#39;Could not bind to </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s"> after trying for </span><span class="si">%s</span><span class="s"> &#39;</span>
+                           <span class="s">&#39;seconds.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">retry</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">good_sock</span>
+
+</div>
+<div class="viewcode-block" id="signum2str"><a class="viewcode-back" href="../../brim.html#brim.service.signum2str">[docs]</a><span class="k">def</span> <span class="nf">signum2str</span><span class="p">(</span><span class="n">signum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Translates a signal number to a str. Example::</span>
+
+<span class="sd">        &gt;&gt;&gt; print signum2str(1)</span>
+<span class="sd">        SIGHUP</span>
+
+<span class="sd">    :param signum: The signal number to convert.</span>
+<span class="sd">    :returns: A str representing the signal.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">signal</span>
+    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">signal</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;SIG&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span> <span class="o">==</span> <span class="n">signum</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">attr</span>
+    <span class="k">return</span> <span class="s">&#39;UNKNOWN&#39;</span>
+
+</div>
+<div class="viewcode-block" id="sustain_workers"><a class="viewcode-back" href="../../brim.html#brim.service.sustain_workers">[docs]</a><span class="k">def</span> <span class="nf">sustain_workers</span><span class="p">(</span><span class="n">workers_desired</span><span class="p">,</span> <span class="n">worker_func</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Starts and maintains a set of subprocesses. For each worker</span>
+<span class="sd">    started, it will run the *worker_func*. If a subprocess exits</span>
+<span class="sd">    without being requested to, it will be restarted and the</span>
+<span class="sd">    *worker_func* called again.</span>
+
+<span class="sd">    *sustain_workers* will not return until signaled to do so with</span>
+<span class="sd">    SIGHUP or SIGTERM to the main process. These signals will be</span>
+<span class="sd">    relayed to the subprocesses as well.</span>
+
+<span class="sd">    SIGHUP generally means the processes should exit as gracefully as</span>
+<span class="sd">    possible. For instance, a web server might exit after it</span>
+<span class="sd">    completes any requests already in progress.</span>
+
+<span class="sd">    SIGTERM generally means the processes should exit immediately,</span>
+<span class="sd">    canceling anything they may have been doing at the time.</span>
+
+<span class="sd">    If *workers_desired* is 0, a special &quot;inproc&quot; mode will be</span>
+<span class="sd">    activated where just the *worker_func* will be called and then</span>
+<span class="sd">    *sustain_workers* will return. This can be useful for debugging.</span>
+
+<span class="sd">    See the Brim.Net WSGI Server `brimwsgi.server.Server</span>
+<span class="sd">    &lt;http://github.com/gholt/brimwsgi&gt;`_ for a good example of how to</span>
+<span class="sd">    use *sustain_workers*.</span>
+
+<span class="sd">    :param workers_desired: The number of subprocesses desired to be</span>
+<span class="sd">                            maintained. If 0, no subprocesses will be</span>
+<span class="sd">                            made and *worker_func* will simply be</span>
+<span class="sd">                            called and then *sustain_workers* will</span>
+<span class="sd">                            return.</span>
+<span class="sd">    :param worker_func: The function to be called by each subprocess</span>
+<span class="sd">                        once it starts. *worker_func* should not</span>
+<span class="sd">                        return except on catastrophic error or when</span>
+<span class="sd">                        signaled to do so. If *worker_func* exits</span>
+<span class="sd">                        without being signaled, another subprocess</span>
+<span class="sd">                        will be started and the function called</span>
+<span class="sd">                        again.</span>
+<span class="sd">    :param logger: If set, debug information will be sent to this</span>
+<span class="sd">                   logging.Logger instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+    <span class="k">if</span> <span class="n">workers_desired</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;wid:000 pid:</span><span class="si">%s</span><span class="s"> Starting inproc worker.&#39;</span> <span class="o">%</span> <span class="n">getpid</span><span class="p">())</span>
+        <span class="n">worker_func</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Exiting due to workers = 0 mode.&#39;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">signal_received</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">term_signal</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">signal</span><span class="p">(</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">SIG_IGN</span><span class="p">)</span>
+        <span class="n">signal_received</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">SIGTERM</span>
+
+    <span class="k">def</span> <span class="nf">hup_signal</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">signal</span><span class="p">(</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">SIG_IGN</span><span class="p">)</span>
+        <span class="n">signal_received</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">SIGHUP</span>
+
+    <span class="n">signal</span><span class="p">(</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">term_signal</span><span class="p">)</span>
+    <span class="n">signal</span><span class="p">(</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">hup_signal</span><span class="p">)</span>
+    <span class="n">worker_pids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">workers_desired</span>
+    <span class="n">initial_forking</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">signal_received</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">worker_id</span> <span class="o">=</span> <span class="n">worker_pids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">pid</span> <span class="o">=</span> <span class="n">fork</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">pid</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">signal</span><span class="p">(</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">SIG_DFL</span><span class="p">)</span>
+                <span class="n">signal</span><span class="p">(</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">SIG_DFL</span><span class="p">)</span>
+                <span class="n">ppid</span> <span class="o">=</span> <span class="n">getppid</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;wid:</span><span class="si">%03d</span><span class="s"> ppid:</span><span class="si">%d</span><span class="s"> pid:</span><span class="si">%d</span><span class="s"> Starting worker.&#39;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">ppid</span><span class="p">,</span> <span class="n">getpid</span><span class="p">()))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">worker_func</span><span class="p">(</span><span class="n">worker_id</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;wid:</span><span class="si">%03d</span><span class="s"> ppid:</span><span class="si">%d</span><span class="s"> pid:</span><span class="si">%d</span><span class="s"> Worker &#39;</span>
+                            <span class="s">&#39;exited due to exception: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                            <span class="p">(</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">ppid</span><span class="p">,</span> <span class="n">getpid</span><span class="p">(),</span> <span class="n">err</span><span class="p">))</span>
+                    <span class="c"># Reraised in case of useful installed sys.excepthook.</span>
+                    <span class="k">raise</span>
+                <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;wid:</span><span class="si">%03d</span><span class="s"> ppid:</span><span class="si">%d</span><span class="s"> pid:</span><span class="si">%d</span><span class="s"> Worker exited.&#39;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">ppid</span><span class="p">,</span> <span class="n">getpid</span><span class="p">()))</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">worker_pids</span><span class="p">[</span><span class="n">worker_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">pid</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">initial_forking</span><span class="p">:</span>
+                    <span class="c"># This means that after the initial forking, subprocesses</span>
+                    <span class="c"># will be reforked at a maximum rate of one per second.</span>
+                    <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">initial_forking</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pid</span><span class="p">,</span> <span class="n">status</span> <span class="o">=</span> <span class="n">os_wait</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">WIFEXITED</span><span class="p">(</span><span class="n">status</span><span class="p">)</span> <span class="ow">or</span> <span class="n">WIFSIGNALED</span><span class="p">(</span><span class="n">status</span><span class="p">):</span>
+                <span class="n">worker_pids</span><span class="p">[</span><span class="n">worker_pids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">pid</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">EINTR</span><span class="p">,</span> <span class="n">ECHILD</span><span class="p">):</span>
+                <span class="k">raise</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="n">signal_received</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">SIGINT</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Exiting due to </span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="n">signum2str</span><span class="p">(</span><span class="n">signal_received</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">killpg</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">signal_received</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" >brim</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
