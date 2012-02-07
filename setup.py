@@ -19,6 +19,7 @@ import brim
 
 
 setup(name='brim', version=brim.version,
-      description='Brim.Net Utility Package', author='Gregory Holt',
+      description='Brim.Net Core Package', author='Gregory Holt',
       author_email='brim@brim.net', url='http://gholt.github.com/brim/',
-      packages=['brim'])
+      packages=['brim'], requires=['eventlet(>=0.9.16)'],
+      scripts=['bin/brimd'])

@@ -13,12 +13,15 @@
 # limitations under the License.
 
 """
-This package contains general utility modules.
+This is the core package for Brim.Net Python-based applications. It
+provides some reusable utility code and provides brimd, a launcher
+offering ease of deployment of WSGI applications (currently just
+using the Eventlet WSGI server) and maintaining background daemons.
 """
 
 __all__ = ['version_info', 'version']
 
 #: Version information ``(major, minor, revision)``.
-version_info = (0, 0, 0)
+version_info = (0, 1, 0)
 #: Version string ``'major.minor.revision'``.
 version = '.'.join(map(str, version_info))

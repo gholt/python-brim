@@ -64,13 +64,13 @@ More Complex Example With Overrides::
         sys.exit('Config conversion error: ' + str(err))
     print 'Using port', port
 
-Another feature of read_conf is that if a conf file has a [brimconf]
+Another feature of read_conf is that if a conf file has a [brim]
 additional_confs setting, the files listed there will also be parsed.
 This lets an end user make a conf file to be included by one or more
 other conf files. Splitting configuration like this can make
 deployment to clusters easier. For example::
 
-    [brimconf]
+    [brim]
     additional_confs = /etc/common.conf "/another file.conf" ~/.common.conf
 """
 
@@ -261,8 +261,8 @@ def _read_conf(parser, conf_files_read, conf_file, exit_on_read_exception):
     else:
         conf_files_read.extend(parser.read([expanduser(conf_file)]))
     try:
-        additional_confs = parser.get('brimconf', 'additional_confs')
-        parser.remove_option('brimconf', 'additional_confs')
+        additional_confs = parser.get('brim', 'additional_confs')
+        parser.remove_option('brim', 'additional_confs')
         for conf_file in list(csv_reader([additional_confs],
                               delimiter=' '))[0]:
             _read_conf(parser, conf_files_read, conf_file,
@@ -279,7 +279,7 @@ def read_conf(conf_files, exit_on_read_exception=True):
     Note that if the parser does not have access to read a given file
     it will act as if it did not exist.
 
-    If a conf file has a [brimconf] additional_confs setting, the
+    If a conf file has a [brim] additional_confs setting, the
     files listed there will also be parsed.
 
     You may wish to check the Conf.files list to determine which

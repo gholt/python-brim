@@ -254,7 +254,7 @@ option2 = 2.2
 
             def read(self, files):
                 ConfigParser.SafeConfigParser.readfp(self, StringIO('''
-[brimconf]
+[brim]
 additional_confs = same_file
                 '''))
                 return files
@@ -285,7 +285,7 @@ additional_confs = same_file
 
             def read(self, files):
                 ConfigParser.SafeConfigParser.readfp(self, StringIO('''
-[brimconf]
+[brim]
 additional_confs = same_file
                 '''))
                 return files

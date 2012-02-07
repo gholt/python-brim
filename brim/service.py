@@ -277,9 +277,8 @@ def sustain_workers(workers_desired, worker_func, logger=None):
     activated where just the *worker_func* will be called and then
     *sustain_workers* will return. This can be useful for debugging.
 
-    See the Brim.Net WSGI Server `brimwsgi.server.Server
-    <http://github.com/gholt/brimwsgi>`_ for a good example of how to
-    use *sustain_workers*.
+    See brim.server.Server for a good example of how to use
+    *sustain_workers*.
 
     :param workers_desired: The number of subprocesses desired to be
                             maintained. If 0, no subprocesses will be

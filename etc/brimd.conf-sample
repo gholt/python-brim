@@ -1,0 +1,110 @@
+[brim]
+# additional_confs = <file-list>
+#   Will include the conf files in <file-list> with this conf. Default: ''
+# wsgi = <name> [<name>] ...
+#   The names of the WSGI apps to configure. Each <name> should have a
+#   corresponding [name] section elsewhere in the configuration. See the
+#   example [echo] below. If no apps are configured, all requests will be
+#   responded to with 404 Not Found.
+# daemons = <name> [<name>] ...
+#   The name of daemons to configure. Each <name> should have a corresponding
+#   [name] section elsewhere in the configuration. See the example
+#   [sample_daemon] below. Daemons are subprocesses not in the WSGI app chain
+#   for background tasks; an example is the replicator in brimkvs.
+# ip = <ip>
+#   The ip address to listen on or * to listen on all addresses. Default: *
+# port = <port>
+#   The port to listen on. Default: 80
+# user = <name>
+#   The local user to run as. Default: <current-user>
+# workers = <number>
+#   The number of subprocess workers to spawn to handle requests. Usually you
+#   want to set this to at least the number of CPU cores you have. Default: 1
+# log_level = <level>
+#   The level at which lesser log records will be suppressed. Valid values are:
+#   CRITICAL, ERROR, WARNING, NOTICE, INFO, and DEBUG. Default: INFO
+# log_facility = <facility>
+#   The facility value sent to syslog. Normally this is one of LOCAL0-7.
+#   Default: LOCAL0
+# log_headers = <boolean>
+#   Whether all headers should be sent to the request log or not. Default: no
+# count_status_codes = <code> [<code>] ...
+#   The list of HTTP status codes to track. See brim.stats for a WSGI app
+#   that reports server stats. Each code listed here will be tracked indepently
+#   of the 2xx, 3xx, 4xx, and 5xx tracking. The default is 404 408 499 501. 404
+#   Not Found, 408 Request Timeout, and 499 Disconnect are usually tracked
+#   separately because they can indicate a problem with the server whereas
+#   other 4xx codes usually indicate a problem with the client. 501 Not
+#   Implemented is usually tracked separately because it can indicate a problem
+#   with the client rather than the server unlike most other 5xx codes.
+
+# json_dumps = <func>
+#   Specifies the Python function to use for converting Python objects into
+#   JSON. This uses json.dumps by default, but you can use other faster
+#   functions if you have them installed, such as simplejson.dumps.
+#   Default: json.dumps
+# json_loads = <func>
+#   Specifies the Python function to use for converting JSON into Python
+#   objects. This uses json.loads by default, but you can use other faster
+#   functions if you have them installed, such as simplejson.loads.
+#   Default: json.loads
+# certfile = <path>
+#   The path to the SSL certificate file to enable SSL. Default: <not-set>
+# keyfile = <path>
+#   The path to the SSL key file to enable SSL. Default: <not-set>
+# client_timeout = <seconds>
+#   The number of seconds with no activity by a client before dropping the
+#   connection. Default: 60
+# concurrent_per_worker = <number>
+#   The number of concurrent connections each worker is allowed to handle.
+#   Default: 1024
+# log_name = <name>
+#   The name to send to syslog with each log line.
+# group = <name>
+#   The local group to run as. Default: <default-group-of-user>
+# umask = <mask>
+#   The umask to run with. Default: 0022
+# backlog = <number>
+#   The number of socket connections that can be queued. Default: 4096
+# listen_retry = <seconds>
+#   The number of seconds to keep trying to bind to the configured ip and port
+#   before giving up. Default: 30
+# eventlet_hub = <name>
+#   The Eventlet coroutine hub to use. Default: poll
+# wsgi_input_iter_chunk_size = <bytes>
+#   The number of bytes read per chunk when the WSGI input is used as an
+#   iterator. This use case isn't very common. Default: 4096
+
+[stats]
+#   Reports the brimd server stats as a JSON reponse. The stats contain basic
+#   things like the server start time and request counts.
+call = brim.stats.Stats
+#   Each application needs at least this call value set to the Python class
+#   that will handle the application's requests.
+# path = <path>
+#   The request path to match and serve; any other paths will be passed on to
+#   the next WSGI app in the chain. This can serve as a basic restriction to
+#   accessing the stats by setting it to a hard to guess value.
+#   Default: /stats
+
+[echo]
+#   A simple WSGI application that just echoes the request body back in the
+#   response. This is a good starting point for other WSGI applications. See
+#   the source for what's implemented and why.
+call = brim.echo.Echo
+#   Each application needs at least this call value set to the Python class
+#   that will handle the application's requests.
+# path = <path>
+#   The request path to match and serve; any other paths will be passed on to
+#   the next WSGI app in the chain. Default: /echo
+# max_echo = <bytes>
+#   The maximum bytes to echo; any additional bytes will be ignored.
+#   Default: 65536
+
+[sample_daemon]
+#   A simple daemon that just logs a status line every so often. This can be a
+#   good starting point for other daemons. See the source for what's
+#   implemented and why.
+call = brim.sample_daemon.SampleDaemon
+# interval = <seconds>
+#   The number of seconds between each status line logged. Default: 60

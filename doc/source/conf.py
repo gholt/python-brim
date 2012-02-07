@@ -41,7 +41,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Brim.Net Utility Package'
+project = u'Brim.Net Core Package'
 copyright = u'2012, Gregory Holt'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -179,7 +179,7 @@ htmlhelp_basename = 'brimdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'brim.tex', u'Brim.Net Utility Package Documentation',
+  ('index', 'brim.tex', u'Brim.Net Core Package Documentation',
    u'Gregory Holt', 'manual'),
 ]
 
@@ -212,6 +212,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'brim', u'Brim.Net Utility Package Documentation',
+    ('index', 'brim', u'Brim.Net Core Package Documentation',
      [u'Gregory Holt'], 1)
 ]

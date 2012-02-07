@@ -1,4 +1,4 @@
-# Brim.Net Utility Package
+# Brim.Net Core Package
 
     Copyright 2012 Gregory Holt
 
@@ -16,19 +16,28 @@
 
 ## Overview
 
-This is a project for providing general utility to Python programs.
+This is the core project for Brim.Net Python-based applications. It provides
+some reusable utility code and provides brimd, a launcher offering ease of
+deployment of WSGI applications (currently just using the Eventlet WSGI server)
+and maintaining background daemons.
 
 For more in-depth documentation see <http://gholt.github.com/brim/>.
 
 ### Required Dependencies
 
-The main code itself just requires Python 2 (2.6 or greater, not tested with
-Python 3 yet).
+* [Python >= 2.6](http://python.org/) Not tested with Python 3 yet.
+* [Eventlet >= 0.9.16](http://eventlet.net/)
+* Unix platform: This should run on any Unix platform, though only tested on
+  Ubuntu 10.04 LTS to date.
 
 ### Optional Dependencies
 
-* [Eventlet](http://eventlet.net/) green sockets can optionally be used by
-  brim.service.get_listening_tcp_socket.
+* [SetProcTitle](http://code.google.com/p/py-setproctitle/) If this is
+  installed, brimd will change its process titles to be more meaningful.
+* [SimpleJSON](https://github.com/simplejson/simplejson) or other JSON library
+  containing json.dumps and json.loads compatible functions. You can configure
+  brimd to use these alternate libraries if you wish and complying apps and
+  daemons will also use the alternate libraries.
 
 ### Build and Test Dependencies
 
@@ -42,8 +51,8 @@ Python 3 yet).
 
 ### Example Install on Ubuntu 10.04
 
-    $ sudo apt-get install gitcore python
-    $ sudo apt-get install python-eventlet  # optional
+    $ sudo apt-get install gitcore python python-eventlet
+    $ sudo easy_install setproctitle  # optional
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py install
@@ -51,7 +60,8 @@ Python 3 yet).
 ### Example Install for Build and Test on Ubuntu 10.04
 
     $ sudo apt-get install gitcore python python-setuptools python-nose \
-      python-coverage python-sphinx python-eventlet
+      python-coverage python-sphinx python-eventlet python-simplejson
+    $ sudo easy_install setproctitle
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py develop
