@@ -43,12 +43,12 @@ class SampleDaemon(object):
             setattr(self, k, v)
         self.name = name
 
-    def __call__(self, server, stats):
+    def __call__(self, subserver, stats):
         """
         This sample daemon simply logs a status line every so often.
 
         This is the main entry point to the daemon. The brimd
-        server will spawn a subprocess, create an instance of this
+        subserver will spawn a subprocess, create an instance of this
         daemon, and call this method. If the method exits for any
         reason, brimd will spawn a new subprocess, create a new
         daemon instance, and call this method again to ensure the
@@ -72,15 +72,15 @@ class SampleDaemon(object):
             Increments the value of the stat <name> by 1.
 
 
-        :param server: The brim.server.Server that is managing
-                       this daemon.
+        :param subserver: The brim.server.Subserver that is managing
+                          this daemon.
         :param stats: Shared memory statistics object as defined
                       above.
         """
         iteration = 0
         while True:
             iteration += 1
-            server.logger.info(
+            subserver.logger.info(
                 '%s sample daemon log line %s' % (self.name, iteration))
             stats.set('last_run', time())
             stats.set('iterations', iteration)

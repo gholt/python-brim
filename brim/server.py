@@ -41,7 +41,6 @@ from brim.service import capture_exceptions_stdout_stderr, droppriv, \
 from eventlet import GreenPool, sleep, wsgi
 from eventlet.greenio import shutdown_safe
 from eventlet.hubs import use_hub
-from eventlet.patcher import monkey_patch
 
 import brim
 from brim.log import get_logger, sysloggable_excinfo
@@ -283,193 +282,23 @@ class _WsgiOutput(object):
         self.env['brim._bytes_out'] += len(rv)
         return rv
 
-
-class Server(object):
+class Subserver(object):
     """
-    The main class for the Brim.Net WSGI Server. This is written
-    mostly to be used by bin/brimd and still be reasonably
-    testable. Few daemons or WSGI apps need to access this directly
-    but some, like brim.stats.Stats do. Here are the contents of
-    bin/brimd::
+    Created for each [brim], [brim2], [brim3] config section to hold
+    the attributes specific to that subconfig.
 
-        #!/usr/bin/env python
-        import sys
-        from brim.server import Server
-        sys.exit(Server().main())
-
-    :param args: Command line arguments for the server, without the
-                 process name. Defaults to sys.argv[1:]
-    :param stdin: The file-like object to treat as standard input.
-                  Defaults to sys.stdin.
-    :param stdout: The file-like object to treat as standard output.
-                   Defaults to sys.stdout.
-    :param stderr: The file-like object to treat as standard error.
-                   Defaults to sys.stderr.
+    :param name: The name of the subserver ('brim', 'brim2', 'brim3',
+                 etc.)
     """
 
-    def __init__(self, args=None, stdin=None, stdout=None, stderr=None):
-        self.args = args
-        if self.args is None:
-            self.args = sys_argv[1:]
-        self.stdin = stdin
-        if self.stdin is None:
-            self.stdin = sys_stdin
-        self.stdout = stdout
-        if self.stdout is None:
-            self.stdout = sys_stdout
-        self.stderr = stderr
-        if self.stderr is None:
-            self.stderr = sys_stderr
+    def __init__(self, server, name):
+        self.server = server
+        self.name = name
         self.daemon_stats_conf = {'start_time': ''}
         self.wsgi_worker_stats_conf = {'start_time': 'worker',
             'request_count': 'sum', 'status_2xx_count': 'sum',
             'status_3xx_count': 'sum', 'status_4xx_count': 'sum',
             'status_5xx_count': 'sum'}
-
-    def main(self):
-        """
-        Performs the brimd actions (start, stop, restart,
-        shutdown, etc.) determined by the command line arguments
-        given in the constructor. Usage can be read from ``brimd
-        --help``.
-
-        :returns: An integer exit code suitable for returning with
-                  sys.exit.
-        """
-        try:
-            conf = self._parse_args()
-            if not conf:
-                return 0
-            self._parse_conf(conf)
-            self._configure_daemons(conf)
-            self._configure_wsgi_apps(conf)
-            self._start()
-            return 0
-        except Exception, err:
-            self.stderr.write('%s\n' % err)
-            self.stderr.flush()
-            return 1
-
-    def _parse_args(self):
-        """
-        This is where the translation and initial reaction to the
-        command line is done.
-
-        :returns: None if no further action is necessary or a
-                  brim.conf.Conf instance if the server should be
-                  started.
-        """
-        parser = OptionParser(add_help_option=False, usage="""
-Usage: %%prog [options] [command]
-
-Brim.Net Core Server %s
-
-Command (defaults to 'no-daemon'):
-
-  start                 Starts brimd if it isn't already running.
-  restart               Starts a new brimd which will wait for any previously
-                        existing one to release the listening port and then
-                        tells any previously existing brimd to shutdown.
-  shutdown              Immediately releases the listening port and the main
-                        process exits. Any subprocesses will continue to serve
-                        any existing connections and then exit once those
-                        connections close.
-  stop                  Terminates brimd immediately, severing any existing
-                        connections and therefore any in-progress requests.
-  status                Displays whether brimd is currently running or not.
-  reload                Same as restart.
-  force-reload          Same as restart.
-  no-daemon             Starts the server in the foreground with no
-                        subprocesses, PID files are ignored and not created,
-                        and output will go to stdout and stderr. Note that only
-                        WSGI apps will be started and no daemons. This can
-                        be useful for debugging.
-            """.strip() % brim.version)
-        parser.add_option('-?', '-h', '--help', dest='help',
-            action='store_true', default=False,
-            help='Outputs this help information.')
-        parser.add_option('-c', '--conf', action='append', dest='conf_files',
-            metavar='PATH',
-            help='By default, /etc/brim/brimd.conf and ~/.brimd.conf '
-                 'are read for configuration. You may override this by '
-                 'specifying a specific conf file with -c. This option may be '
-                 'specified more than once and the conf files will each be '
-                 'read in order.')
-        parser.add_option('-p', '--pid-file', dest='pid_file',
-            default='/var/run/brimd.pid', metavar='PATH',
-            help='The path to the file to store the PID of the running main '
-                 'brimd process.')
-        parser.add_option('-o', '--output', dest='output',
-            action='store_true', default=False,
-            help='When running as a daemon brimd will normally close '
-                 'standard input, output, and error; this option will leave '
-                 'them open, which can be useful for debugging.')
-        parser.add_option('-v', '--version', dest='version',
-            action='store_true', default=False,
-            help='Displays the version of brimd.')
-
-        def _parser_error(msg):
-            raise Exception(msg)
-
-        parser.error = _parser_error
-        options, args = parser.parse_args(self.args)
-        if options.help:
-            parser.print_help(self.stdout)
-            return 0
-        if len(args) > 1:
-            raise Exception('Too many commands given; only one allowed.')
-        if options.version:
-            print >>self.stdout, 'Brim.Net Core Server', brim.version
-            return 0
-        if not options.conf_files:
-            options.conf_files = DEFAULT_CONF_FILES
-        self.pid_file = options.pid_file
-        self.output = options.output
-        command = args[0] if args else 'no-daemon'
-        self.no_daemon = command == 'no-daemon'
-        if command == 'start':
-            success, pid = _send_pid_sig(self.pid_file, 0)
-            if success:
-                print >>self.stdout, '%s already running' % pid
-            else:
-                conf = read_conf(options.conf_files)
-                if not conf.files:
-                    raise Exception('No configuration found.')
-                return conf
-        elif command in ('restart', 'reload', 'force-reload'):
-            conf = read_conf(options.conf_files)
-            if not conf.files:
-                raise Exception('No configuration found.')
-            success, pid = _send_pid_sig(self.pid_file, 0)
-            # If brimd is already running, we fork a child to shut it down
-            # after a second so we, as the new brimd, can grab the port.
-            if success and not fork():
-                sleep(1)
-                _send_pid_sig(self.pid_file, SIGHUP, expect_exit=True,
-                              pid_override=pid)
-                return None
-            else:
-                return conf
-        elif command == 'shutdown':
-            _send_pid_sig(self.pid_file, SIGHUP, expect_exit=True)
-        elif command == 'stop':
-            _send_pid_sig(self.pid_file, SIGTERM, expect_exit=True)
-        elif command == 'status':
-            success, pid = _send_pid_sig(self.pid_file, 0)
-            if success:
-                print >>self.stdout, '%s is running' % pid
-            elif pid:
-                print >>self.stdout, '%s is not running' % pid
-            else:
-                print >>self.stdout, 'not running'
-        elif command == 'no-daemon':
-            conf = read_conf(options.conf_files)
-            if not conf.files:
-                raise Exception('No configuration found.')
-            return conf
-        else:
-            raise Exception('Unknown command %r.' % command)
-        return None
 
     def _parse_conf(self, conf):
         """
@@ -480,78 +309,88 @@ Command (defaults to 'no-daemon'):
         :param conf: The brim.conf.Conf instance for the overall
                      server configuration.
         """
-
-        def _conf_error(section, option, value, conversion_type, err):
-            raise Exception('Configuration value [%s] %s of %r cannot be '
-                            'converted to %s.' %
-                            (section, option, value, conversion_type))
-
-        conf.error = _conf_error
-        self.ip = conf.get('brim', 'ip', '*')
-        self.port = conf.get_int('brim', 'port', 80)
-        self.backlog = conf.get_int('brim', 'backlog', 4096)
-        self.listen_retry = conf.get_int('brim', 'listen_retry', 30)
-        self.certfile = conf.get('brim', 'certfile')
-        self.keyfile = conf.get('brim', 'keyfile')
-        self.user = conf.get('brim', 'user')
-        self.group = conf.get('brim', 'group')
-        self.umask = conf.get('brim', 'umask', '0022')
-        try:
-            self.umask = int(self.umask, 8)
-        except ValueError:
-            raise Exception('Invalid umask value %r.' % self.umask)
-        if self.no_daemon:
+        self.ip = conf.get(self.name, 'ip', conf.get('brim', 'ip', '*'))
+        self.port = conf.get_int(self.name, 'port',
+            conf.get_int('brim', 'port', 80))
+        self.backlog = conf.get_int(self.name, 'backlog',
+            conf.get_int('brim', 'backlog', 4096))
+        self.listen_retry = conf.get_int(self.name, 'listen_retry',
+            conf.get_int('brim', 'listen_retry', 30))
+        self.certfile = conf.get(self.name, 'certfile',
+            conf.get('brim', 'certfile'))
+        self.keyfile = conf.get(self.name, 'keyfile',
+            conf.get('brim', 'keyfile'))
+        if self.server.no_daemon:
             self.wsgi_worker_count = 0
         else:
-            self.wsgi_worker_count = conf.get_int('brim', 'workers', 1)
-        self.log_name = conf.get('brim', 'log_name', 'brim')
-        self.log_level = conf.get('brim', 'log_level', 'INFO').upper()
+            self.wsgi_worker_count = conf.get_int(self.name, 'workers',
+                conf.get_int('brim', 'workers', 1))
+        self.log_name = conf.get(self.name, 'log_name',
+            conf.get('brim', 'log_name', 'brim') + self.name[4:])
+        self.log_level = conf.get(self.name, 'log_level',
+            conf.get('brim', 'log_level', 'INFO')).upper()
         try:
             import logging
             getattr(logging, self.log_level)
         except AttributeError:
-            raise Exception('Invalid log_level %r.' % self.log_level)
-        self.log_facility = conf.get('brim', 'log_facility', 'LOCAL0').upper()
+            raise Exception(
+                'Invalid [%s] log_level %r.' % (self.name, self.log_level))
+        self.log_facility = conf.get(self.name, 'log_facility',
+            conf.get('brim', 'log_facility', 'LOCAL0')).upper()
         if not self.log_facility.startswith('LOG_'):
             self.log_facility = 'LOG_' + self.log_facility
         try:
             from logging.handlers import SysLogHandler
             getattr(SysLogHandler, self.log_facility)
         except AttributeError:
-            raise Exception('Invalid log_facility %r.' % self.log_facility)
-        self.client_timeout = conf.get_int('brim', 'client_timeout', 60)
-        self.eventlet_hub = conf.get('brim', 'eventlet_hub', 'poll')
+            raise Exception('Invalid [%s] log_facility %r.' %
+                            (self.name, self.log_facility))
+        self.client_timeout = conf.get_int(self.name, 'client_timeout',
+            conf.get_int('brim', 'client_timeout', 60))
+        self.eventlet_hub = conf.get(self.name, 'eventlet_hub',
+            conf.get('brim', 'eventlet_hub', 'poll'))
         self.concurrent_per_worker = \
-            conf.get_int('brim', 'concurrent_per_worker', 1024)
+            conf.get_int(self.name, 'concurrent_per_worker',
+                conf.get_int('brim', 'concurrent_per_worker', 1024))
         self.wsgi_input_iter_chunk_size = \
-            conf.get_int('brim', 'wsgi_input_iter_chunk_size', 4096)
-        self.log_headers = conf.get_boolean('brim', 'log_headers', False)
-        self.json_dumps = conf.get('brim', 'json_dumps', 'json.dumps')
+            conf.get_int(self.name, 'wsgi_input_iter_chunk_size',
+                conf.get_int('brim', 'wsgi_input_iter_chunk_size', 4096))
+        self.log_headers = conf.get_boolean(self.name, 'log_headers',
+            conf.get_boolean('brim', 'log_headers', False))
+        self.json_dumps = conf.get(self.name, 'json_dumps',
+            conf.get('brim', 'json_dumps', 'json.dumps'))
         try:
             mod, fnc = self.json_dumps.rsplit('.', 1)
         except ValueError:
-            raise Exception('Invalid json_dumps value %r.' % self.json_dumps)
+            raise Exception('Invalid [%s] json_dumps value %r.' %
+                            (self.name, self.json_dumps))
         try:
             self.json_dumps = getattr(__import__(mod, fromlist=[fnc]), fnc)
         except (AttributeError, ImportError):
             raise Exception(
-                'Could not load function %r for json_dumps.' % self.json_dumps)
-        self.json_loads = conf.get('brim', 'json_loads', 'json.loads')
+                'Could not load function %r for [%s] json_dumps.' %
+                (self.json_dumps, self.name))
+        self.json_loads = conf.get(self.name, 'json_loads',
+            conf.get('brim', 'json_loads', 'json.loads'))
         try:
             mod, fnc = self.json_loads.rsplit('.', 1)
         except ValueError:
-            raise Exception('Invalid json_loads value %r.' % self.json_loads)
+            raise Exception('Invalid [%s] json_loads value %r.' %
+                            (self.name, self.json_loads))
         try:
             self.json_loads = getattr(__import__(mod, fromlist=[fnc]), fnc)
         except (AttributeError, ImportError):
             raise Exception(
-                'Could not load function %r for json_loads.' % self.json_loads)
+                'Could not load function %r for [%s] json_loads.' %
+                (self.json_loads, self.name))
+        self.count_status_codes = conf.get(self.name, 'count_status_codes',
+            conf.get('brim', 'count_status_codes', '404 408 499 501'))
         try:
-            self.count_status_codes = [int(c) for c in conf.get('brim',
-                'count_status_codes', '404 408 499 501').split()]
+            self.count_status_codes = [int(c) for c in
+                self.count_status_codes.split()]
         except ValueError:
-            raise Exception('Invalid count_status_codes %r.' %
-                            conf.get('brim', 'count_status_codes'))
+            raise Exception('Invalid [%s] count_status_codes %r.' %
+                            (self.name, self.count_status_codes))
 
     def _configure_daemons(self, conf):
         """
@@ -587,7 +426,7 @@ Command (defaults to 'no-daemon'):
                      server configuration.
         """
         self.daemons = []
-        daemon_names = conf.get('brim', 'daemons', '').strip().split()
+        daemon_names = conf.get(self.name, 'daemons', '').strip().split()
         for daemon_name in daemon_names:
             call = conf.get(daemon_name, 'call')
             if not call:
@@ -622,7 +461,8 @@ Command (defaults to 'no-daemon'):
                 if args != 3:
                     raise Exception('Would not be able to use %r for daemon '
                         '%r. Incorrect number of __call__ args, %s, should be '
-                        '3 (self, server, stats).' % (call, daemon_name, args))
+                        '3 (self, subserver, stats).' %
+                        (call, daemon_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably no __call__ method.'
@@ -695,7 +535,7 @@ Command (defaults to 'no-daemon'):
                      server configuration.
         """
         self.wsgi_apps = []
-        app_names = conf.get('brim', 'wsgi', '').strip().split()
+        app_names = conf.get(self.name, 'wsgi', '').strip().split()
         for app_name in app_names:
             call = conf.get(app_name, 'call')
             if not call:
@@ -769,19 +609,11 @@ Command (defaults to 'no-daemon'):
                     self.wsgi_worker_stats_conf[stat_name] = stat_type
             self.wsgi_apps.append((app_name, app_class, app_conf))
 
-    def _start(self):
+    def _privileged_start(self):
         """
-        This is the last method run by the main brimd server
-        process. It binds the listening socket, drops privileges,
-        daemonizes if enabled (and updates the pid file), configures
-        a default logger, and then calls brim.service.sustain_workers
-        to keep a steady set of subprocesses running to actually
-        handle requests.
-
-        When sustain_workers returns (usually due to a terminate
-        signal sent to the main process) this method then closes the
-        listening socket and exits. Any existing subprocesses will
-        exit once they complete handling their existing connections.
+        Called just before dropping privileges and calling _start.
+        Should be used to bind to privileged ports and anything else
+        that might need greater privileges.
         """
         try:
             self.sock = get_listening_tcp_socket(self.ip, self.port,
@@ -790,37 +622,28 @@ Command (defaults to 'no-daemon'):
         except socket_error, err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
-        if not self.no_daemon:
-            pid = fork()
-            if pid:
-                with open(self.pid_file, 'w') as pid_file:
-                    pid_file.write('%s\n' % pid)
-                return 0
-            if not self.output:
-                capture_exceptions_stdout_stderr(
-                    exceptions=self._capture_exception,
-                    stdout_func=self._capture_stdout,
-                    stderr_func=self._capture_stderr)
-        droppriv(self.user, self.group, self.umask)
+
+    def _start(self):
+        """
+        This is the last method run by the main brimd server process.
+        """
         self.daemon_bucket_stats = \
             _BucketStats(len(self.daemons), self.daemon_stats_conf.keys())
         for code in self.count_status_codes:
             self.wsgi_worker_stats_conf['status_%d_count' % code] = 'sum'
         self.wsgi_worker_bucket_stats = _BucketStats(
             self.wsgi_worker_count or 1, self.wsgi_worker_stats_conf.keys())
-        if setproctitle:
-            setproctitle('main:brimd')
         self.start_time = int(time())
-        self.logger = get_logger('brim', self.log_name, self.log_level,
-                                 self.log_facility, self.no_daemon)
+        self.logger = get_logger(self.name, self.log_name, self.log_level,
+                                 self.log_facility, self.server.no_daemon)
         self.daemon_id = -1
-        if self.daemons and not self.no_daemon:
+        if self.daemons and not self.server.no_daemon:
             if not fork():
                 if setproctitle:
-                    setproctitle('daemon:brimd')
+                    setproctitle('daemon:%sd' % self.name)
                 sustain_workers(len(self.daemons), self._daemon,
                                 logger=self.logger)
-                return 0
+                return
         wsgi.HttpProtocol.default_request_version = 'HTTP/1.0'
         wsgi.HttpProtocol.log_request = lambda *a: None
         wsgi.HttpProtocol.log_message = \
@@ -832,47 +655,6 @@ Command (defaults to 'no-daemon'):
         if self.wsgi_worker_id == -1:
             shutdown_safe(self.sock)
             self.sock.close()
-        return 0
-
-    def _capture_exception(self, *excinfo):
-        """
-        Used by capture_exceptions_stdout_stderr to catch any
-        completely uncaught exceptions and redirect them to the
-        logger.
-        """
-        if self.daemon_id >= 0:
-            msg = 'UNCAUGHT EXCEPTION: did:%03d %s' % \
-                  (self.daemon_id, sysloggable_excinfo(*excinfo))
-        else:
-            msg = 'UNCAUGHT EXCEPTION: wid:%03d %s' % \
-                  (self.wsgi_worker_id, sysloggable_excinfo(*excinfo))
-        self.logger.error(msg)
-
-    def _capture_stdout(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard output and redirect it to the logger.
-        """
-        for line in value.split('\n'):
-            if line:
-                if self.daemon_id >= 0:
-                    msg = 'STDOUT: did:%03d %s' % (self.daemon_id, line)
-                else:
-                    msg = 'STDOUT: wid:%03d %s' % (self.wsgi_worker_id, line)
-                self.logger.info(msg)
-
-    def _capture_stderr(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard error and redirect it to the logger.
-        """
-        for line in value.split('\n'):
-            if line:
-                if self.daemon_id >= 0:
-                    msg = 'STDERR: did:%03d %s' % (self.daemon_id, line)
-                else:
-                    msg = 'STDERR: wid:%03d %s' % (self.wsgi_worker_id, line)
-                self.logger.error(msg)
 
     def _daemon(self, daemon_id):
         """
@@ -881,7 +663,7 @@ Command (defaults to 'no-daemon'):
         """
         name, cls, conf = self.daemons[daemon_id]
         if setproctitle:
-            setproctitle('%s:daemon:brimd' % name)
+            setproctitle('%s:daemon:%sd' % (name, self.name))
         self.daemon_id = daemon_id
         stats = _Stats(self.daemon_bucket_stats, daemon_id)
         stats.set('start_time', time())
@@ -895,14 +677,12 @@ Command (defaults to 'no-daemon'):
         Eventlet WSGI layer and our _wsgi_entry below).
         """
         if setproctitle:
-            if not self.wsgi_worker_count:
-                setproctitle('brimd')
-            else:
-                setproctitle('%d:wsgi:brimd' % wsgi_worker_id)
+            if not self.server.no_daemon:
+                setproctitle('%d:wsgi:%sd' % (wsgi_worker_id, self.name))
         self.wsgi_worker_id = wsgi_worker_id
         self.wsgi_worker_bucket_stats.set(wsgi_worker_id, 'start_time', time())
-        use_hub(self.eventlet_hub)
-        monkey_patch(all=False, socket=True)
+        if not self.server.no_daemon:
+            use_hub(self.eventlet_hub)
         self.first_app = self
         for app_name, app_class, app_conf in reversed(self.wsgi_apps):
             self.first_app = app_class(app_name, app_conf, self.first_app)
@@ -1022,3 +802,325 @@ Command (defaults to 'no-daemon'):
             self.logger.txn = None
         except Exception:
             self.logger.exception('WSGI EXCEPTION:')
+
+
+class Server(object):
+    """
+    The main class for the Brim.Net WSGI Server. This is written
+    mostly to be used by bin/brimd and still be reasonably
+    testable. Few daemons or WSGI apps need to access this directly
+    but some, like brim.stats.Stats do. Here are the contents of
+    bin/brimd::
+
+        #!/usr/bin/env python
+        import sys
+        from brim.server import Server
+        sys.exit(Server().main())
+
+    :param args: Command line arguments for the server, without the
+                 process name. Defaults to sys.argv[1:]
+    :param stdin: The file-like object to treat as standard input.
+                  Defaults to sys.stdin.
+    :param stdout: The file-like object to treat as standard output.
+                   Defaults to sys.stdout.
+    :param stderr: The file-like object to treat as standard error.
+                   Defaults to sys.stderr.
+    """
+
+    def __init__(self, args=None, stdin=None, stdout=None, stderr=None):
+        self.args = args
+        if self.args is None:
+            self.args = sys_argv[1:]
+        self.stdin = stdin
+        if self.stdin is None:
+            self.stdin = sys_stdin
+        self.stdout = stdout
+        if self.stdout is None:
+            self.stdout = sys_stdout
+        self.stderr = stderr
+        if self.stderr is None:
+            self.stderr = sys_stderr
+        self.subservers = []
+
+    def main(self):
+        """
+        Performs the brimd actions (start, stop, restart,
+        shutdown, etc.) determined by the command line arguments
+        given in the constructor. Usage can be read from ``brimd
+        --help``.
+
+        :returns: An integer exit code suitable for returning with
+                  sys.exit.
+        """
+        try:
+            conf = self._parse_args()
+            if not conf:
+                return 0
+            self._parse_conf(conf)
+            for subserver in self.subservers:
+                if subserver:
+                    subserver._configure_daemons(conf)
+                    subserver._configure_wsgi_apps(conf)
+            self._start()
+            return 0
+        except Exception, err:
+            raise
+            self.stderr.write('%s\n' % err)
+            self.stderr.flush()
+            return 1
+
+    def _parse_args(self):
+        """
+        This is where the translation and initial reaction to the
+        command line is done.
+
+        :returns: None if no further action is necessary or a
+                  brim.conf.Conf instance if the server should be
+                  started.
+        """
+        parser = OptionParser(add_help_option=False, usage="""
+Usage: %%prog [options] [command]
+
+Brim.Net Core Server %s
+
+Command (defaults to 'no-daemon'):
+
+  start                 Starts brimd if it isn't already running.
+  restart               Starts a new brimd which will wait for any previously
+                        existing one to release the listening port(s) and then
+                        tells any previously existing brimd to shutdown.
+  shutdown              Immediately releases the listening port(s) and the main
+                        process exits. Any subprocesses will continue to serve
+                        any existing connections and then exit once those
+                        connections close.
+  stop                  Terminates brimd immediately, severing any existing
+                        connections and therefore any in-progress requests.
+  status                Displays whether brimd is currently running or not.
+  reload                Same as restart.
+  force-reload          Same as restart.
+  no-daemon             Starts the server in the foreground with no
+                        subprocesses, PID files are ignored and not created,
+                        and output will go to stdout and stderr. Note that only
+                        WSGI apps will be started and no daemons. This can
+                        be useful for debugging.
+            """.strip() % brim.version)
+        parser.add_option('-?', '-h', '--help', dest='help',
+            action='store_true', default=False,
+            help='Outputs this help information.')
+        parser.add_option('-c', '--conf', action='append', dest='conf_files',
+            metavar='PATH',
+            help='By default, /etc/brim/brimd.conf and ~/.brimd.conf '
+                 'are read for configuration. You may override this by '
+                 'specifying a specific conf file with -c. This option may be '
+                 'specified more than once and the conf files will each be '
+                 'read in order.')
+        parser.add_option('-p', '--pid-file', dest='pid_file',
+            default='/var/run/brimd.pid', metavar='PATH',
+            help='The path to the file to store the PID of the running main '
+                 'brimd process.')
+        parser.add_option('-o', '--output', dest='output',
+            action='store_true', default=False,
+            help='When running as a daemon brimd will normally close '
+                 'standard input, output, and error; this option will leave '
+                 'them open, which can be useful for debugging.')
+        parser.add_option('-v', '--version', dest='version',
+            action='store_true', default=False,
+            help='Displays the version of brimd.')
+
+        def _parser_error(msg):
+            raise Exception(msg)
+
+        parser.error = _parser_error
+        options, args = parser.parse_args(self.args)
+        if options.help:
+            parser.print_help(self.stdout)
+            return 0
+        if len(args) > 1:
+            raise Exception('Too many commands given; only one allowed.')
+        if options.version:
+            print >>self.stdout, 'Brim.Net Core Server', brim.version
+            return 0
+        if not options.conf_files:
+            options.conf_files = DEFAULT_CONF_FILES
+        self.pid_file = options.pid_file
+        self.output = options.output
+        command = args[0] if args else 'no-daemon'
+        self.no_daemon = command == 'no-daemon'
+        if command == 'start':
+            success, pid = _send_pid_sig(self.pid_file, 0)
+            if success:
+                print >>self.stdout, '%s already running' % pid
+            else:
+                conf = read_conf(options.conf_files)
+                if not conf.files:
+                    raise Exception('No configuration found.')
+                return conf
+        elif command in ('restart', 'reload', 'force-reload'):
+            conf = read_conf(options.conf_files)
+            if not conf.files:
+                raise Exception('No configuration found.')
+            success, pid = _send_pid_sig(self.pid_file, 0)
+            # If brimd is already running, we fork a child to shut it down
+            # after a second so we, as the new brimd, can grab the port.
+            if success and not fork():
+                sleep(1)
+                _send_pid_sig(self.pid_file, SIGHUP, expect_exit=True,
+                              pid_override=pid)
+                return None
+            else:
+                return conf
+        elif command == 'shutdown':
+            _send_pid_sig(self.pid_file, SIGHUP, expect_exit=True)
+        elif command == 'stop':
+            _send_pid_sig(self.pid_file, SIGTERM, expect_exit=True)
+        elif command == 'status':
+            success, pid = _send_pid_sig(self.pid_file, 0)
+            if success:
+                print >>self.stdout, '%s is running' % pid
+            elif pid:
+                print >>self.stdout, '%s is not running' % pid
+            else:
+                print >>self.stdout, 'not running'
+        elif command == 'no-daemon':
+            conf = read_conf(options.conf_files)
+            if not conf.files:
+                raise Exception('No configuration found.')
+            return conf
+        else:
+            raise Exception('Unknown command %r.' % command)
+        return None
+
+    def _parse_conf(self, conf):
+        """
+        Translates the brim.conf.Conf configuration into instance
+        attributes for use later. This ensures we have a good
+        configuration before we try starting the server.
+
+        :param conf: The brim.conf.Conf instance for the overall
+                     server configuration.
+        """
+
+        def _conf_error(section, option, value, conversion_type, err):
+            raise Exception('Configuration value [%s] %s of %r cannot be '
+                            'converted to %s.' %
+                            (section, option, value, conversion_type))
+
+        conf.error = _conf_error
+        self.user = conf.get('brim', 'user')
+        self.group = conf.get('brim', 'group')
+        self.umask = conf.get('brim', 'umask', '0022')
+        try:
+            self.umask = int(self.umask, 8)
+        except ValueError:
+            raise Exception('Invalid umask value %r.' % self.umask)
+
+        max_subconfig = 1
+        for key in conf.store.keys():
+            if not key.startswith('brim') or not key[4:].isdigit():
+                continue
+            max_subconfig = max(max_subconfig, int(key[4:]))
+        self.subservers = [None] * max_subconfig
+
+        for key in conf.store.keys():
+            if key == 'brim':
+                subserver_index = 0
+            elif not key.startswith('brim') or not key[4:].isdigit():
+                continue
+            else:
+                subserver_index = int(key[4:]) - 1
+            if self.subservers[subserver_index]:
+                raise Exception('Multiple config sections [%s].\n' % key)
+            subserver = self.subservers[subserver_index] = Subserver(self, key)
+            subserver._parse_conf(conf)
+
+    def _start(self):
+        """
+        This is the last method run by the main brimd server
+        process. It binds the listening socket, drops privileges,
+        daemonizes if enabled (and updates the pid file), configures
+        a default logger, and then calls brim.service.sustain_workers
+        to keep a steady set of subprocesses running to actually
+        handle requests.
+
+        When sustain_workers returns (usually due to a terminate
+        signal sent to the main process) this method then closes the
+        listening socket and exits. Any existing subprocesses will
+        exit once they complete handling their existing connections.
+        """
+        for subserver in self.subservers:
+            if subserver:
+                subserver._privileged_start()
+        if not self.no_daemon:
+            pid = fork()
+            if pid:
+                with open(self.pid_file, 'w') as pid_file:
+                    pid_file.write('%s\n' % pid)
+                return 0
+            if not self.output:
+                capture_exceptions_stdout_stderr(
+                    exceptions=self._capture_exception,
+                    stdout_func=self._capture_stdout,
+                    stderr_func=self._capture_stderr)
+        droppriv(self.user, self.group, self.umask)
+        if self.no_daemon:
+            if setproctitle:
+                setproctitle('brimd')
+            use_hub(self.subservers[0].eventlet_hub)
+            pool = GreenPool()
+            coros = []
+            for subserver in self.subservers:
+                if subserver:
+                    coros.append(pool.spawn(subserver._start))
+            pool.waitall()
+            retval = max(c.wait() for c in coros)
+            return retval
+        else:
+            for subserver in self.subservers[1:]:
+                if subserver:
+                    if not fork():
+                        if setproctitle:
+                            setproctitle('wsgi:%sd' % subserver.name)
+                        return subserver._start()
+            if setproctitle:
+                setproctitle('wsgi:brimd')
+            return self.subservers[0]._start()
+
+    def _capture_exception(self, *excinfo):
+        """
+        Used by capture_exceptions_stdout_stderr to catch any
+        completely uncaught exceptions and redirect them to the
+        logger.
+        """
+        if self.daemon_id >= 0:
+            msg = 'UNCAUGHT EXCEPTION: did:%03d %s' % \
+                  (self.daemon_id, sysloggable_excinfo(*excinfo))
+        else:
+            msg = 'UNCAUGHT EXCEPTION: wid:%03d %s' % \
+                  (self.wsgi_worker_id, sysloggable_excinfo(*excinfo))
+        self.logger.error(msg)
+
+    def _capture_stdout(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard output and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                if self.daemon_id >= 0:
+                    msg = 'STDOUT: did:%03d %s' % (self.daemon_id, line)
+                else:
+                    msg = 'STDOUT: wid:%03d %s' % (self.wsgi_worker_id, line)
+                self.logger.info(msg)
+
+    def _capture_stderr(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard error and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                if self.daemon_id >= 0:
+                    msg = 'STDERR: did:%03d %s' % (self.daemon_id, line)
+                else:
+                    msg = 'STDERR: wid:%03d %s' % (self.wsgi_worker_id, line)
+                self.logger.error(msg)

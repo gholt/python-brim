@@ -1,6 +1,17 @@
 [brim]
+#   The following are only available in this section and not in subconfigs like
+#   [brim2], [brim3], etc.
 # additional_confs = <file-list>
 #   Will include the conf files in <file-list> with this conf. Default: ''
+# user = <name>
+#   The local user to run as. Default: <current-user>
+# group = <name>
+#   The local group to run as. Default: <default-group-of-user>
+# umask = <mask>
+#   The umask to run with. Default: 0022
+
+#   The following are available in this section and in subconfigs like [brim2],
+#   [brim3], etc.
 # wsgi = <name> [<name>] ...
 #   The names of the WSGI apps to configure. Each <name> should have a
 #   corresponding [name] section elsewhere in the configuration. See the
@@ -15,11 +26,11 @@
 #   The ip address to listen on or * to listen on all addresses. Default: *
 # port = <port>
 #   The port to listen on. Default: 80
-# user = <name>
-#   The local user to run as. Default: <current-user>
 # workers = <number>
 #   The number of subprocess workers to spawn to handle requests. Usually you
 #   want to set this to at least the number of CPU cores you have. Default: 1
+# log_name = <name>
+#   The name to send to syslog with each log line. Default: brim
 # log_level = <level>
 #   The level at which lesser log records will be suppressed. Valid values are:
 #   CRITICAL, ERROR, WARNING, NOTICE, INFO, and DEBUG. Default: INFO
@@ -37,7 +48,6 @@
 #   other 4xx codes usually indicate a problem with the client. 501 Not
 #   Implemented is usually tracked separately because it can indicate a problem
 #   with the client rather than the server unlike most other 5xx codes.
-
 # json_dumps = <func>
 #   Specifies the Python function to use for converting Python objects into
 #   JSON. This uses json.dumps by default, but you can use other faster
@@ -58,12 +68,6 @@
 # concurrent_per_worker = <number>
 #   The number of concurrent connections each worker is allowed to handle.
 #   Default: 1024
-# log_name = <name>
-#   The name to send to syslog with each log line.
-# group = <name>
-#   The local group to run as. Default: <default-group-of-user>
-# umask = <mask>
-#   The umask to run with. Default: 0022
 # backlog = <number>
 #   The number of socket connections that can be queued. Default: 4096
 # listen_retry = <seconds>
@@ -74,6 +78,15 @@
 # wsgi_input_iter_chunk_size = <bytes>
 #   The number of bytes read per chunk when the WSGI input is used as an
 #   iterator. This use case isn't very common. Default: 4096
+
+[brim2]
+#   You can have multiple sets of WSGI apps and daemons configured by adding
+#   additional [brim2], [brim3], etc. sections, mostly useful to have a
+#   separate sets of apps listening on a different ips or ports.
+#   Any settings not specified in the subsection will default to the values in
+#   the main [brim] section excepting the wsgi, daemons, and log_name settings.
+#   The wsgi and daemons settings default to no apps or daemons and log_name
+#   defaults to the [brim] log_name + the subconfig number.
 
 [stats]
 #   Reports the brimd server stats as a JSON reponse. The stats contain basic

@@ -57,22 +57,22 @@ class Stats(object):
         if env['REQUEST_METHOD'] not in ('GET', 'HEAD'):
             start_response('501 Not Implemented', [('Content-Length', '0')])
             return []
-        server = env['brim']
+        subserver = env['brim']
         body = {}
-        daemon_stats = server.daemon_bucket_stats
+        daemon_stats = subserver.daemon_bucket_stats
         for daemon_id in xrange(daemon_stats.bucket_count):
             daemon_body = {}
             for stat_name in daemon_stats.names:
                 v = daemon_stats.get(daemon_id, stat_name)
                 daemon_body[stat_name] = v
-            body['daemon_' + server.daemons[daemon_id][0]] = daemon_body
-        wsgi_worker_stats = server.wsgi_worker_bucket_stats
+            body['daemon_' + subserver.daemons[daemon_id][0]] = daemon_body
+        wsgi_worker_stats = subserver.wsgi_worker_bucket_stats
         sums = dict((n, 0) for n, t in
-                    server.wsgi_worker_stats_conf.iteritems() if t == 'sum')
+                    subserver.wsgi_worker_stats_conf.iteritems() if t == 'sum')
         mins = dict((n, maxint) for n, t in
-                    server.wsgi_worker_stats_conf.iteritems() if t == 'min')
+                    subserver.wsgi_worker_stats_conf.iteritems() if t == 'min')
         maxs = dict((n, 0) for n, t in
-                    server.wsgi_worker_stats_conf.iteritems() if t == 'max')
+                    subserver.wsgi_worker_stats_conf.iteritems() if t == 'max')
         for wsgi_worker_id in xrange(wsgi_worker_stats.bucket_count):
             wsgi_worker_body = {}
             for stat_name in wsgi_worker_stats.names:
@@ -88,7 +88,7 @@ class Stats(object):
         body.update(sums)
         body.update(mins)
         body.update(maxs)
-        body['start_time'] = server.start_time
+        body['start_time'] = subserver.start_time
         body = env['brim.json_dumps'](body) + '\n'
         start_response('200 OK', [('Content-Length', str(len(body))),
                                   ('Content-Type', 'application/json')])
