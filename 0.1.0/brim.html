@@ -1,0 +1,1637 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim &mdash; Brim.Net Core Package v0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="index.html" />
+    <link rel="prev" title="LICENSE" href="license.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="LICENSE"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-brim">
+<span id="brim"></span><span id="brim-package"></span><h1>brim<a class="headerlink" href="#module-brim" title="Permalink to this headline">¶</a></h1>
+<p>This is the core package for Brim.Net Python-based applications. It
+provides some reusable utility code and provides brimd, a launcher
+offering ease of deployment of WSGI applications (currently just
+using the Eventlet WSGI server) and maintaining background daemons.</p>
+<dl class="data">
+<dt id="brim.version_info">
+<tt class="descclassname">brim.</tt><tt class="descname">version_info</tt><a class="headerlink" href="#brim.version_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Version information <tt class="docutils literal"><span class="pre">(major,</span> <span class="pre">minor,</span> <span class="pre">revision)</span></tt>.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.version">
+<tt class="descclassname">brim.</tt><tt class="descname">version</tt><a class="headerlink" href="#brim.version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Version string <tt class="docutils literal"><span class="pre">'major.minor.revision'</span></tt>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.conf">
+<span id="brim-conf"></span><h1>brim.conf<a class="headerlink" href="#module-brim.conf" title="Permalink to this headline">¶</a></h1>
+<p>Provides a simpler way to work with configuration files by
+translating a ConfigParser-style configuration file into a simpler
+dict and then wrapping that with a Conf class providing convenient
+&#8220;get&#8221; functions that work much like dict&#8217;s &#8220;get&#8221; method (returns None
+or the default value provided if the section or option is missing).</p>
+<p>Simple Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">brim.conf</span> <span class="kn">import</span> <span class="n">read_conf</span>
+
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;/etc/myco/myapp.conf&#39;</span><span class="p">,</span> <span class="s">&#39;~/.myapp.conf&#39;</span><span class="p">])</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">conf</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;No configuration found.&#39;</span><span class="p">)</span>
+<span class="n">port</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;server&#39;</span><span class="p">,</span> <span class="s">&#39;port&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+<span class="k">print</span> <span class="s">&#39;Using port&#39;</span><span class="p">,</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>By default, any errors parsing the conf files or converting values
+will call sys.exit with an explanatory message. But you can override
+these behaviors by setting exit_on_read_exception to False and
+setting the Conf.error method to your own method.</p>
+<p>More Complex Example With Overrides:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">ConfigParser</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">brim.conf</span> <span class="kn">import</span> <span class="n">read_conf</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;/etc/myco/myapp.conf&#39;</span><span class="p">,</span> <span class="s">&#39;~/.myapp.conf&#39;</span><span class="p">],</span>
+                     <span class="n">exit_on_read_exception</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">ConfigParser</span><span class="o">.</span><span class="n">Error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;Config read error: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">conf</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+    <span class="nb">exit</span><span class="p">(</span><span class="s">&#39;No configuration found.&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">custom_error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Configuration value [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s"> of </span><span class="si">%r</span><span class="s"> cannot be &#39;</span>
+                    <span class="s">&#39;converted to </span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">))</span>
+
+<span class="n">conf</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">custom_error</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;wsgi_server&#39;</span><span class="p">,</span> <span class="s">&#39;port&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;Config conversion error: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+<span class="k">print</span> <span class="s">&#39;Using port&#39;</span><span class="p">,</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>Another feature of read_conf is that if a conf file has a [brim]
+additional_confs setting, the files listed there will also be parsed.
+This lets an end user make a conf file to be included by one or more
+other conf files. Splitting configuration like this can make
+deployment to clusters easier. For example:</p>
+<div class="highlight-python"><pre>[brim]
+additional_confs = /etc/common.conf "/another file.conf" ~/.common.conf</pre>
+</div>
+<dl class="class">
+<dt id="brim.conf.Conf">
+<em class="property">class </em><tt class="descclassname">brim.conf.</tt><tt class="descname">Conf</tt><big>(</big><em>store</em>, <em>files=None</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Wraps a dict of conf sections, each value a dict of conf options,
+each value the actual value of the section/option within the
+conf. The list of file names the configuration was read from may
+optionally be stored.</p>
+<p>The usual way to use Conf after instantiation is just through the
+&#8220;get&#8221; methods, but direct access to the store dict and the files
+list is also supported.</p>
+<p>Normally Conf instances are created with the global func
+<a class="reference internal" href="#brim.conf.read_conf" title="brim.conf.read_conf"><tt class="xref py py-func docutils literal"><span class="pre">read_conf()</span></tt></a> but you can construct Conf instances
+directly as well:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># Normally...</span>
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;/etc/myco/myapp.conf&#39;</span><span class="p">,</span> <span class="s">&#39;~/.myapp.conf&#39;</span><span class="p">])</span>
+
+<span class="c"># Directly...</span>
+<span class="n">conf</span> <span class="o">=</span> <span class="n">Conf</span><span class="p">({</span>
+    <span class="s">&#39;section1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;option1.1&#39;</span><span class="p">:</span> <span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="s">&#39;option1.2&#39;</span><span class="p">:</span> <span class="s">&#39;b&#39;</span><span class="p">},</span>
+    <span class="s">&#39;section2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;option2.1&#39;</span><span class="p">:</span> <span class="s">&#39;c&#39;</span><span class="p">,</span> <span class="s">&#39;option2.2&#39;</span><span class="p">:</span> <span class="s">&#39;d&#39;</span><span class="p">}})</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>store</strong> &#8211; A dict representing the configuration, as described
+above.</li>
+<li><strong>files</strong> &#8211; Optional list of file names the configuration was
+read from.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="brim.conf.Conf.error">
+<tt class="descname">error</tt><big>(</big><em>section</em>, <em>option</em>, <em>value</em>, <em>conversion_type</em>, <em>err</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is called when one of the &#8220;get&#8221; methods cannot
+convert a value. By default, this method will call sys.exit
+with an explanatory message, but you can override it by
+setting Conf.error to another method.</p>
+<p>An example of overriding to raise an Exception:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">_error</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">conversion_type</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Configuration value [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s"> of </span><span class="si">%r</span><span class="s"> &#39;</span>
+                    <span class="s">&#39;cannot be converted to </span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span>
+                     <span class="n">conversion_type</span><span class="p">))</span>
+
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">([</span><span class="s">&#39;some.conf&#39;</span><span class="p">])</span>
+<span class="n">conf</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">_error</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf that was
+read.</li>
+<li><strong>option</strong> &#8211; The option name within the section that was
+read.</li>
+<li><strong>value</strong> &#8211; The str value read and failed conversion.</li>
+<li><strong>conversion_type</strong> &#8211; The name of the type of conversion
+that failed, such as <tt class="docutils literal"><span class="pre">'boolean'</span></tt>,
+<tt class="docutils literal"><span class="pre">'int'</span></tt>, or <tt class="docutils literal"><span class="pre">'float'</span></tt>.</li>
+<li><strong>err</strong> &#8211; The Exception that was raised, if any, during the
+conversion.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.conf.Conf.files">
+<tt class="descname">files</tt><a class="headerlink" href="#brim.conf.Conf.files" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of source conf file names the conf was read from.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get">
+<tt class="descname">get</tt><big>(</big><em>section</em>, <em>option</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the value of the section/option in the conf store or
+the default value given (or None) if the section/option does
+not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get_boolean">
+<tt class="descname">get_boolean</tt><big>(</big><em>section</em>, <em>option</em>, <em>default</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get_boolean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get_boolean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the boolean value of the section/option in the conf
+store or the default value given if the section/option does
+not exist.</p>
+<p>This will call <a class="reference internal" href="#brim.conf.Conf.error" title="brim.conf.Conf.error"><tt class="xref py py-func docutils literal"><span class="pre">error()</span></tt></a> if the value cannot be
+converted to a boolean.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get_float">
+<tt class="descname">get_float</tt><big>(</big><em>section</em>, <em>option</em>, <em>default</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get_float"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get_float" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the float value of the section/option in the conf
+store or the default value given if the section/option does
+not exist.</p>
+<p>This will call <a class="reference internal" href="#brim.conf.Conf.error" title="brim.conf.Conf.error"><tt class="xref py py-func docutils literal"><span class="pre">error()</span></tt></a> if the value cannot be
+converted to a float.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.conf.Conf.get_int">
+<tt class="descname">get_int</tt><big>(</big><em>section</em>, <em>option</em>, <em>default</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#Conf.get_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.Conf.get_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the int value of the section/option in the conf store
+or the default value given if the section/option does not
+exist.</p>
+<p>This will call <a class="reference internal" href="#brim.conf.Conf.error" title="brim.conf.Conf.error"><tt class="xref py py-func docutils literal"><span class="pre">error()</span></tt></a> if the value cannot be
+converted to an int.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The section name within the conf to read.</li>
+<li><strong>option</strong> &#8211; The option name within the section to read.</li>
+<li><strong>default</strong> &#8211; The default value to return if the section or
+option does not exist or is set to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.conf.Conf.store">
+<tt class="descname">store</tt><a class="headerlink" href="#brim.conf.Conf.store" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dict of conf sections, each value a dict of conf
+options, each value the actual value of the section/option
+within the conf.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.conf.read_conf">
+<tt class="descclassname">brim.conf.</tt><tt class="descname">read_conf</tt><big>(</big><em>conf_files</em>, <em>exit_on_read_exception=True</em><big>)</big><a class="reference internal" href="_modules/brim/conf.html#read_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.conf.read_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new Conf instance based on the results from reading the
+conf_files into a ConfigParser.SafeConfigParser.</p>
+<p>Note that if the parser does not have access to read a given file
+it will act as if it did not exist.</p>
+<p>If a conf file has a [brim] additional_confs setting, the
+files listed there will also be parsed.</p>
+<p>You may wish to check the Conf.files list to determine which
+files, if any, were read to form the Conf instance.</p>
+<p>On a parser error, this will call sys.exit with an explanatory
+message by default. If you set exit_on_read_exception to False,
+the ConfigParser.Error will be raised instead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conf_files</strong> &#8211; A list of conf files to read and translate, in
+order. Therefore, values in files further into
+the list will override any values from prior
+files. File names may use the ~/filename or
+~user/filename format and will be expanded
+with os.path.expanduser.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.conf.TRUE_VALUES">
+<tt class="descclassname">brim.conf.</tt><tt class="descname">TRUE_VALUES</tt><a class="headerlink" href="#brim.conf.TRUE_VALUES" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of str values that equate to True, all lowercase.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.conf.FALSE_VALUES">
+<tt class="descclassname">brim.conf.</tt><tt class="descname">FALSE_VALUES</tt><a class="headerlink" href="#brim.conf.FALSE_VALUES" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of str values that equate to False, all lowercase.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.echo">
+<span id="brim-echo"></span><h1>brim.echo<a class="headerlink" href="#module-brim.echo" title="Permalink to this headline">¶</a></h1>
+<p>Contains a simple WSGI application that just echoes the request body
+back in the response. This is a good starting point for other WSGI
+applications. See the source for what&#8217;s implemented and why.</p>
+<p>See <a class="reference internal" href="#brim.echo.Echo.parse_conf" title="brim.echo.Echo.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">Echo.parse_conf()</span></tt></a> for configuration options.</p>
+<dl class="class">
+<dt id="brim.echo.Echo">
+<em class="property">class </em><tt class="descclassname">brim.echo.</tt><tt class="descname">Echo</tt><big>(</big><em>name</em>, <em>parsed_conf</em>, <em>next_app</em><big>)</big><a class="reference internal" href="_modules/brim/echo.html#Echo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.echo.Echo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A simple WSGI application that just echoes the request body back
+in the response. This is a good starting point for other WSGI
+applications. See the source for what&#8217;s implemented and why.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+the overall configuration for the WSGI server.</li>
+<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.echo.Echo.parse_conf" title="brim.echo.Echo.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>next_app</strong> &#8211; The next WSGI app in the chain.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="brim.echo.Echo.parse_conf">
+<em class="property">classmethod </em><tt class="descname">parse_conf</tt><big>(</big><em>name</em>, <em>conf</em><big>)</big><a class="reference internal" href="_modules/brim/echo.html#Echo.parse_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.echo.Echo.parse_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates the overall WSGI server configuration into an
+app-specific configuration dict suitable for passing as
+<tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in the Echo constructor.</p>
+<p>Sample Configuration File:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">echo</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">echo</span><span class="o">.</span><span class="n">Echo</span>
+<span class="c"># path = &lt;path&gt;</span>
+<span class="c">#   The request path to match and serve; any other paths</span>
+<span class="c">#   will be passed on to the next WSGI app in the chain.</span>
+<span class="c">#   Default: /echo</span>
+<span class="c"># max_echo = &lt;bytes&gt;</span>
+<span class="c">#   The maximum bytes to echo; any additional bytes will</span>
+<span class="c">#   be ignored. Default: 65536</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
+in the overall configuration for the WSGI
+server.</li>
+<li><strong>conf</strong> &#8211; The brim.conf.Conf instance representing the
+overall configuration of the WSGI server.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+the Echo constructor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="brim.echo.Echo.stats_conf">
+<em class="property">classmethod </em><tt class="descname">stats_conf</tt><big>(</big><em>name</em>, <em>parsed_conf</em><big>)</big><a class="reference internal" href="_modules/brim/echo.html#Echo.stats_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.echo.Echo.stats_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of (stat_name, stat_type) pairs that specifies
+the stat variables this app wants established. stat_name is
+the str name of the stat and stat_type is one of the
+following:</p>
+<p>worker</p>
+<blockquote>
+<div>Indicates a worker only stat. No overall stat will be
+reported.</div></blockquote>
+<p>sum</p>
+<blockquote>
+<div>Indicates an overall stat should be reported that is a
+sum of the stat from all workers.</div></blockquote>
+<p>min</p>
+<blockquote>
+<div>Indicates an overall stat should be reported that is the
+smallest value of the stat from all workers.</div></blockquote>
+<p>max</p>
+<blockquote>
+<div>Indicates an overall stat should be reported that is the
+largest value of the stat from all workers.</div></blockquote>
+<p>Within the app itself, these stats can be accessed through
+the object at <tt class="docutils literal"><span class="pre">env['brim.stats']</span></tt>. This object will
+support the following methods:</p>
+<p>get(&lt;name&gt;)</p>
+<blockquote>
+<div>Return the int value of the stat &lt;name&gt;.</div></blockquote>
+<p>set(&lt;name&gt;, value)</p>
+<blockquote>
+<div>Sets the value of the stat &lt;name&gt;. The value will be
+treated as an unsigned integer.</div></blockquote>
+<p>incr(&lt;name&gt;)</p>
+<blockquote>
+<div>Increments the value of the stat &lt;name&gt; by 1.</div></blockquote>
+<p>Retreiving stats can be accomplished through WSGI apps like
+brim.stats.Stats.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
+in the overall configuration for the WSGI
+server.</li>
+<li><strong>parsed_conf</strong> &#8211; The conf result from
+<a class="reference internal" href="#brim.echo.Echo.parse_conf" title="brim.echo.Echo.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list of (stat_name, stat_type) pairs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.http">
+<span id="brim-http"></span><h1>brim.http<a class="headerlink" href="#module-brim.http" title="Permalink to this headline">¶</a></h1>
+<p>Contains utility classes for responding to WSGI requests. This isn&#8217;t
+WebOb <a class="reference external" href="http://www.webob.org/">http://www.webob.org/</a> but sometimes it&#8217;s enough and you should
+be able to upgrade easily to WebOb once you do need it.</p>
+<p>Much like webob.exc there are classes for standard HTTP responses,
+such as <a class="reference internal" href="#brim.http.HTTPNotFound" title="brim.http.HTTPNotFound"><tt class="xref py py-class docutils literal"><span class="pre">HTTPNotFound</span></tt></a> for 404. Continuing with webob.exc
+similarities, these classes are all subclasses of
+<a class="reference internal" href="#brim.http.HTTPException" title="brim.http.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">HTTPException</span></tt></a> and therefore can be raised and caught as
+well as used as WSGI apps. The 2xx classes are all subclasses of
+<a class="reference internal" href="#brim.http.HTTPOk" title="brim.http.HTTPOk"><tt class="xref py py-class docutils literal"><span class="pre">HTTPOk</span></tt></a>, 3xx subclasses of <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">HTTPRedirection</span></tt></a>,
+4xx subclasses of <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPClientError</span></tt></a>, and 5xx subclasses of
+<a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPServerError</span></tt></a>. <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPClientError</span></tt></a> and
+<a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPServerError</span></tt></a> also both subclass <a class="reference internal" href="#brim.http.HTTPError" title="brim.http.HTTPError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPError</span></tt></a>,
+like webob.exc.</p>
+<p>Instead of a Request object, this package just provides some simpler
+classes and functions, like <a class="reference internal" href="#brim.http.QueryParser" title="brim.http.QueryParser"><tt class="xref py py-class docutils literal"><span class="pre">QueryParser</span></tt></a> and
+<a class="reference internal" href="#brim.http.get_header_int" title="brim.http.get_header_int"><tt class="xref py py-func docutils literal"><span class="pre">get_header_int()</span></tt></a>, and some replacement functions like
+<a class="reference internal" href="#brim.http.quote" title="brim.http.quote"><tt class="xref py py-func docutils literal"><span class="pre">quote()</span></tt></a> (it&#8217;s Unicode-safe by using UTF8).</p>
+<dl class="data">
+<dt id="brim.http.CODE2NAME">
+<tt class="descclassname">brim.http.</tt><tt class="descname">CODE2NAME</tt><a class="headerlink" href="#brim.http.CODE2NAME" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates an HTTP status code to an English status reason string,
+such as CODE2NAME[201] = &#8216;Created&#8217;.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPAccepted">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPAccepted</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPAccepted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPAccepted" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPAlreadyReported">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPAlreadyReported</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPAlreadyReported"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPAlreadyReported" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPBadGateway">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPBadGateway</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPBadGateway"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPBadGateway" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.http.HTTPBadRequest">
+<tt class="descclassname">brim.http.</tt><tt class="descname">HTTPBadRequest</tt><a class="headerlink" href="#brim.http.HTTPBadRequest" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPClientError">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPClientError</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=400</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPClientError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPClientError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPError" title="brim.http.HTTPError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPConflict">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPConflict</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPConflict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPConflict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPContinue">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPContinue</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=100</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPContinue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPContinue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPInformational" title="brim.http.HTTPInformational"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPInformational</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPCreated">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPCreated</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPCreated"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPCreated" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPError">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPError</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=500</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPException" title="brim.http.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPException">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPException</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=500</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>Root class of all brim.http response classes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>body</strong> &#8211; The body of the response. If the body has a length
+(as determined by len(body)) and the headers don&#8217;t
+have a content-length or transfer-encoding, the
+content-length will be set the body&#8217;s length.</li>
+<li><strong>headers</strong> &#8211; A dict of the headers to include in the response.</li>
+<li><strong>code</strong> &#8211; The HTTP response code to give; defaults to 500.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPExpectationFailed">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPExpectationFailed</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPExpectationFailed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPExpectationFailed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPFailedDependency">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPFailedDependency</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPFailedDependency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPFailedDependency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPForbidden">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPForbidden</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPForbidden"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPForbidden" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPFound">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPFound</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=302</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPFound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPFound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPGatewayTimeout">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPGatewayTimeout</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPGatewayTimeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPGatewayTimeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPGone">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPGone</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPGone"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPGone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPHTTPVersionNotSupported">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPHTTPVersionNotSupported</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPHTTPVersionNotSupported"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPHTTPVersionNotSupported" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPIMUsed">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPIMUsed</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPIMUsed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPIMUsed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPInformational">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPInformational</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=100</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPInformational"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPInformational" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPException" title="brim.http.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPInsufficientStorage">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPInsufficientStorage</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPInsufficientStorage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPInsufficientStorage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.http.HTTPInternalServerError">
+<tt class="descclassname">brim.http.</tt><tt class="descname">HTTPInternalServerError</tt><a class="headerlink" href="#brim.http.HTTPInternalServerError" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPLengthRequired">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPLengthRequired</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPLengthRequired"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPLengthRequired" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPLocked">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPLocked</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPLocked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPLocked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPLoopDetected">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPLoopDetected</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPLoopDetected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPLoopDetected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPMethodNotAllowed">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPMethodNotAllowed</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPMethodNotAllowed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPMethodNotAllowed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPMovedPermanently">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPMovedPermanently</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=301</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPMovedPermanently"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPMovedPermanently" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPMultiStatus">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPMultiStatus</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPMultiStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPMultiStatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.http.HTTPMultipleChoices">
+<tt class="descclassname">brim.http.</tt><tt class="descname">HTTPMultipleChoices</tt><a class="headerlink" href="#brim.http.HTTPMultipleChoices" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNoContent">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNoContent</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNoContent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNoContent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNonAuthoritativeInformation">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNonAuthoritativeInformation</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNonAuthoritativeInformation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNonAuthoritativeInformation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNotAcceptable">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNotAcceptable</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNotAcceptable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNotAcceptable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNotExtended">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNotExtended</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNotExtended"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNotExtended" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNotFound">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNotFound</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNotFound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNotFound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNotImplemented">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNotImplemented</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNotImplemented"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNotImplemented" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPNotModified">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPNotModified</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=304</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPNotModified"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPNotModified" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.http.HTTPOK">
+<tt class="descclassname">brim.http.</tt><tt class="descname">HTTPOK</tt><a class="headerlink" href="#brim.http.HTTPOK" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.http.HTTPOk">
+<tt class="descclassname">brim.http.</tt><tt class="descname">HTTPOk</tt><a class="headerlink" href="#brim.http.HTTPOk" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPPartialContent">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPPartialContent</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPPartialContent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPPartialContent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPPaymentRequired">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPPaymentRequired</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPPaymentRequired"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPPaymentRequired" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPPreconditionFailed">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPPreconditionFailed</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPPreconditionFailed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPPreconditionFailed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPProcessing">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPProcessing</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=102</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPProcessing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPProcessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPInformational" title="brim.http.HTTPInformational"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPInformational</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPProxyAuthenticationRequired">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPProxyAuthenticationRequired</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPProxyAuthenticationRequired"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPProxyAuthenticationRequired" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPRedirection">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPRedirection</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=300</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPRedirection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPRedirection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPException" title="brim.http.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPRequestEntityTooLarge">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPRequestEntityTooLarge</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPRequestEntityTooLarge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPRequestEntityTooLarge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPRequestTimeout">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPRequestTimeout</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPRequestTimeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPRequestTimeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPRequestURITooLong">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPRequestURITooLong</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPRequestURITooLong"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPRequestURITooLong" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPRequestedRangeNotSatisfiable">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPRequestedRangeNotSatisfiable</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPRequestedRangeNotSatisfiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPRequestedRangeNotSatisfiable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPResetContent">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPResetContent</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPResetContent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPResetContent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPSuccess" title="brim.http.HTTPSuccess"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPSuccess</span></tt></a></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="brim.http.HTTPResponse">
+<tt class="descclassname">brim.http.</tt><tt class="descname">HTTPResponse</tt><a class="headerlink" href="#brim.http.HTTPResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#brim.http.HTTPException" title="brim.http.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">HTTPException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPSeeOther">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPSeeOther</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=303</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPSeeOther"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPSeeOther" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPServerError">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPServerError</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=500</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPServerError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPServerError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPError" title="brim.http.HTTPError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPServiceUnavailable">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPServiceUnavailable</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPServiceUnavailable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPServiceUnavailable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPSuccess">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPSuccess</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=200</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPSuccess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPSuccess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPException" title="brim.http.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPSwitchingProtocols">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPSwitchingProtocols</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=101</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPSwitchingProtocols"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPSwitchingProtocols" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPInformational" title="brim.http.HTTPInformational"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPInformational</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPTemporaryRedirect">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPTemporaryRedirect</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=307</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPTemporaryRedirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPTemporaryRedirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPUnauthorized">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPUnauthorized</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPUnauthorized"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPUnauthorized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPUnprocessableEntity">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPUnprocessableEntity</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPUnprocessableEntity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPUnprocessableEntity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPUnsupportedMediaType">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPUnsupportedMediaType</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPUnsupportedMediaType"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPUnsupportedMediaType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPUpgradeRequired">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPUpgradeRequired</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPUpgradeRequired"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPUpgradeRequired" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPClientError" title="brim.http.HTTPClientError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPClientError</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPUseProxy">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPUseProxy</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=305</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPUseProxy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPUseProxy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPRedirection" title="brim.http.HTTPRedirection"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPRedirection</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.http.HTTPVariantAlsoNegotiates">
+<em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPVariantAlsoNegotiates</tt><big>(</big><em>body=None</em>, <em>headers=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#HTTPVariantAlsoNegotiates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.HTTPVariantAlsoNegotiates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#brim.http.HTTPServerError" title="brim.http.HTTPServerError"><tt class="xref py py-class docutils literal"><span class="pre">brim.http.HTTPServerError</span></tt></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="brim.http.QueryParser">
+<em class="property">class </em><tt class="descclassname">brim.http.</tt><tt class="descname">QueryParser</tt><big>(</big><em>query_string=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#QueryParser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.QueryParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Parses an HTTP query string and provides convenient retrieval
+methods for parameter values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query_string</strong> &#8211; The HTTP query string, such as in a WSGI
+env[&#8216;QUERY_STRING&#8217;]. If using something
+other than WSGI&#8217;s QUERY_STRING, be sure you
+do <strong>not</strong> include the question mark that
+separates the path?query string or it will
+be translated as the first character of the
+first parameter.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="brim.http.QueryParser.get">
+<tt class="descname">get</tt><big>(</big><em>name</em>, <em>default=None</em>, <em>last_only=True</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#QueryParser.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.QueryParser.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the value of the query parameter, or the default
+value if the parameter does not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> &#8211; The default value if the parameter does not
+exist.</li>
+<li><strong>last_only</strong> &#8211; If True (the default), only the last value
+of the parameter will be returned if the
+parameter is specified multiple times. If
+False, all values will be returned in a
+list (even if there is only one value).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.http.QueryParser.get_boolean">
+<tt class="descname">get_boolean</tt><big>(</big><em>name</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#QueryParser.get_boolean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.QueryParser.get_boolean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the boolean value of the query parameter, or the
+default value if the parameter does not exist.</p>
+<p>If the parameter is included in the query string, but has no
+value (such as ?param), then <tt class="docutils literal"><span class="pre">not</span> <span class="pre">default</span></tt> will be
+returned.</p>
+<p>Otherwise, the parameter value will be checked against known
+TRUE_VALUES and FALSE_VALUES for translation, or
+HTTPBadRequest will be raised if the value cannot be
+translated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> &#8211; The default value if the parameter does not
+exist.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.http.QueryParser.get_float">
+<tt class="descname">get_float</tt><big>(</big><em>name</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#QueryParser.get_float"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.QueryParser.get_float" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the float value of the query parameter, or the
+default value if the parameter does not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> &#8211; The default value if the parameter does not
+exist or has no value.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brim.http.QueryParser.get_int">
+<tt class="descname">get_int</tt><big>(</big><em>name</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#QueryParser.get_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.QueryParser.get_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the int value of the query parameter, or the default
+value if the parameter does not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> &#8211; The default value if the parameter does not
+exist or has no value.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.http.get_header_int">
+<tt class="descclassname">brim.http.</tt><tt class="descname">get_header_int</tt><big>(</big><em>env</em>, <em>name</em>, <em>default=None</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#get_header_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.get_header_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the int value of an HTTP header.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>env</strong> &#8211; Standard WSGI env to read from.</li>
+<li><strong>name</strong> &#8211; The name of the header to retrieve.</li>
+<li><strong>default</strong> &#8211; If specified, the default value will be used if
+the header cannot be found. If not specified, the
+header value will be considered required, and
+HTTPBadRequest will be raised if the header is
+missing.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The int value of the header, or raises HTTPBadRequest
+if the header can&#8217;t be translated to an integer or if
+the header is missing and required.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.http.quote">
+<tt class="descclassname">brim.http.</tt><tt class="descname">quote</tt><big>(</big><em>value</em>, <em>safe='/'</em><big>)</big><a class="reference internal" href="_modules/brim/http.html#quote"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.http.quote" title="Permalink to this definition">¶</a></dt>
+<dd><p>Patched version of urllib.quote that encodes UTF8 strings before
+quoting.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.log">
+<span id="brim-log"></span><h1>brim.log<a class="headerlink" href="#module-brim.log" title="Permalink to this headline">¶</a></h1>
+<p>Provides logging utilities for brimd; normally you don&#8217;t need to
+use this module directly as the active logger itself is passed via
+the WSGI <tt class="docutils literal"><span class="pre">env['brim.logger']</span></tt> value.</p>
+<dl class="function">
+<dt id="brim.log.get_logger">
+<tt class="descclassname">brim.log.</tt><tt class="descname">get_logger</tt><big>(</big><em>route</em>, <em>name</em>, <em>level</em>, <em>facility</em>, <em>console</em><big>)</big><a class="reference internal" href="_modules/brim/log.html#get_logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.log.get_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a logging.Logger based on the information given.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>route</strong> &#8211; The str log route, which is often the same as the
+name but does not have to be. Think of this as the
+key for the logger in source code.</li>
+<li><strong>name</strong> &#8211; The str log name, this is the name sent to the
+underlying log system. Think of this as the display
+name for the logger.</li>
+<li><strong>level</strong> &#8211; The str log level for which any records at or above
+the level will be sent to the underlying log
+system. Any records below the level will be
+discarded.</li>
+<li><strong>facility</strong> &#8211; If the underlying log system supports it, such
+as syslog, this str facility value can help
+direct the system where to store the records.</li>
+<li><strong>console</strong> &#8211; If set True, the underlying log system will
+simply be to sys.stdout. This can be useful for
+debugging. Normally you&#8217;ll want to set this False
+so the log records are sent to syslog.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A configured logging.Logger.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.log.NOTICE">
+<tt class="descclassname">brim.log.</tt><tt class="descname">NOTICE</tt><a class="headerlink" href="#brim.log.NOTICE" title="Permalink to this definition">¶</a></dt>
+<dd><p>An additional log level patched into the standard logging levels;
+this level is to be used for logging HTTP requests only so that it
+can be easily filtered on to form access logs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.log.sysloggable_excinfo">
+<tt class="descclassname">brim.log.</tt><tt class="descname">sysloggable_excinfo</tt><big>(</big><em>*excinfo</em><big>)</big><a class="reference internal" href="_modules/brim/log.html#sysloggable_excinfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.log.sysloggable_excinfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns exception information as a string suitable for sending to
+syslog (no newlines, the exception type and message first in case
+the line is truncated, etc.).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>excinfo</strong> &#8211; The exception info (exctype, value, traceback)
+such as returned with sys.exc_info.</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body">A str represention suitable for syslog.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.sample_daemon">
+<span id="brim-sample-daemon"></span><h1>brim.sample_daemon<a class="headerlink" href="#module-brim.sample_daemon" title="Permalink to this headline">¶</a></h1>
+<p>Contains a simple daemon that just logs a status line every so often.
+This can be a good starting point for other daemons. See the source
+for what&#8217;s implemented and why.</p>
+<p>See <a class="reference internal" href="#brim.sample_daemon.SampleDaemon.parse_conf" title="brim.sample_daemon.SampleDaemon.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">SampleDaemon.parse_conf()</span></tt></a> for configuration options.</p>
+<dl class="class">
+<dt id="brim.sample_daemon.SampleDaemon">
+<em class="property">class </em><tt class="descclassname">brim.sample_daemon.</tt><tt class="descname">SampleDaemon</tt><big>(</big><em>name</em>, <em>parsed_conf</em><big>)</big><a class="reference internal" href="_modules/brim/sample_daemon.html#SampleDaemon"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.sample_daemon.SampleDaemon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A simple daemon that just logs a status line every so often. This
+can be a good starting point for other daemons. See the source
+for what&#8217;s implemented and why.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the daemon, indicates the daemon&#8217;s
+section in the overall configuration for the WSGI
+server.</li>
+<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.sample_daemon.SampleDaemon.parse_conf" title="brim.sample_daemon.SampleDaemon.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="brim.sample_daemon.SampleDaemon.parse_conf">
+<em class="property">classmethod </em><tt class="descname">parse_conf</tt><big>(</big><em>name</em>, <em>conf</em><big>)</big><a class="reference internal" href="_modules/brim/sample_daemon.html#SampleDaemon.parse_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.sample_daemon.SampleDaemon.parse_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates the overall server configuration into an
+daemon-specific configuration dict suitable for passing as
+<tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in the SampleDaemon constructor.</p>
+<p>Sample Configuration File:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">sample_daemon</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">sample_daemon</span><span class="o">.</span><span class="n">SampleDaemon</span>
+<span class="c"># interval = &lt;seconds&gt;</span>
+<span class="c">#   The number of seconds between each status line logged.</span>
+<span class="c">#   Default: 60</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> &#8211; The name of the daemon, indicates the daemon&#8217;s
+section in the overall configuration for the
+server.</li>
+<li><strong>conf</strong> &#8211; The brim.conf.Conf instance representing the
+overall configuration of the server.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+the SampleDaemon constructor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="brim.sample_daemon.SampleDaemon.stats_conf">
+<em class="property">classmethod </em><tt class="descname">stats_conf</tt><big>(</big><em>name</em>, <em>parsed_conf</em><big>)</big><a class="reference internal" href="_modules/brim/sample_daemon.html#SampleDaemon.stats_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.sample_daemon.SampleDaemon.stats_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of names that specifies the stat variables this app
+wants established.</p>
+<p>Retreiving stats can be accomplished through WSGI apps like
+brim.stats.Stats.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
+in the overall configuration for the WSGI
+server.</li>
+<li><strong>parsed_conf</strong> &#8211; The conf result from
+<a class="reference internal" href="#brim.sample_daemon.SampleDaemon.parse_conf" title="brim.sample_daemon.SampleDaemon.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.server">
+<span id="brim-server"></span><h1>brim.server<a class="headerlink" href="#module-brim.server" title="Permalink to this headline">¶</a></h1>
+<p>The main module that implements the Brim.Net WSGI Server. Normally
+you don&#8217;t directly use this module but instead configure and run
+brimd.</p>
+<p>See etc/brimd.conf-sample for configuration options.</p>
+<dl class="data">
+<dt id="brim.server.DEFAULT_CONF_FILES">
+<tt class="descclassname">brim.server.</tt><tt class="descname">DEFAULT_CONF_FILES</tt><a class="headerlink" href="#brim.server.DEFAULT_CONF_FILES" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of default conf files to use when none are specified.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.server.HTTP_CLIENT_DISCONNECT">
+<tt class="descclassname">brim.server.</tt><tt class="descname">HTTP_CLIENT_DISCONNECT</tt><a class="headerlink" href="#brim.server.HTTP_CLIENT_DISCONNECT" title="Permalink to this definition">¶</a></dt>
+<dd><p>The status code logged for requests terminated early by the client
+(499).</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="brim.server.PID_WAIT_TIME">
+<tt class="descclassname">brim.server.</tt><tt class="descname">PID_WAIT_TIME</tt><a class="headerlink" href="#brim.server.PID_WAIT_TIME" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of seconds to wait for a PID to disappear after sending
+an appropriate signal.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="brim.server.Server">
+<em class="property">class </em><tt class="descclassname">brim.server.</tt><tt class="descname">Server</tt><big>(</big><em>args=None</em>, <em>stdin=None</em>, <em>stdout=None</em>, <em>stderr=None</em><big>)</big><a class="reference internal" href="_modules/brim/server.html#Server"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.server.Server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>The main class for the Brim.Net WSGI Server. This is written
+mostly to be used by bin/brimd and still be reasonably
+testable. Few daemons or WSGI apps need to access this directly
+but some, like brim.stats.Stats do. Here are the contents of
+bin/brimd:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">brim.server</span> <span class="kn">import</span> <span class="n">Server</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">Server</span><span class="p">()</span><span class="o">.</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>args</strong> &#8211; Command line arguments for the server, without the
+process name. Defaults to sys.argv[1:]</li>
+<li><strong>stdin</strong> &#8211; The file-like object to treat as standard input.
+Defaults to sys.stdin.</li>
+<li><strong>stdout</strong> &#8211; The file-like object to treat as standard output.
+Defaults to sys.stdout.</li>
+<li><strong>stderr</strong> &#8211; The file-like object to treat as standard error.
+Defaults to sys.stderr.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="brim.server.Server.main">
+<tt class="descname">main</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/brim/server.html#Server.main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.server.Server.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs the brimd actions (start, stop, restart,
+shutdown, etc.) determined by the command line arguments
+given in the constructor. Usage can be read from <tt class="docutils literal"><span class="pre">brimd</span>
+<span class="pre">--help</span></tt>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body">An integer exit code suitable for returning with
+sys.exit.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.service">
+<span id="brim-service"></span><h1>brim.service<a class="headerlink" href="#module-brim.service" title="Permalink to this headline">¶</a></h1>
+<p>Provides functions useful for services, such as network daemons,
+background jobs, etc.</p>
+<dl class="function">
+<dt id="brim.service.capture_exceptions_stdout_stderr">
+<tt class="descclassname">brim.service.</tt><tt class="descname">capture_exceptions_stdout_stderr</tt><big>(</big><em>exceptions=None</em>, <em>stdout_func=None</em>, <em>stderr_func=None</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#capture_exceptions_stdout_stderr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.capture_exceptions_stdout_stderr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Captures uncaught exceptions and redirects them to the
+<em>exceptions</em> function and captures standard output and error and
+redirects that data to the stdout_func and stderr_func functions.
+The original standard output and error files will be closed so
+that no output can come from your program to these streams. This
+is useful when writing background daemons that often have no
+connected console.</p>
+<p>The <em>exceptions</em> function will be called with (exctype, value,
+traceback).</p>
+<p>The <em>stdout_func</em> and <em>stderr_func</em> functions will be called with
+(str).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.droppriv">
+<tt class="descclassname">brim.service.</tt><tt class="descname">droppriv</tt><big>(</big><em>user</em>, <em>group=None</em>, <em>umask=18</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#droppriv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.droppriv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drops privileges to the user, group, and umask given, changes the
+process to session leader, and changes working directories to /.
+If a group is not given, the user&#8217;s default group will be used.
+Will raise an Exception with an explanatory message if the user
+or group cannot be found or if permission is denied while
+attempting the switch.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>user</strong> &#8211; The user to switch to.</li>
+<li><strong>group</strong> &#8211; The group to switch to; defaults to the default
+group of the user.</li>
+<li><strong>umask</strong> &#8211; The umask to set; defaults 0022.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.get_listening_tcp_socket">
+<tt class="descclassname">brim.service.</tt><tt class="descname">get_listening_tcp_socket</tt><big>(</big><em>ip</em>, <em>port</em>, <em>backlog=4096</em>, <em>retry=30</em>, <em>certfile=None</em>, <em>keyfile=None</em>, <em>style=None</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#get_listening_tcp_socket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.get_listening_tcp_socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a socket.socket bound to the given ip and tcp port with
+other optional parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ip</strong> &#8211; The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
+translated to <tt class="docutils literal"><span class="pre">'0.0.0.0'</span></tt> which will listen on all
+configured addresses.</li>
+<li><strong>port</strong> &#8211; The tcp port to listen on.</li>
+<li><strong>backlog</strong> &#8211; The amount of system queued connections allowed.</li>
+<li><strong>retry</strong> &#8211; The number seconds to keep trying to bind the
+socket, in case there&#8217;s another process bound but
+exiting soon. This allows near zero-downtime
+process handoffs as you start the new one and kill
+the old.</li>
+<li><strong>certfile</strong> &#8211; The certificate file if you wish the socket to
+be ssl wrapped (see ssl.wrap_socket).</li>
+<li><strong>keyfile</strong> &#8211; The key file if you wish the socket to be ssl
+wrapped (see ssl.wrap_socket).</li>
+<li><strong>style</strong> &#8211; The libraries you&#8217;d like to use in creating the
+socket. The default will use the standard Python
+libraries. <tt class="docutils literal"><span class="pre">'Eventlet'</span></tt> is recognized and will
+use the Eventlet libraries. Other styles may added
+in the future.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.signum2str">
+<tt class="descclassname">brim.service.</tt><tt class="descname">signum2str</tt><big>(</big><em>signum</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#signum2str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.signum2str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates a signal number to a str. Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">signum2str</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">SIGHUP</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signum</strong> &#8211; The signal number to convert.</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body">A str representing the signal.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.service.sustain_workers">
+<tt class="descclassname">brim.service.</tt><tt class="descname">sustain_workers</tt><big>(</big><em>workers_desired</em>, <em>worker_func</em>, <em>logger=None</em><big>)</big><a class="reference internal" href="_modules/brim/service.html#sustain_workers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.service.sustain_workers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts and maintains a set of subprocesses. For each worker
+started, it will run the <em>worker_func</em>. If a subprocess exits
+without being requested to, it will be restarted and the
+<em>worker_func</em> called again.</p>
+<p><em>sustain_workers</em> will not return until signaled to do so with
+SIGHUP or SIGTERM to the main process. These signals will be
+relayed to the subprocesses as well.</p>
+<p>SIGHUP generally means the processes should exit as gracefully as
+possible. For instance, a web server might exit after it
+completes any requests already in progress.</p>
+<p>SIGTERM generally means the processes should exit immediately,
+canceling anything they may have been doing at the time.</p>
+<p>If <em>workers_desired</em> is 0, a special &#8220;inproc&#8221; mode will be
+activated where just the <em>worker_func</em> will be called and then
+<em>sustain_workers</em> will return. This can be useful for debugging.</p>
+<p>See brim.server.Server for a good example of how to use
+<em>sustain_workers</em>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>workers_desired</strong> &#8211; The number of subprocesses desired to be
+maintained. If 0, no subprocesses will be
+made and <em>worker_func</em> will simply be
+called and then <em>sustain_workers</em> will
+return.</li>
+<li><strong>worker_func</strong> &#8211; The function to be called by each subprocess
+once it starts. <em>worker_func</em> should not
+return except on catastrophic error or when
+signaled to do so. If <em>worker_func</em> exits
+without being signaled, another subprocess
+will be started and the function called
+again.</li>
+<li><strong>logger</strong> &#8211; If set, debug information will be sent to this
+logging.Logger instance.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.stats">
+<span id="brim-stats"></span><h1>brim.stats<a class="headerlink" href="#module-brim.stats" title="Permalink to this headline">¶</a></h1>
+<p>Reports the brimd server stats as a JSON reponse. The stats
+contain basic things like the server start time and request counts.</p>
+<p>See <a class="reference internal" href="#brim.stats.Stats.parse_conf" title="brim.stats.Stats.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">Stats.parse_conf()</span></tt></a> for configuration options.</p>
+<dl class="class">
+<dt id="brim.stats.Stats">
+<em class="property">class </em><tt class="descclassname">brim.stats.</tt><tt class="descname">Stats</tt><big>(</big><em>name</em>, <em>parsed_conf</em>, <em>next_app</em><big>)</big><a class="reference internal" href="_modules/brim/stats.html#Stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.stats.Stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A WSGI application that reports the brimd server stats as a
+JSON reponse. The stats contain basic things like the server
+start time and request counts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+the overall configuration for the WSGI server.</li>
+<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.stats.Stats.parse_conf" title="brim.stats.Stats.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>next_app</strong> &#8211; The next WSGI app in the chain.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="brim.stats.Stats.parse_conf">
+<em class="property">classmethod </em><tt class="descname">parse_conf</tt><big>(</big><em>name</em>, <em>conf</em><big>)</big><a class="reference internal" href="_modules/brim/stats.html#Stats.parse_conf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.stats.Stats.parse_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates the overall WSGI server configuration into an
+app-specific configuration dict suitable for passing as
+<tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in the Stats constructor.</p>
+<p>Sample Configuration File:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">stats</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">Stats</span>
+<span class="c"># path = &lt;path&gt;</span>
+<span class="c">#   The request path to match and serve; any other paths</span>
+<span class="c">#   will be passed on to the next WSGI app in the chain.</span>
+<span class="c">#   This can serve as a basic restriction to accessing</span>
+<span class="c">#   the stats by setting it to a hard to guess value.</span>
+<span class="c">#   Default: /stats</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
+in the overall configuration for the WSGI
+server.</li>
+<li><strong>conf</strong> &#8211; The brim.conf.Conf instance representing the
+overall configuration of the WSGI server.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+the Stats constructor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-brim.util">
+<span id="brim-util"></span><h1>brim.util<a class="headerlink" href="#module-brim.util" title="Permalink to this headline">¶</a></h1>
+<p>Miscellaneous classes and functions.</p>
+<dl class="exception">
+<dt id="brim.util.LockPathTimeout">
+<em class="property">exception </em><tt class="descclassname">brim.util.</tt><tt class="descname">LockPathTimeout</tt><a class="reference internal" href="_modules/brim/util.html#LockPathTimeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.LockPathTimeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>Raised by <a class="reference internal" href="#brim.util.lock_path" title="brim.util.lock_path"><tt class="xref py py-func docutils literal"><span class="pre">lock_path()</span></tt></a> when its timeout is reached
+without gaining its lock.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.util.lock_path">
+<tt class="descclassname">brim.util.</tt><tt class="descname">lock_path</tt><big>(</big><em>*args</em>, <em>**kwds</em><big>)</big><a class="reference internal" href="_modules/brim/util.html#lock_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.lock_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>A context manager that attempts to gain an advisory lock for the
+path given within the timeout given. Raises LockPathTimeout if
+time expires before gaining the lock. If the lock is obtained,
+True is yielded and the lock relinquished with the context ends.</p>
+<p>For example:</p>
+<div class="highlight-python"><pre>with lock_path(path, timeout):
+    # do things inside path knowing others using the same
+    # advisory locking mechanism will be blocked until you're
+    # done.</pre>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> &#8211; The path to gain an advisory lock on.</li>
+<li><strong>timeout</strong> &#8211; The number of seconds to wait to gain the lock
+before raising LockPathTimeout.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.util.make_dirs">
+<tt class="descclassname">brim.util.</tt><tt class="descname">make_dirs</tt><big>(</big><em>path</em>, <em>mode=511</em><big>)</big><a class="reference internal" href="_modules/brim/util.html#make_dirs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.make_dirs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Just like os.makedirs but ignoring errors due to the path already
+existing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> &#8211; The path to create a directory and all parent
+directories for.</li>
+<li><strong>mode</strong> &#8211; The permissions mode (masked with the current umask)
+to create new directories with.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.util.unlink">
+<tt class="descclassname">brim.util.</tt><tt class="descname">unlink</tt><big>(</big><em>path</em><big>)</big><a class="reference internal" href="_modules/brim/util.html#unlink"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.util.unlink" title="Permalink to this definition">¶</a></dt>
+<dd><p>Just like os.unlink but ignoring errors due to the path already
+not existing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> &#8211; The path to unlink.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">brim</a></li>
+<li><a class="reference internal" href="#module-brim.conf">brim.conf</a></li>
+<li><a class="reference internal" href="#module-brim.echo">brim.echo</a></li>
+<li><a class="reference internal" href="#module-brim.http">brim.http</a></li>
+<li><a class="reference internal" href="#module-brim.log">brim.log</a></li>
+<li><a class="reference internal" href="#module-brim.sample_daemon">brim.sample_daemon</a></li>
+<li><a class="reference internal" href="#module-brim.server">brim.server</a></li>
+<li><a class="reference internal" href="#module-brim.service">brim.service</a></li>
+<li><a class="reference internal" href="#module-brim.stats">brim.stats</a></li>
+<li><a class="reference internal" href="#module-brim.util">brim.util</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="license.html"
+                        title="previous chapter">LICENSE</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/brim.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="LICENSE"
+             >previous</a> |</li>
+        <li><a href="index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

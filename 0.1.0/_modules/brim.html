@@ -7,13 +7,13 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim &mdash; Brim.Net Utility Package v0.0.0 documentation</title>
+    <title>brim &mdash; Brim.Net Core Package v0.1.0 documentation</title>
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.0.0',
+        VERSION:     '0.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Utility Package v0.0.0 documentation" href="../index.html" />
+    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="../index.html" />
     <link rel="up" title="Module code" href="index.html" /> 
   </head>
   <body>
@@ -35,7 +35,7 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+        <li><a href="../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
           <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -61,13 +61,16 @@
 <span class="c"># limitations under the License.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This package contains general utility modules.</span>
+<span class="sd">This is the core package for Brim.Net Python-based applications. It</span>
+<span class="sd">provides some reusable utility code and provides brimd, a launcher</span>
+<span class="sd">offering ease of deployment of WSGI applications (currently just</span>
+<span class="sd">using the Eventlet WSGI server) and maintaining background daemons.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;version_info&#39;</span><span class="p">,</span> <span class="s">&#39;version&#39;</span><span class="p">]</span>
 
 <span class="c">#: Version information ``(major, minor, revision)``.</span>
-<span class="n">version_info</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">version_info</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 <span class="c">#: Version string ``&#39;major.minor.revision&#39;``.</span>
 <span class="n">version</span> <span class="o">=</span> <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">version_info</span><span class="p">))</span>
 </pre></div>
@@ -103,7 +106,7 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+        <li><a href="../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
           <li><a href="index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>

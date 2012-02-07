@@ -7,13 +7,13 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim.conf &mdash; Brim.Net Utility Package v0.0.0 documentation</title>
+    <title>brim.conf &mdash; Brim.Net Core Package v0.1.0 documentation</title>
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.0.0',
+        VERSION:     '0.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Utility Package v0.0.0 documentation" href="../../index.html" />
+    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="../../index.html" />
     <link rel="up" title="brim" href="../brim.html" /> 
   </head>
   <body>
@@ -35,7 +35,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
       </ul>
@@ -113,13 +113,13 @@
 <span class="sd">        sys.exit(&#39;Config conversion error: &#39; + str(err))</span>
 <span class="sd">    print &#39;Using port&#39;, port</span>
 
-<span class="sd">Another feature of read_conf is that if a conf file has a [brimconf]</span>
+<span class="sd">Another feature of read_conf is that if a conf file has a [brim]</span>
 <span class="sd">additional_confs setting, the files listed there will also be parsed.</span>
 <span class="sd">This lets an end user make a conf file to be included by one or more</span>
 <span class="sd">other conf files. Splitting configuration like this can make</span>
 <span class="sd">deployment to clusters easier. For example::</span>
 
-<span class="sd">    [brimconf]</span>
+<span class="sd">    [brim]</span>
 <span class="sd">    additional_confs = /etc/common.conf &quot;/another file.conf&quot; ~/.common.conf</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -310,8 +310,8 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">conf_files_read</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">read</span><span class="p">([</span><span class="n">expanduser</span><span class="p">(</span><span class="n">conf_file</span><span class="p">)]))</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">additional_confs</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;brimconf&#39;</span><span class="p">,</span> <span class="s">&#39;additional_confs&#39;</span><span class="p">)</span>
-        <span class="n">parser</span><span class="o">.</span><span class="n">remove_option</span><span class="p">(</span><span class="s">&#39;brimconf&#39;</span><span class="p">,</span> <span class="s">&#39;additional_confs&#39;</span><span class="p">)</span>
+        <span class="n">additional_confs</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;additional_confs&#39;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">remove_option</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;additional_confs&#39;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">conf_file</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">csv_reader</span><span class="p">([</span><span class="n">additional_confs</span><span class="p">],</span>
                               <span class="n">delimiter</span><span class="o">=</span><span class="s">&#39; &#39;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="n">_read_conf</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">conf_files_read</span><span class="p">,</span> <span class="n">conf_file</span><span class="p">,</span>
@@ -328,7 +328,7 @@
 <span class="sd">    Note that if the parser does not have access to read a given file</span>
 <span class="sd">    it will act as if it did not exist.</span>
 
-<span class="sd">    If a conf file has a [brimconf] additional_confs setting, the</span>
+<span class="sd">    If a conf file has a [brim] additional_confs setting, the</span>
 <span class="sd">    files listed there will also be parsed.</span>
 
 <span class="sd">    You may wish to check the Conf.files list to determine which</span>
@@ -386,7 +386,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" >brim</a> &raquo;</li> 
       </ul>

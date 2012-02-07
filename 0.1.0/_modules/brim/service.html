@@ -7,13 +7,13 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim.service &mdash; Brim.Net Utility Package v0.0.0 documentation</title>
+    <title>brim.service &mdash; Brim.Net Core Package v0.1.0 documentation</title>
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.0.0',
+        VERSION:     '0.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Utility Package v0.0.0 documentation" href="../../index.html" />
+    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="../../index.html" />
     <link rel="up" title="brim" href="../brim.html" /> 
   </head>
   <body>
@@ -35,7 +35,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
       </ul>
@@ -70,8 +70,8 @@
 <span class="kn">from</span> <span class="nn">errno</span> <span class="kn">import</span> <span class="n">EADDRINUSE</span><span class="p">,</span> <span class="n">ECHILD</span><span class="p">,</span> <span class="n">EINTR</span><span class="p">,</span> <span class="n">EPERM</span>
 <span class="kn">from</span> <span class="nn">grp</span> <span class="kn">import</span> <span class="n">getgrnam</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">chdir</span><span class="p">,</span> <span class="n">devnull</span><span class="p">,</span> <span class="n">dup2</span><span class="p">,</span> <span class="n">fork</span><span class="p">,</span> <span class="n">getegid</span><span class="p">,</span> <span class="n">geteuid</span><span class="p">,</span> <span class="n">getpid</span><span class="p">,</span> <span class="n">getppid</span><span class="p">,</span> \
-    <span class="n">killpg</span><span class="p">,</span> <span class="n">setgid</span><span class="p">,</span> <span class="n">setsid</span><span class="p">,</span> <span class="n">setuid</span><span class="p">,</span> <span class="n">umask</span> <span class="k">as</span> <span class="n">os_umask</span><span class="p">,</span> <span class="n">wait</span> <span class="k">as</span> <span class="n">os_wait</span><span class="p">,</span> \
-    <span class="n">WIFEXITED</span><span class="p">,</span> <span class="n">WIFSIGNALED</span>
+    <span class="n">killpg</span><span class="p">,</span> <span class="n">setgid</span><span class="p">,</span> <span class="n">setgroups</span><span class="p">,</span> <span class="n">setsid</span><span class="p">,</span> <span class="n">setuid</span><span class="p">,</span> <span class="n">umask</span> <span class="k">as</span> <span class="n">os_umask</span><span class="p">,</span> \
+    <span class="n">wait</span> <span class="k">as</span> <span class="n">os_wait</span><span class="p">,</span> <span class="n">WIFEXITED</span><span class="p">,</span> <span class="n">WIFSIGNALED</span>
 <span class="kn">from</span> <span class="nn">pwd</span> <span class="kn">import</span> <span class="n">getpwnam</span>
 <span class="kn">from</span> <span class="nn">signal</span> <span class="kn">import</span> <span class="n">SIG_DFL</span><span class="p">,</span> <span class="n">SIGHUP</span><span class="p">,</span> <span class="n">SIG_IGN</span><span class="p">,</span> <span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="p">,</span> <span class="n">SIGTERM</span>
 <span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">platform</span>
@@ -175,6 +175,11 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">user</span> <span class="ow">or</span> <span class="n">group</span><span class="p">:</span>
         <span class="n">uid</span> <span class="o">=</span> <span class="n">geteuid</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">setgroups</span><span class="p">([])</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EPERM</span><span class="p">:</span>
+                <span class="k">raise</span>
         <span class="n">gid</span> <span class="o">=</span> <span class="n">getegid</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
@@ -321,9 +326,8 @@
 <span class="sd">    activated where just the *worker_func* will be called and then</span>
 <span class="sd">    *sustain_workers* will return. This can be useful for debugging.</span>
 
-<span class="sd">    See the Brim.Net WSGI Server `brimwsgi.server.Server</span>
-<span class="sd">    &lt;http://github.com/gholt/brimwsgi&gt;`_ for a good example of how to</span>
-<span class="sd">    use *sustain_workers*.</span>
+<span class="sd">    See brim.server.Server for a good example of how to use</span>
+<span class="sd">    *sustain_workers*.</span>
 
 <span class="sd">    :param workers_desired: The number of subprocesses desired to be</span>
 <span class="sd">                            maintained. If 0, no subprocesses will be</span>
@@ -443,7 +447,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Utility Package v0.0.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" >brim</a> &raquo;</li> 
       </ul>

@@ -1,0 +1,218 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim.stats &mdash; Brim.Net Core Package v0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="../../index.html" />
+    <link rel="up" title="brim" href="../brim.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brim.stats</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2012 Gregory Holt</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Reports the brimd server stats as a JSON reponse. The stats</span>
+<span class="sd">contain basic things like the server start time and request counts.</span>
+
+<span class="sd">See :py:func:`Stats.parse_conf` for configuration options.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">maxint</span>
+
+
+<div class="viewcode-block" id="Stats"><a class="viewcode-back" href="../../brim.html#brim.stats.Stats">[docs]</a><span class="k">class</span> <span class="nc">Stats</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A WSGI application that reports the brimd server stats as a</span>
+<span class="sd">    JSON reponse. The stats contain basic things like the server</span>
+<span class="sd">    start time and request counts.</span>
+
+<span class="sd">    :param name: The name of the app, indicates the app&#39;s section in</span>
+<span class="sd">                 the overall configuration for the WSGI server.</span>
+<span class="sd">    :param parsed_conf: The conf result from :py:func:`parse_conf`.</span>
+<span class="sd">    :param next_app: The next WSGI app in the chain.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">,</span> <span class="n">next_app</span><span class="p">):</span>
+        <span class="c"># Copy all items from the parsed_conf to actual instance attributes.</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">parsed_conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">next_app</span> <span class="o">=</span> <span class="n">next_app</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If the request path matches the one configured for this app,</span>
+<span class="sd">        a JSON response will be sent containing the brimd server</span>
+<span class="sd">        stats. Otherwise, the request is passed on to the next app in</span>
+<span class="sd">        the chain.</span>
+
+<span class="sd">        :param env: The WSGI env as per the spec.</span>
+<span class="sd">        :param start_response: The WSGI start_response as per the spec.</span>
+<span class="sd">        :returns: Calls start_response and returns an iteratable as</span>
+<span class="sd">                  per the WSGI spec.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;PATH_INFO&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">next_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;REQUEST_METHOD&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;HEAD&#39;</span><span class="p">):</span>
+            <span class="n">start_response</span><span class="p">(</span><span class="s">&#39;501 Not Implemented&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s">&#39;Content-Length&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">)])</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim&#39;</span><span class="p">]</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">daemon_stats</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">daemon_bucket_stats</span>
+        <span class="k">for</span> <span class="n">daemon_id</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">daemon_stats</span><span class="o">.</span><span class="n">bucket_count</span><span class="p">):</span>
+            <span class="n">daemon_body</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">stat_name</span> <span class="ow">in</span> <span class="n">daemon_stats</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">daemon_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">daemon_id</span><span class="p">,</span> <span class="n">stat_name</span><span class="p">)</span>
+                <span class="n">daemon_body</span><span class="p">[</span><span class="n">stat_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="n">body</span><span class="p">[</span><span class="s">&#39;daemon_&#39;</span> <span class="o">+</span> <span class="n">server</span><span class="o">.</span><span class="n">daemons</span><span class="p">[</span><span class="n">daemon_id</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">daemon_body</span>
+        <span class="n">wsgi_worker_stats</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">wsgi_worker_bucket_stats</span>
+        <span class="n">sums</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span>
+                    <span class="n">server</span><span class="o">.</span><span class="n">wsgi_worker_stats_conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&#39;sum&#39;</span><span class="p">)</span>
+        <span class="n">mins</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">maxint</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span>
+                    <span class="n">server</span><span class="o">.</span><span class="n">wsgi_worker_stats_conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&#39;min&#39;</span><span class="p">)</span>
+        <span class="n">maxs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span>
+                    <span class="n">server</span><span class="o">.</span><span class="n">wsgi_worker_stats_conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&#39;max&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">wsgi_worker_id</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">wsgi_worker_stats</span><span class="o">.</span><span class="n">bucket_count</span><span class="p">):</span>
+            <span class="n">wsgi_worker_body</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">stat_name</span> <span class="ow">in</span> <span class="n">wsgi_worker_stats</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">wsgi_worker_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">wsgi_worker_id</span><span class="p">,</span> <span class="n">stat_name</span><span class="p">)</span>
+                <span class="n">wsgi_worker_body</span><span class="p">[</span><span class="n">stat_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="k">if</span> <span class="n">stat_name</span> <span class="ow">in</span> <span class="n">sums</span><span class="p">:</span>
+                    <span class="n">sums</span><span class="p">[</span><span class="n">stat_name</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v</span>
+                <span class="k">if</span> <span class="n">stat_name</span> <span class="ow">in</span> <span class="n">mins</span><span class="p">:</span>
+                    <span class="n">mins</span><span class="p">[</span><span class="n">stat_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">mins</span><span class="p">[</span><span class="n">stat_name</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">stat_name</span> <span class="ow">in</span> <span class="n">maxs</span><span class="p">:</span>
+                    <span class="n">maxs</span><span class="p">[</span><span class="n">stat_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">maxs</span><span class="p">[</span><span class="n">stat_name</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span>
+            <span class="n">body</span><span class="p">[</span><span class="s">&#39;worker_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">wsgi_worker_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">wsgi_worker_body</span>
+        <span class="n">body</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">sums</span><span class="p">)</span>
+        <span class="n">body</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">mins</span><span class="p">)</span>
+        <span class="n">body</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">maxs</span><span class="p">)</span>
+        <span class="n">body</span><span class="p">[</span><span class="s">&#39;start_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">start_time</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.json_dumps&#39;</span><span class="p">](</span><span class="n">body</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+        <span class="n">start_response</span><span class="p">(</span><span class="s">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s">&#39;Content-Length&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">))),</span>
+                                  <span class="p">(</span><span class="s">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s">&#39;application/json&#39;</span><span class="p">)])</span>
+        <span class="k">if</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;REQUEST_METHOD&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;HEAD&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">body</span><span class="p">]</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Stats.parse_conf"><a class="viewcode-back" href="../../brim.html#brim.stats.Stats.parse_conf">[docs]</a>    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Translates the overall WSGI server configuration into an</span>
+<span class="sd">        app-specific configuration dict suitable for passing as</span>
+<span class="sd">        ``parsed_conf`` in the Stats constructor.</span>
+
+<span class="sd">        Sample Configuration File::</span>
+
+<span class="sd">            [stats]</span>
+<span class="sd">            call = brim.stats.Stats</span>
+<span class="sd">            # path = &lt;path&gt;</span>
+<span class="sd">            #   The request path to match and serve; any other paths</span>
+<span class="sd">            #   will be passed on to the next WSGI app in the chain.</span>
+<span class="sd">            #   This can serve as a basic restriction to accessing</span>
+<span class="sd">            #   the stats by setting it to a hard to guess value.</span>
+<span class="sd">            #   Default: /stats</span>
+
+<span class="sd">        :param name: The name of the app, indicates the app&#39;s section</span>
+<span class="sd">                     in the overall configuration for the WSGI</span>
+<span class="sd">                     server.</span>
+<span class="sd">        :param conf: The brim.conf.Conf instance representing the</span>
+<span class="sd">                     overall configuration of the WSGI server.</span>
+<span class="sd">        :returns: A dict suitable for passing as ``parsed_conf`` in</span>
+<span class="sd">                  the Stats constructor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;path&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;path&#39;</span><span class="p">,</span> <span class="s">&#39;/stats&#39;</span><span class="p">)}</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" >brim</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
