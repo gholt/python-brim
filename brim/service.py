@@ -21,8 +21,8 @@ import sys
 from errno import EADDRINUSE, ECHILD, EINTR, EPERM
 from grp import getgrnam
 from os import chdir, devnull, dup2, fork, getegid, geteuid, getpid, getppid, \
-    killpg, setgid, setsid, setuid, umask as os_umask, wait as os_wait, \
-    WIFEXITED, WIFSIGNALED
+    killpg, setgid, setgroups, setsid, setuid, umask as os_umask, \
+    wait as os_wait, WIFEXITED, WIFSIGNALED
 from pwd import getpwnam
 from signal import SIG_DFL, SIGHUP, SIG_IGN, SIGINT, signal, SIGTERM
 from sys import platform
@@ -126,6 +126,11 @@ def droppriv(user, group=None, umask=0022):
     """
     if user or group:
         uid = geteuid()
+        try:
+            setgroups([])
+        except OSError, err:
+            if err.errno != EPERM:
+                raise
         gid = getegid()
         if user:
             try:

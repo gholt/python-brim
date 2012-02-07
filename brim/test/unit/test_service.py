@@ -214,6 +214,7 @@ class Test_droppriv(TestCase):
         self.orig_os_umask = service.os_umask
         self.orig_setsid = service.setsid
         self.orig_chdir = service.chdir
+        self.orig_setgroups = service.setgroups
 
         class PWNam(object):
 
@@ -235,6 +236,7 @@ class Test_droppriv(TestCase):
         self.os_umask_calls = []
         self.setsid_calls = []
         self.chdir_calls = []
+        self.setgroups_calls = []
         service.geteuid = lambda: self.euid
         service.getegid = lambda: self.egid
         service.getpwnam = lambda u: self.pwnam[u]
@@ -244,6 +246,7 @@ class Test_droppriv(TestCase):
         service.os_umask = lambda *a: self.os_umask_calls.append(a)
         service.setsid = lambda *a: self.setsid_calls.append(a)
         service.chdir = lambda *a: self.chdir_calls.append(a)
+        service.setgroups = lambda *a: self.setgroups_calls.append(a)
 
     def tearDown(self):
         service.geteuid = self.orig_geteuid
@@ -255,9 +258,11 @@ class Test_droppriv(TestCase):
         service.os_umask = self.orig_os_umask
         service.setsid = self.orig_setsid
         service.chdir = self.orig_chdir
+        service.setgroups = self.orig_setgroups
 
     def test_droppriv_to_same_uid_gid(self):
         service.droppriv('user')
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [(1,)])
         self.assertEquals(self.setgid_calls, [(2,)])
         self.assertEquals(self.os_umask_calls, [(0022,)])
@@ -269,6 +274,7 @@ class Test_droppriv(TestCase):
         self.pwnam['user'].pw_gid = 20
         self.grnam['group'].gr_gid = 30
         service.droppriv('user')
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [(10,)])
         self.assertEquals(self.setgid_calls, [(20,)])
         self.assertEquals(self.os_umask_calls, [(0022,)])
@@ -280,6 +286,7 @@ class Test_droppriv(TestCase):
         self.pwnam['user'].pw_gid = 20
         self.grnam['group'].gr_gid = 30
         service.droppriv('user', 'group')
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [(10,)])
         self.assertEquals(self.setgid_calls, [(30,)])
         self.assertEquals(self.os_umask_calls, [(0022,)])
@@ -288,6 +295,7 @@ class Test_droppriv(TestCase):
 
     def test_droppriv_umask(self):
         service.droppriv('user', umask=0123)
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [(1,)])
         self.assertEquals(self.setgid_calls, [(2,)])
         self.assertEquals(self.os_umask_calls, [(0123,)])
@@ -301,6 +309,7 @@ class Test_droppriv(TestCase):
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot switch to unknown user 'unknown'.")
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [])
         self.assertEquals(self.setgid_calls, [])
         self.assertEquals(self.os_umask_calls, [])
@@ -315,6 +324,7 @@ class Test_droppriv(TestCase):
             exc = err
         self.assertEquals(str(exc),
                           "Cannot switch to unknown group 'unknown'.")
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [])
         self.assertEquals(self.setgid_calls, [])
         self.assertEquals(self.os_umask_calls, [])
@@ -337,6 +347,7 @@ class Test_droppriv(TestCase):
             service.setuid = orig_setuid
         self.assertEquals(str(exc),
                           "Permission denied when switching to user 'user'.")
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [])
         # This also asserts setgid is called before setuid.
         self.assertEquals(self.setgid_calls, [(2,)])
@@ -360,6 +371,7 @@ class Test_droppriv(TestCase):
             service.setgid = orig_setgid
         self.assertEquals(str(exc),
                           "Permission denied when switching to group 'group'.")
+        self.assertEquals(self.setgroups_calls, [([],)])
         # This also asserts setuid is not called before setgid.
         self.assertEquals(self.setuid_calls, [])
         self.assertEquals(self.setgid_calls, [])
@@ -367,9 +379,63 @@ class Test_droppriv(TestCase):
         self.assertEquals(self.setsid_calls, [])
         self.assertEquals(self.chdir_calls, [])
 
+    def test_setgroups_failure(self):
+        setgroups_calls = []
+
+        def _setgroups(*args):
+            setgroups_calls.append(args)
+            e = OSError('test')
+            e.errno = 0
+            raise e
+
+        exc = None
+        orig_setgroups = service.setgroups
+        try:
+            service.setgroups = _setgroups
+            service.droppriv('user')
+        except Exception, err:
+            exc = err
+        finally:
+            service.setgroups = orig_setgroups
+        self.assertEquals(str(exc), 'test')
+        self.assertEquals(setgroups_calls, [([],)])
+        self.assertEquals(self.setuid_calls, [])
+        self.assertEquals(self.setgid_calls, [])
+        self.assertEquals(self.os_umask_calls, [])
+        self.assertEquals(self.setsid_calls, [])
+        self.assertEquals(self.chdir_calls, [])
+
+    def test_setgroups_perm_failure_ignored(self):
+        setgroups_calls = []
+
+        def _setgroups(*args):
+            setgroups_calls.append(args)
+            e = OSError('test')
+            e.errno = EPERM
+            raise e
+
+        exc = None
+        orig_setgroups = service.setgroups
+        try:
+            service.setgroups = _setgroups
+            service.droppriv('user')
+        except Exception, err:
+            exc = err
+        finally:
+            service.setgroups = orig_setgroups
+        self.assertEquals(exc, None)
+        self.assertEquals(setgroups_calls, [([],)])
+        self.assertEquals(self.setuid_calls, [(1,)])
+        self.assertEquals(self.setgid_calls, [(2,)])
+        self.assertEquals(self.os_umask_calls, [(0022,)])
+        self.assertEquals(self.setsid_calls, [()])
+        self.assertEquals(self.chdir_calls, [('/',)])
+
     def test_setsid_failure(self):
+        setsid_calls = []
 
         def _setsid(*args):
+            setsid_calls.append(args)
             e = OSError('test')
             e.errno = 0
             raise e
@@ -384,15 +450,18 @@ class Test_droppriv(TestCase):
         finally:
             service.setsid = orig_setsid
         self.assertEquals(str(exc), 'test')
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [(1,)])
         self.assertEquals(self.setgid_calls, [(2,)])
         self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(self.setsid_calls, [])
+        self.assertEquals(setsid_calls, [()])
         self.assertEquals(self.chdir_calls, [])
 
     def test_setsid_perm_failure_ignored(self):
+        setsid_calls = []
 
         def _setsid(*args):
+            setsid_calls.append(args)
             e = OSError('test')
             e.errno = EPERM
             raise e
@@ -407,10 +476,11 @@ class Test_droppriv(TestCase):
         finally:
             service.setsid = orig_setsid
         self.assertEquals(exc, None)
+        self.assertEquals(self.setgroups_calls, [([],)])
         self.assertEquals(self.setuid_calls, [(1,)])
         self.assertEquals(self.setgid_calls, [(2,)])
         self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(self.setsid_calls, [])
+        self.assertEquals(setsid_calls, [()])
         self.assertEquals(self.chdir_calls, [('/',)])
 
 
