@@ -15,7 +15,7 @@
 from StringIO import StringIO
 from unittest import main, TestCase
 
-from brim import sample_daemon
+from brim import daemon_sample
 from brim.conf import Conf
 
 
@@ -49,12 +49,12 @@ class FakeStats(object):
         self.stats[name] = self.stats.get(name, 0) + 1
 
 
-class TestSampleDaemon(TestCase):
+class TestDaemonSample(TestCase):
 
     def test_init_attrs(self):
-        s = sample_daemon.SampleDaemon('test', {})
+        s = daemon_sample.DaemonSample('test', {})
         self.assertEquals(getattr(s, 'testattr', None), None)
-        s = sample_daemon.SampleDaemon('test', {'testattr': 1})
+        s = daemon_sample.DaemonSample('test', {'testattr': 1})
         self.assertEquals(getattr(s, 'testattr', None), 1)
 
     def test_call(self):
@@ -70,19 +70,19 @@ class TestSampleDaemon(TestCase):
 
         fake_server = FakeServer()
         fake_stats = FakeStats()
-        s = sample_daemon.SampleDaemon('test', {'interval': 60})
-        orig_sleep = sample_daemon.sleep
-        orig_time = sample_daemon.time
+        s = daemon_sample.DaemonSample('test', {'interval': 60})
+        orig_sleep = daemon_sample.sleep
+        orig_time = daemon_sample.time
         exc = None
         try:
-            sample_daemon.sleep = _sleep
-            sample_daemon.time = _time
+            daemon_sample.sleep = _sleep
+            daemon_sample.time = _time
             s(fake_server, fake_stats)
         except Exception, err:
             exc = err
         finally:
-            sample_daemon.sleep = orig_sleep
-            sample_daemon.time = orig_time
+            daemon_sample.sleep = orig_sleep
+            daemon_sample.time = orig_time
         self.assertEquals(str(exc), 'testexit')
         self.assertEquals(sleep_calls, [(60,)] * 3)
         self.assertEquals(fake_server.logger.info_calls,
@@ -93,17 +93,17 @@ class TestSampleDaemon(TestCase):
         self.assertEquals(fake_stats.get('iterations'), 3)
 
     def test_parse_conf(self):
-        c = sample_daemon.SampleDaemon.parse_conf('test', Conf({}))
+        c = daemon_sample.DaemonSample.parse_conf('test', Conf({}))
         self.assertEquals(c, {'interval': 60})
-        c = sample_daemon.SampleDaemon.parse_conf('test',
+        c = daemon_sample.DaemonSample.parse_conf('test',
             Conf({'test': {'interval': 123}}))
         self.assertEquals(c, {'interval': 123})
-        c = sample_daemon.SampleDaemon.parse_conf('test',
+        c = daemon_sample.DaemonSample.parse_conf('test',
             Conf({'test2': {'interval': 123}}))
         self.assertEquals(c, {'interval': 60})
 
     def test_stats_conf(self):
-        self.assertEquals(sample_daemon.SampleDaemon.stats_conf('test',
+        self.assertEquals(daemon_sample.DaemonSample.stats_conf('test',
             {'interval': 60}), ['iterations', 'last_run'])
 
 

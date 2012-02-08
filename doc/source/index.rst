@@ -74,16 +74,21 @@ Example Install for Build and Test on Ubuntu 10.04
     $ python setup.py build_sphinx
     $ ./.unittests
 
-Example Usage
-=============
+
+Usage Examples
+==============
+
+
+Example WSGI Usage
+------------------
 
 * Create /etc/brim/brimd.conf::
 
-    [brim]
-    wsgi = echo stats
+    [wsgi]
+    apps = echo stats
 
     [echo]
-    call = brim.echo.Echo
+    call = brim.wsgi_echo.WSGIEcho
 
     [stats]
     call = brim.stats.Stats
@@ -113,28 +118,28 @@ Run ``brimd -h`` for more details on server control. It supports the standard in
 Also, see the included brimd.conf-sample for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.
 
 
-Example Multi-Configuration Usage
-=================================
+Example WSGI Multi-Configuration Usage
+--------------------------------------
 
 You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:
 
 * Create /etc/brim/brimd.conf::
 
-    [brim]
-    wsgi = echo stats
+    [wsgi]
+    apps = echo stats
 
-    [brim2]
+    [wsgi]
     port = 81
-    wsgi = echo2 stats
+    apps = echo2 stats
 
     [echo]
-    call = brim.echo.Echo
+    call = brim.wsgi_echo.WSGIEcho
 
     [stats]
     call = brim.stats.Stats
 
     [echo2]
-    call = brim.echo.Echo
+    call = brim.wsgi_echo.WSGIEcho
     path = /echo2
 
 You can see the new section [brim2] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.
@@ -168,8 +173,38 @@ You can see the new section [brim2] that defines the second listening port with 
 The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
+Example TCP Straight Socket Application Usage
+---------------------------------------------
+
+TODO
+
+
+Example UDP Application Usage
+-----------------------------
+
+TODO
+
+
+Example Daemon Usage
+--------------------
+
+The brimd server can manage additional daemons as well as the main WSGI server. You configure them much like WSGI apps, but with the daemons configuration value. There is a brim.daemon_sample.DaemonSample that can be a good start for writing new daemons.
+
+Here's an example brimd.conf that starts the sample daemon::
+
+    [daemons]
+    daemons = sample
+
+    [sample]
+    call = brim.daemon_sample.DaemonSample
+
+
+Development Examples
+====================
+
+
 WSGI Application Development
-============================
+----------------------------
 
 Developing WSGI applications for brimd is quite similar to other Python WSGI servers. Here's a simple example::
 
@@ -372,7 +407,7 @@ Let's try it out::
 Of course, we only have one worker so the overall stats just mirror that worker. You can add ``workers = <number>`` to your brimd.conf if you want more workers.
 
 Extra WSGI env Items
-====================
+....................
 
 brim
 
@@ -402,7 +437,7 @@ brim.additional_request_log_info
 
 brim.stats
 
-    An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app's stats_conf class method. See the brim.echo.Echo and brim.stats.Stats apps for examples of how to use these stats. This stats object will implement the following methods:
+    An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app's stats_conf class method. See the brim.wsgi_echo.WSGIEcho and brim.stats.Stats apps for examples of how to use these stats. This stats object will implement the following methods:
 
         get(<name>)
 
@@ -423,7 +458,7 @@ brim.stats
 
 
 Server Stats
-============
+............
 
 The brimd server tracks various statistics, such as the server start time and number of requests processed. The brim.stats.Stats app can be configured to provide access to these stats via a JSON response::
 
@@ -527,18 +562,22 @@ start_time
     These track specific response codes. Which response codes are tracked can be configured in brimd.conf, but are 404, 408, 499, and 501 by default. A high 404 count on a server that normally shouldn't do so can indicate missing files or a bad incoming link. 408 Request Timeout and 499 Disconnect can indicate network problems or perhaps too aggressive timeouts. 501 Not Implemented counts can often be subtracted from the status_5xx_count to get a true count of real server problems.
 
 
-Additional Daemons
-==================
+TCP Straight Socket Application Development
+-------------------------------------------
 
-The brimd server can manage additional daemons as well as the main WSGI server. You configure them much like WSGI apps, but with the daemons configuration value. There is a brim.sample_daemon.SampleDaemon that can be a good start for writing new daemons.
+TODO
 
-Here's an example brimd.conf that starts the sample daemon::
 
-    [brim]
-    daemons = sample
+UDP Socket Application Development
+----------------------------------
 
-    [sample]
-    call = brim.sample_daemon.SampleDaemon
+TODO
+
+
+Daemon Development
+------------------
+
+TODO
 
 
 Code-Generated Documentation

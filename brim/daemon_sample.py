@@ -17,7 +17,7 @@ Contains a simple daemon that just logs a status line every so often.
 This can be a good starting point for other daemons. See the source
 for what's implemented and why.
 
-See :py:func:`SampleDaemon.parse_conf` for configuration options.
+See :py:func:`DaemonSample.parse_conf` for configuration options.
 """
 
 from time import time
@@ -25,7 +25,7 @@ from time import time
 from eventlet import sleep
 
 
-class SampleDaemon(object):
+class DaemonSample(object):
     """
     A simple daemon that just logs a status line every so often. This
     can be a good starting point for other daemons. See the source
@@ -71,7 +71,6 @@ class SampleDaemon(object):
 
             Increments the value of the stat <name> by 1.
 
-
         :param subserver: The brim.server.Subserver that is managing
                           this daemon.
         :param stats: Shared memory statistics object as defined
@@ -91,12 +90,12 @@ class SampleDaemon(object):
         """
         Translates the overall server configuration into an
         daemon-specific configuration dict suitable for passing as
-        ``parsed_conf`` in the SampleDaemon constructor.
+        ``parsed_conf`` in the DaemonSample constructor.
 
         Sample Configuration File::
 
-            [sample_daemon]
-            call = brim.sample_daemon.SampleDaemon
+            [daemon_sample]
+            call = brim.daemon_sample.DaemonSample
             # interval = <seconds>
             #   The number of seconds between each status line logged.
             #   Default: 60
@@ -107,7 +106,7 @@ class SampleDaemon(object):
         :param conf: The brim.conf.Conf instance representing the
                      overall configuration of the server.
         :returns: A dict suitable for passing as ``parsed_conf`` in
-                  the SampleDaemon constructor.
+                  the DaemonSample constructor.
         """
         return {'interval': conf.get_int(name, 'interval', 60)}
 

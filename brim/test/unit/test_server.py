@@ -1366,15 +1366,15 @@ class TestServer(TestCase):
     def test_configure_daemons(self):
         conf = Conf({
             'brim': {'daemons': 'one two'},
-            'one': {'call': 'brim.sample_daemon.SampleDaemon'},
-            'two': {'call': 'brim.sample_daemon.SampleDaemon'}})
+            'one': {'call': 'brim.daemon_sample.DaemonSample'},
+            'two': {'call': 'brim.daemon_sample.DaemonSample'}})
         subserv = server.Subserver(self.serv, 'brim')
         subserv._configure_daemons(conf)
         self.assertEquals(len(subserv.daemons), 2)
         self.assertEquals(subserv.daemons[0][0], 'one')
         self.assertEquals(subserv.daemons[1][0], 'two')
-        self.assertEquals(subserv.daemons[0][1].__name__, 'SampleDaemon')
-        self.assertEquals(subserv.daemons[1][1].__name__, 'SampleDaemon')
+        self.assertEquals(subserv.daemons[0][1].__name__, 'DaemonSample')
+        self.assertEquals(subserv.daemons[1][1].__name__, 'DaemonSample')
         self.assertEquals(subserv.daemons[0][2],
                           subserv.daemons[0][1].parse_conf('one', conf))
         self.assertEquals(subserv.daemons[1][2],
@@ -1383,7 +1383,7 @@ class TestServer(TestCase):
     def test_configure_daemons_conf_no_call(self):
         conf = Conf({
             'brim': {'daemons': 'one'},
-            'one': {'cll': 'brim.sample_daemon.SampleDaemon'}})
+            'one': {'cll': 'brim.daemon_sample.DaemonSample'}})
         exc = None
         try:
             server.Subserver(self.serv, 'brim')._configure_daemons(conf)
@@ -1395,26 +1395,26 @@ class TestServer(TestCase):
     def test_configure_daemons_conf_invalid_call(self):
         conf = Conf({
             'brim': {'daemons': 'one'},
-            'one': {'call': 'brim_sample_daemon_SampleDaemon'}})
+            'one': {'call': 'brim_daemon_sample_DaemonSample'}})
         exc = None
         try:
             server.Subserver(self.serv, 'brim')._configure_daemons(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Invalid call value "
-            "'brim_sample_daemon_SampleDaemon' for daemon [one].")
+            "'brim_daemon_sample_DaemonSample' for daemon [one].")
 
     def test_configure_daemons_no_load(self):
         conf = Conf({
             'brim': {'daemons': 'one'},
-            'one': {'call': 'brim.sample_daemon.ampleDaemon'}})
+            'one': {'call': 'brim.daemon_sample.aemonSample'}})
         exc = None
         try:
             server.Subserver(self.serv, 'brim')._configure_daemons(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Could not load class "
-            "'brim.sample_daemon.ampleDaemon' for daemon [one].")
+            "'brim.daemon_sample.aemonSample' for daemon [one].")
 
     def test_configure_daemons_not_a_class(self):
         conf = Conf({
@@ -1576,15 +1576,15 @@ class TestServer(TestCase):
     def test_configure_wsgi_apps(self):
         conf = Conf({
             'brim': {'wsgi': 'one two'},
-            'one': {'call': 'brim.echo.Echo'},
-            'two': {'call': 'brim.echo.Echo'}})
+            'one': {'call': 'brim.wsgi_echo.WSGIEcho'},
+            'two': {'call': 'brim.wsgi_echo.WSGIEcho'}})
         subserv = server.Subserver(self.serv, 'brim')
         subserv._configure_wsgi_apps(conf)
         self.assertEquals(len(subserv.wsgi_apps), 2)
         self.assertEquals(subserv.wsgi_apps[0][0], 'one')
         self.assertEquals(subserv.wsgi_apps[1][0], 'two')
-        self.assertEquals(subserv.wsgi_apps[0][1].__name__, 'Echo')
-        self.assertEquals(subserv.wsgi_apps[1][1].__name__, 'Echo')
+        self.assertEquals(subserv.wsgi_apps[0][1].__name__, 'WSGIEcho')
+        self.assertEquals(subserv.wsgi_apps[1][1].__name__, 'WSGIEcho')
         self.assertEquals(subserv.wsgi_apps[0][2],
                           subserv.wsgi_apps[0][1].parse_conf('one', conf))
         self.assertEquals(subserv.wsgi_apps[1][2],
@@ -1593,7 +1593,7 @@ class TestServer(TestCase):
     def test_configure_wsgi_apps_conf_no_call(self):
         conf = Conf({
             'brim': {'wsgi': 'one'},
-            'one': {'cll': 'brim.echo.Echo'}})
+            'one': {'cll': 'brim.wsgi_echo.WSGIEcho'}})
         exc = None
         try:
             server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
@@ -1605,26 +1605,26 @@ class TestServer(TestCase):
     def test_configure_wsgi_apps_conf_invalid_call(self):
         conf = Conf({
             'brim': {'wsgi': 'one'},
-            'one': {'call': 'brim_echo_Echo'}})
+            'one': {'call': 'brim_wsgi_echo_WSGIEcho'}})
         exc = None
         try:
             server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Invalid call value "
-            "'brim_echo_Echo' for app [one].")
+            "'brim_wsgi_echo_WSGIEcho' for app [one].")
 
     def test_configure_wsgi_apps_no_load(self):
         conf = Conf({
             'brim': {'wsgi': 'one'},
-            'one': {'call': 'brim.echo.cho'}})
+            'one': {'call': 'brim.wsgi_echo.sgi_cho'}})
         exc = None
         try:
             server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Could not load class "
-            "'brim.echo.cho' for app [one].")
+            "'brim.wsgi_echo.sgi_cho' for app [one].")
 
     def test_configure_wsgi_apps_not_a_class(self):
         conf = Conf({
@@ -1927,7 +1927,7 @@ class TestServer(TestCase):
 
     def test_start_daemoned_with_daemons_parent_side(self):
         self.conf = Conf({'brim': {'port': '0', 'daemons': 'one'},
-            'one': {'call': 'brim.sample_daemon.SampleDaemon'}})
+            'one': {'call': 'brim.daemon_sample.DaemonSample'}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
         self.serv._parse_args()
@@ -1967,7 +1967,7 @@ class TestServer(TestCase):
 
     def test_start_daemoned_with_daemons_child_side(self):
         self.conf = Conf({'brim': {'port': '0', 'daemons': 'one'},
-            'one': {'call': 'brim.sample_daemon.SampleDaemon'}})
+            'one': {'call': 'brim.daemon_sample.DaemonSample'}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
         self.serv._parse_args()
@@ -2828,11 +2828,11 @@ class TestServer(TestCase):
         conf = Conf({
             'brim': {'wsgi': 'one', 'daemons': 'two', 'log_name': 'test'},
             'brim2': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
-            'one': {'call': 'brim.echo.Echo', 'path': '/one'},
-            'two': {'call': 'brim.sample_daemon.SampleDaemon',
+            'one': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/one'},
+            'two': {'call': 'brim.daemon_sample.DaemonSample',
                     'interval': '60'},
-            'three': {'call': 'brim.echo.Echo', 'path': '/three'},
-            'four': {'call': 'brim.sample_daemon.SampleDaemon',
+            'three': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/three'},
+            'four': {'call': 'brim.daemon_sample.DaemonSample',
                      'interval': '120'}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
@@ -2860,11 +2860,11 @@ class TestServer(TestCase):
             'brim': {'wsgi': 'one', 'daemons': 'two', 'log_name': 'test'},
             'brim2': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
             'brim02': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
-            'one': {'call': 'brim.echo.Echo', 'path': '/one'},
-            'two': {'call': 'brim.sample_daemon.SampleDaemon',
+            'one': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/one'},
+            'two': {'call': 'brim.daemon_sample.DaemonSample',
                     'interval': '60'},
-            'three': {'call': 'brim.echo.Echo', 'path': '/three'},
-            'four': {'call': 'brim.sample_daemon.SampleDaemon',
+            'three': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/three'},
+            'four': {'call': 'brim.daemon_sample.DaemonSample',
                      'interval': '120'}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']

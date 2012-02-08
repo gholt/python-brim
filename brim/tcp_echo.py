@@ -13,92 +13,90 @@
 # limitations under the License.
 
 """
-Contains a simple WSGI application that just echoes the request body
-back in the response. This is a good starting point for other WSGI
+Contains a simple straight TCP socket application that just echoes
+the incoming data back. This is a good starting point for other TCP
 applications. See the source for what's implemented and why.
 
-See :py:func:`Echo.parse_conf` for configuration options.
+See :py:func:`TCPEcho.parse_conf` for configuration options.
 """
 
 
-class Echo(object):
+class TCPEcho(object):
     """
-    A simple WSGI application that just echoes the request body back
-    in the response. This is a good starting point for other WSGI
+    A simple straight TCP socket application that just echoes the
+    incoming data back. This is a good starting point for other TCP
     applications. See the source for what's implemented and why.
 
     :param name: The name of the app, indicates the app's section in
-                 the overall configuration for the WSGI server.
+                 the overall configuration for the TCP server.
     :param parsed_conf: The conf result from :py:func:`parse_conf`.
-    :param next_app: The next WSGI app in the chain.
     """
 
-    def __init__(self, name, parsed_conf, next_app):
+    def __init__(self, name, parsed_conf):
         # Copy all items from the parsed_conf to actual instance attributes.
         for k, v in parsed_conf.iteritems():
             setattr(self, k, v)
         self.name = name
-        self.next_app = next_app
 
-    def __call__(self, env, start_response):
+    def __call__(self, subserver, stats, sock):
         """
-        If the request path matches the one configured for this app,
-        the request body will be read and then sent back in the
-        response. Otherwise, the request is passed on to the next app
-        in the chain.
+        Simply echo the incoming data back.
 
-        :param env: The WSGI env as per the spec.
-        :param start_response: The WSGI start_response as per the
-                               spec.
-        :returns: Calls start_response and returns an iteratable as
-                  per the WSGI spec.
+        The stats object will have at least the stat variables asked
+        for in :py:func:``stats_conf``. This stats object will
+        support the following methods:
+
+        get(<name>)
+
+            Return the int value of the stat <name>.
+
+        set(<name>, value)
+
+            Sets the value of the stat <name>. The value will be
+            treated as an unsigned integer.
+
+        incr(<name>)
+
+            Increments the value of the stat <name> by 1.
+
+        :param subserver: The brim.server.Subserver that is managing
+                          this daemon.
+        :param stats: Shared memory statistics object as defined
+                      above.
+        :param sock: The just connected socket.
         """
-        if env['PATH_INFO'] != self.path:
-            return self.next_app(env, start_response)
-        env['brim.stats'].incr('%s.requests' % self.name)
-        body = []
-        length = 0
-        while length < self.max_echo:
-            try:
-                chunk = env['wsgi.input'].read(self.max_echo - length)
-            except Exception:
-                chunk = ''
-            if not chunk:
-                break
-            length += len(chunk)
-            body.append(chunk)
-        start_response('200 OK', [('Content-Length', str(length))])
-        return body
+        try:
+            stats.incr('%s.connections' % self.name)
+            while True:
+                data = sock.recv(65536)
+                if not data:
+                    break
+                while data:
+                    i = sock.send(data)
+                    data = data[i:]
+        finally:    
+            sock.close()
 
     @classmethod
     def parse_conf(cls, name, conf):
         """
-        Translates the overall WSGI server configuration into an
+        Translates the overall server configuration into an
         app-specific configuration dict suitable for passing as
-        ``parsed_conf`` in the Echo constructor.
+        ``parsed_conf`` in the TCPEcho constructor.
 
         Sample Configuration File::
 
-            [echo]
-            call = brim.echo.Echo
-            # path = <path>
-            #   The request path to match and serve; any other paths
-            #   will be passed on to the next WSGI app in the chain.
-            #   Default: /echo
-            # max_echo = <bytes>
-            #   The maximum bytes to echo; any additional bytes will
-            #   be ignored. Default: 65536
+            [tcp_echo]
+            call = brim.tcp_echo.TCPEcho
 
         :param name: The name of the app, indicates the app's section
-                     in the overall configuration for the WSGI
-                     server.
+                     in the overall configuration for the server.
         :param conf: The brim.conf.Conf instance representing the
-                     overall configuration of the WSGI server.
+                     overall configuration of the server.
         :returns: A dict suitable for passing as ``parsed_conf`` in
-                  the Echo constructor.
+                  the TCPEcho constructor.
         """
-        return {'path': conf.get(name, 'path', '/echo'),
-                'max_echo': conf.get_int(name, 'max_echo', 65536)}
+        return {}
 
     @classmethod
     def stats_conf(cls, name, parsed_conf):
@@ -150,10 +148,9 @@ class Echo(object):
         brim.stats.Stats.
 
         :param name: The name of the app, indicates the app's section
-                     in the overall configuration for the WSGI
-                     server.
+                     in the overall configuration for the server.
         :param parsed_conf: The conf result from
                             :py:func:`parse_conf`.
         :returns: A list of (stat_name, stat_type) pairs.
         """
-        return [('%s.requests' % name, 'sum')]
+        return [('%s.connections' % name, 'sum')]

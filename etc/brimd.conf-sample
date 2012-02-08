@@ -1,6 +1,4 @@
 [brim]
-#   The following are only available in this section and not in subconfigs like
-#   [brim2], [brim3], etc.
 # additional_confs = <file-list>
 #   Will include the conf files in <file-list> with this conf. Default: ''
 # user = <name>
@@ -9,26 +7,10 @@
 #   The local group to run as. Default: <default-group-of-user>
 # umask = <mask>
 #   The umask to run with. Default: 0022
-
-#   The following are available in this section and in subconfigs like [brim2],
-#   [brim3], etc.
-# wsgi = <name> [<name>] ...
-#   The names of the WSGI apps to configure. Each <name> should have a
-#   corresponding [name] section elsewhere in the configuration. See the
-#   example [echo] below. If no apps are configured, all requests will be
-#   responded to with 404 Not Found.
-# daemons = <name> [<name>] ...
-#   The name of daemons to configure. Each <name> should have a corresponding
-#   [name] section elsewhere in the configuration. See the example
-#   [sample_daemon] below. Daemons are subprocesses not in the WSGI app chain
-#   for background tasks; an example is the replicator in brimkvs.
-# ip = <ip>
-#   The ip address to listen on or * to listen on all addresses. Default: *
-# port = <port>
-#   The port to listen on. Default: 80
-# workers = <number>
-#   The number of subprocess workers to spawn to handle requests. Usually you
-#   want to set this to at least the number of CPU cores you have. Default: 1
+#
+#   The following are also available in [wsgi], [tcp], [udp], and [daemon]
+#   sections as well as this section (which will define the defaults for the
+#   other sections).
 # log_name = <name>
 #   The name to send to syslog with each log line. Default: brim
 # log_level = <level>
@@ -37,17 +19,6 @@
 # log_facility = <facility>
 #   The facility value sent to syslog. Normally this is one of LOCAL0-7.
 #   Default: LOCAL0
-# log_headers = <boolean>
-#   Whether all headers should be sent to the request log or not. Default: no
-# count_status_codes = <code> [<code>] ...
-#   The list of HTTP status codes to track. See brim.stats for a WSGI app
-#   that reports server stats. Each code listed here will be tracked indepently
-#   of the 2xx, 3xx, 4xx, and 5xx tracking. The default is 404 408 499 501. 404
-#   Not Found, 408 Request Timeout, and 499 Disconnect are usually tracked
-#   separately because they can indicate a problem with the server whereas
-#   other 4xx codes usually indicate a problem with the client. 501 Not
-#   Implemented is usually tracked separately because it can indicate a problem
-#   with the client rather than the server unlike most other 5xx codes.
 # json_dumps = <func>
 #   Specifies the Python function to use for converting Python objects into
 #   JSON. This uses json.dumps by default, but you can use other faster
@@ -58,6 +29,17 @@
 #   objects. This uses json.loads by default, but you can use other faster
 #   functions if you have them installed, such as simplejson.loads.
 #   Default: json.loads
+#
+#   The following are also available in [wsgi], [tcp], and [udp] sections as
+#   well as this section (which will define the defaults for the other
+#   sections).
+# ip = <ip>
+#   The ip address to listen on or * to listen on all addresses. Default: *
+# port = <port>
+#   The port to listen on. Default: 80
+# workers = <number>
+#   The number of subprocess workers to spawn to handle requests. Usually you
+#   want to set this to at least the number of CPU cores you have. Default: 1
 # certfile = <path>
 #   The path to the SSL certificate file to enable SSL. Default: <not-set>
 # keyfile = <path>
@@ -75,18 +57,59 @@
 #   before giving up. Default: 30
 # eventlet_hub = <name>
 #   The Eventlet coroutine hub to use. Default: poll
+
+[wsgi]
+# apps = <name> [<name>] ...
+#   The names of the WSGI apps to configure. Each <name> should have a
+#   corresponding [name] section elsewhere in the configuration. See the
+#   example [wsgi_echo] below.
+# log_headers = <boolean>
+#   Whether all headers should be sent to the request log or not. Default: no
+# count_status_codes = <code> [<code>] ...
+#   The list of HTTP status codes to track. See brim.stats for a WSGI app
+#   that reports server stats. Each code listed here will be tracked indepently
+#   of the 2xx, 3xx, 4xx, and 5xx tracking. The default is 404 408 499 501. 404
+#   Not Found, 408 Request Timeout, and 499 Disconnect are usually tracked
+#   separately because they can indicate a problem with the server whereas
+#   other 4xx codes usually indicate a problem with the client. 501 Not
+#   Implemented is usually tracked separately because it can indicate a problem
+#   with the client rather than the server unlike most other 5xx codes.
 # wsgi_input_iter_chunk_size = <bytes>
 #   The number of bytes read per chunk when the WSGI input is used as an
 #   iterator. This use case isn't very common. Default: 4096
 
-[brim2]
-#   You can have multiple sets of WSGI apps and daemons configured by adding
-#   additional [brim2], [brim3], etc. sections, mostly useful to have a
-#   separate sets of apps listening on different ips or ports.
-#   Any settings not specified in the subsection will default to the values in
-#   the main [brim] section excepting the wsgi, daemons, and log_name settings.
-#   The wsgi and daemons settings default to no apps or daemons and log_name
-#   defaults to the [brim] log_name + the subconfig number.
+[wsgi2]
+#   You can have multiple sets of WSGI apps configured by adding additional
+#   [wsgi2], [wsgi3], etc. sections, mostly useful to have a separate sets of
+#   apps listening on different ips or ports.
+
+[tcp]
+call = <package.module.Class>
+#   Set to the Python class that will handle the incoming connections.
+#   Additional options are described in the above [brim] section. The Python
+#   handler class may have options of its own as well.
+
+[tcp2]
+#   You can have multiple sets of TCP socket handlers configured by adding
+#   additional [tcp2], [tcp3], etc. sections.
+
+[udp]
+call = <package.module.Class>
+#   Set to the Python class that will handle the incoming datagrams.
+#   Additional options are described in the above [brim] section. The Python
+#   handler class may have options of its own as well.
+
+[udp2]
+#   You can have multiple sets of UDP socket handlers configured by adding
+#   additional [udp2], [udp3], etc. sections.
+
+[daemons]
+# daemons = <name> [<name>] ...
+#   The name of daemons to configure. Each <name> should have a corresponding
+#   [name] section elsewhere in the configuration. See the example
+#   [sample_daemon] below. Daemons are subprocesses for background tasks; an
+#   example is the replicator in brimkvs.
+
 
 [stats]
 #   Reports the brimd server stats as a JSON reponse. The stats contain basic
@@ -100,11 +123,11 @@ call = brim.stats.Stats
 #   accessing the stats by setting it to a hard to guess value.
 #   Default: /stats
 
-[echo]
+[wsgi_echo]
 #   A simple WSGI application that just echoes the request body back in the
 #   response. This is a good starting point for other WSGI applications. See
 #   the source for what's implemented and why.
-call = brim.echo.Echo
+call = brim.wsgi_echo.WSGIEcho
 #   Each application needs at least this call value set to the Python class
 #   that will handle the application's requests.
 # path = <path>
@@ -119,5 +142,7 @@ call = brim.echo.Echo
 #   good starting point for other daemons. See the source for what's
 #   implemented and why.
 call = brim.sample_daemon.SampleDaemon
+#   Each daemon needs at least this call value set to the Python class that
+#   will be launched by the server.
 # interval = <seconds>
 #   The number of seconds between each status line logged. Default: 60
