@@ -284,15 +284,27 @@ class _WsgiOutput(object):
 
 class Subserver(object):
     """
-    Created for each [brim], [brim2], [brim3] config section to hold
-    the attributes specific to that subconfig.
+    Created for each [brim], [brim2], [brim3] config section to hold the
+    attributes specific to that subconfig. Few daemons or WSGI apps need to
+    access this directly, but some like brim.stats.Stats do.
 
+    :param server: The parent brim.server.Server.
     :param name: The name of the subserver ('brim', 'brim2', 'brim3',
                  etc.)
     """
 
     def __init__(self, server, name):
+        #: The parent brim.server.Server of this subserver.
         self.server = server
+        #: The logger in use by this subserver. WSGI apps can also access this
+        #: via ``env['brim.logger']``.
+        self.logger = None
+        #: The json.dumps compatible function configured. WSGI apps can also
+        #: access this via ``env['brim.json_dumps']``.
+        self.json_dumps = None
+        #: The json.loads compatible function configured. WSGI apps can also
+        #: access this via ``env['brim.json_loads']``.
+        self.json_loads = None
         self.name = name
         self.daemon_stats_conf = {'start_time': ''}
         self.wsgi_worker_stats_conf = {'start_time': 'worker',
@@ -630,6 +642,11 @@ class Subserver(object):
         """
         This is the last method run by the main brimd server process.
         """
+        if not self.server.output:
+            capture_exceptions_stdout_stderr(
+                exceptions=self._capture_exception,
+                stdout_func=self._capture_stdout,
+                stderr_func=self._capture_stderr)
         self.daemon_bucket_stats = \
             _BucketStats(len(self.daemons), self.daemon_stats_conf.keys())
         for code in self.count_status_codes:
@@ -806,19 +823,51 @@ class Subserver(object):
         except Exception:
             self.logger.exception('WSGI EXCEPTION:')
 
+    def _capture_exception(self, *excinfo):
+        """
+        Used by capture_exceptions_stdout_stderr to catch any
+        completely uncaught exceptions and redirect them to the
+        logger.
+        """
+        if self.daemon_id >= 0:
+            msg = 'UNCAUGHT EXCEPTION: did:%03d %s' % \
+                  (self.daemon_id, sysloggable_excinfo(*excinfo))
+        else:
+            msg = 'UNCAUGHT EXCEPTION: wid:%03d %s' % \
+                  (self.wsgi_worker_id, sysloggable_excinfo(*excinfo))
+        self.logger.error(msg)
+
+    def _capture_stdout(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard output and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                if self.daemon_id >= 0:
+                    msg = 'STDOUT: did:%03d %s' % (self.daemon_id, line)
+                else:
+                    msg = 'STDOUT: wid:%03d %s' % (self.wsgi_worker_id, line)
+                self.logger.info(msg)
+
+    def _capture_stderr(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard error and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                if self.daemon_id >= 0:
+                    msg = 'STDERR: did:%03d %s' % (self.daemon_id, line)
+                else:
+                    msg = 'STDERR: wid:%03d %s' % (self.wsgi_worker_id, line)
+                self.logger.error(msg)
+
 
 class Server(object):
     """
-    The main class for the Brim.Net WSGI Server. This is written
-    mostly to be used by bin/brimd and still be reasonably
-    testable. Few daemons or WSGI apps need to access this directly
-    but some, like brim.stats.Stats do. Here are the contents of
-    bin/brimd::
-
-        #!/usr/bin/env python
-        import sys
-        from brim.server import Server
-        sys.exit(Server().main())
+    The main class for the Brim.Net WSGI Server launched by the brimd
+    script. Few daemons or WSGI apps need to access this directly.
 
     :param args: Command line arguments for the server, without the
                  process name. Defaults to sys.argv[1:]
@@ -1092,13 +1141,8 @@ Command (defaults to 'no-daemon'):
         completely uncaught exceptions and redirect them to the
         logger.
         """
-        if self.daemon_id >= 0:
-            msg = 'UNCAUGHT EXCEPTION: did:%03d %s' % \
-                  (self.daemon_id, sysloggable_excinfo(*excinfo))
-        else:
-            msg = 'UNCAUGHT EXCEPTION: wid:%03d %s' % \
-                  (self.wsgi_worker_id, sysloggable_excinfo(*excinfo))
-        self.logger.error(msg)
+        self.logger.error(
+            'UNCAUGHT EXCEPTION: main %s' % (sysloggable_excinfo(*excinfo),))
 
     def _capture_stdout(self, value):
         """
@@ -1107,11 +1151,7 @@ Command (defaults to 'no-daemon'):
         """
         for line in value.split('\n'):
             if line:
-                if self.daemon_id >= 0:
-                    msg = 'STDOUT: did:%03d %s' % (self.daemon_id, line)
-                else:
-                    msg = 'STDOUT: wid:%03d %s' % (self.wsgi_worker_id, line)
-                self.logger.info(msg)
+                self.logger.info('STDOUT: main %s' % (line,))
 
     def _capture_stderr(self, value):
         """
@@ -1120,8 +1160,4 @@ Command (defaults to 'no-daemon'):
         """
         for line in value.split('\n'):
             if line:
-                if self.daemon_id >= 0:
-                    msg = 'STDERR: did:%03d %s' % (self.daemon_id, line)
-                else:
-                    msg = 'STDERR: wid:%03d %s' % (self.wsgi_worker_id, line)
-                self.logger.error(msg)
+                self.logger.error('STDERR: main %s' % (line,))

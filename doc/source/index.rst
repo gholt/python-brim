@@ -80,7 +80,7 @@ Example Usage
 * Create /etc/brim/brimd.conf::
 
     [brim]
-    apps = echo stats
+    wsgi = echo stats
 
     [echo]
     call = brim.echo.Echo
@@ -92,15 +92,15 @@ Example Usage
 
     $ sudo brimd start
 
-* Access the "echo" app::
+* Access the "echo" app (echos *Just a test.* back)::
 
     $ curl -i http://127.0.0.1/echo --data-binary 'Just a test.'
 
-* Access a non-existent path::
+* Access a non-existent path (404s)::
 
     $ curl -i http://127.0.0.1/invalid
 
-* Access the "stats" app::
+* Access the "stats" app (returns JSON formatted server stats)::
 
     $ curl -s http://127.0.0.1/stats | python -mjson.tool
 
@@ -110,7 +110,62 @@ Example Usage
 
 Run ``brimd -h`` for more details on server control. It supports the standard init.d-style commands as well a special no-daemon mode for debugging.
 
-Also, see the included brimd.conf-sample for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdeamons to start, etc.
+Also, see the included brimd.conf-sample for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.
+
+
+Example Multi-Configuration Usage
+=================================
+
+You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:
+
+* Create /etc/brim/brimd.conf::
+
+    [brim]
+    wsgi = echo stats
+
+    [brim2]
+    port = 81
+    wsgi = echo2 stats
+
+    [echo]
+    call = brim.echo.Echo
+
+    [stats]
+    call = brim.stats.Stats
+
+    [echo2]
+    call = brim.echo.Echo
+    path = /echo2
+
+You can see the new section [brim2] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.
+
+* Start the server::
+
+    $ sudo brimd start
+
+* Access the "echo" app on the main port::
+
+    $ curl -i http://127.0.0.1/echo --data-binary 'Just a test.'
+
+* Access the "echo" app on the second port::
+
+    $ curl -i http://127.0.0.1:81/echo2 --data-binary 'Just a test.'
+
+* Note that the apps don't answer on the other ports::
+
+    $ curl -i http://127.0.0.1/echo2 --data-binary 'Just a test.'
+    $ curl -i http://127.0.0.1:81/echo --data-binary 'Just a test.'
+
+* Access the "stats" app and see it's configured on both ports. You can perform extra requests on one port to ensure the stats returned are different::
+
+    $ curl -s http://127.0.0.1/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+
+* Stop the server::
+
+    $ sudo brimd stop
+
+The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
 WSGI Application Development
@@ -133,7 +188,7 @@ Developing WSGI applications for brimd is quite similar to other Python WSGI ser
 Here's an example /etc/brim/brimd.conf with this app active::
 
     [brimd]
-    apps = helloworld
+    wsgi = helloworld
 
     [helloworld]
     call = mypackage.mymodule.HelloWorld
@@ -189,7 +244,7 @@ It's important to note that this early config parsing is done in the main server
 Now, let's update our configuration::
 
     [brimd]
-    apps = helloworld
+    wsgi = helloworld
 
     [helloworld]
     call = mypackage.mymodule.HelloWorld
@@ -277,7 +332,7 @@ When handling actual requests, we can access the stats via the ``env['brim.stats
 So now, let's add the brim.stats.Stats app to our configuration so we'll be able to get a report on the server stats::
 
     [brimd]
-    apps = helloworld stats
+    wsgi = helloworld stats
 
     [helloworld]
     call = mypackage.mymodule.HelloWorld
@@ -373,16 +428,16 @@ Server Stats
 The brimd server tracks various statistics, such as the server start time and number of requests processed. The brim.stats.Stats app can be configured to provide access to these stats via a JSON response::
 
     [brim]
-    apps = stats
+    wsgi = stats
     workers = 4
 
     [stats]
     call = brim.stats.Stats
     # path = <path>
-        # The request path to match and serve; any other paths will be passed
-        # on to the next WSGI app in the chain. This can serve as a basic
-        # restriction to accessing the stats by setting it to a hard to guess
-        # value. Default: /stats
+    #   The request path to match and serve; any other paths will be passed on
+    #   to the next WSGI app in the chain. This can serve as a basic
+    #   restriction to accessing the stats by setting it to a hard to guess
+    #   value. Default: /stats
 
 After restarting the server, you can now access these stats::
 
