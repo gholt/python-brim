@@ -663,6 +663,8 @@ class TestServer(TestCase):
 
         def _fork(*args):
             self.fork_calls.append(args)
+            if len(self.fork_retval) > 1:
+                return self.fork_retval.pop(0)
             return self.fork_retval[0]
 
         def _sleep(*args):
@@ -1802,8 +1804,9 @@ class TestServer(TestCase):
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
-        server.Subserver(self.serv, 'brim')._configure_daemons(self.conf)
-        server.Subserver(self.serv, 'brim')._configure_wsgi_apps(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._configure_daemons(self.conf)
+        subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
 
         def _sustain_workers(*args, **kwargs):
@@ -1829,8 +1832,9 @@ class TestServer(TestCase):
         self.serv.args = ['start']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
-        server.Subserver(self.serv, 'brim')._configure_daemons(self.conf)
-        server.Subserver(self.serv, 'brim')._configure_wsgi_apps(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._configure_daemons(self.conf)
+        subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
         open_retval = [StringIO()]
         open_calls = []
@@ -2806,6 +2810,148 @@ class TestServer(TestCase):
             subserv.wsgi_worker_id, 'request_count'), 1)
         self.assertEquals(subserv.wsgi_worker_bucket_stats.get(
             subserv.wsgi_worker_id, 'status_3xx_count'), 1)
+
+    def test_multiconf(self):
+        conf = Conf({
+            'brim': {'wsgi': 'one', 'daemons': 'two', 'log_name': 'test'},
+            'brim2': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
+            'one': {'call': 'brim.echo.Echo', 'path': '/one'},
+            'two': {'call': 'brim.sample_daemon.SampleDaemon',
+                    'interval': '60'},
+            'three': {'call': 'brim.echo.Echo', 'path': '/three'},
+            'four': {'call': 'brim.sample_daemon.SampleDaemon',
+                     'interval': '120'}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(conf)
+        self.assertEquals(len(self.serv.subservers), 2)
+        subserv1, subserv2 = self.serv.subservers
+        self.assertEquals(subserv1.ip, '*')
+        self.assertEquals(subserv2.ip, '*')
+        self.assertEquals(subserv1.port, 80)
+        self.assertEquals(subserv2.port, 81)
+        self.assertEquals(subserv1.log_name, 'test')
+        self.assertEquals(subserv2.log_name, 'test2')
+        subserv1._configure_daemons(conf)
+        subserv1._configure_wsgi_apps(conf)
+        subserv2._configure_daemons(conf)
+        subserv2._configure_wsgi_apps(conf)
+        self.assertEquals(subserv1.wsgi_apps[0][2]['path'], '/one')
+        self.assertEquals(subserv2.wsgi_apps[0][2]['path'], '/three')
+        self.assertEquals(subserv1.daemons[0][2]['interval'], 60)
+        self.assertEquals(subserv2.daemons[0][2]['interval'], 120)
+
+    def test_multiconf_conflict(self):
+        conf = Conf({
+            'brim': {'wsgi': 'one', 'daemons': 'two', 'log_name': 'test'},
+            'brim2': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
+            'brim02': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
+            'one': {'call': 'brim.echo.Echo', 'path': '/one'},
+            'two': {'call': 'brim.sample_daemon.SampleDaemon',
+                    'interval': '60'},
+            'three': {'call': 'brim.echo.Echo', 'path': '/three'},
+            'four': {'call': 'brim.sample_daemon.SampleDaemon',
+                     'interval': '120'}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        exc = None
+        try:
+            self.serv._parse_conf(conf)
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc), 'Multiple config sections [brim02].\n')
+
+    def test_multiconf_wsgi_launch_parent_side(self):
+        self.conf = Conf({
+            'brim': {'port': '0', 'wsgi': 'one'},
+            'brim2': {'port': '0', 'wsgi': 'one'},
+            'one': {'call':
+                'brim.test.unit.test_server.AppWithStatsConf'}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv1 = self.serv.subservers[0]
+        subserv1._configure_daemons(self.conf)
+        subserv1._configure_wsgi_apps(self.conf)
+        subserv2 = self.serv.subservers[1]
+        subserv2._configure_daemons(self.conf)
+        subserv2._configure_wsgi_apps(self.conf)
+        sustain_workers_calls = []
+        capture_calls = []
+        self.fork_retval = [0, 12345]
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        def _capture_exceptions_stdout_stderr(*args, **kwargs):
+            capture_calls.append((args, kwargs))
+
+        orig_sustain_workers = server.sustain_workers
+        orig_capture_exceptions_stdout_stderr = \
+            server.capture_exceptions_stdout_stderr
+        try:
+            server.sustain_workers = _sustain_workers
+            server.capture_exceptions_stdout_stderr = \
+                _capture_exceptions_stdout_stderr
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+            server.capture_exceptions_stdout_stderr = \
+                orig_capture_exceptions_stdout_stderr
+        self.assertEquals(sustain_workers_calls,
+            [((1, subserv1._wsgi_worker), {'logger': subserv1.logger})])
+        self.assertEquals(capture_calls, [((), {
+            'exceptions': self.serv._capture_exception,
+            'stdout_func': self.serv._capture_stdout,
+            'stderr_func': self.serv._capture_stderr})])
+
+    def test_multiconf_wsgi_launch_child_side(self):
+        self.conf = Conf({
+            'brim': {'port': '0', 'wsgi': 'one'},
+            'brim2': {'port': '0', 'wsgi': 'one'},
+            'one': {'call':
+                'brim.test.unit.test_server.AppWithStatsConf'}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv1 = self.serv.subservers[0]
+        subserv1._configure_daemons(self.conf)
+        subserv1._configure_wsgi_apps(self.conf)
+        subserv2 = self.serv.subservers[1]
+        subserv2._configure_daemons(self.conf)
+        subserv2._configure_wsgi_apps(self.conf)
+        sustain_workers_calls = []
+        capture_calls = []
+        self.fork_retval = [0, 0]
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        def _capture_exceptions_stdout_stderr(*args, **kwargs):
+            capture_calls.append((args, kwargs))
+
+        orig_sustain_workers = server.sustain_workers
+        orig_capture_exceptions_stdout_stderr = \
+            server.capture_exceptions_stdout_stderr
+        try:
+            server.sustain_workers = _sustain_workers
+            server.capture_exceptions_stdout_stderr = \
+                _capture_exceptions_stdout_stderr
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+            server.capture_exceptions_stdout_stderr = \
+                orig_capture_exceptions_stdout_stderr
+        self.assertEquals(sustain_workers_calls,
+            [((1, subserv2._wsgi_worker), {'logger': subserv2.logger})])
+        self.assertEquals(capture_calls, [((), {
+            'exceptions': self.serv._capture_exception,
+            'stdout_func': self.serv._capture_stdout,
+            'stderr_func': self.serv._capture_stderr})])
 
 
 if __name__ == '__main__':
