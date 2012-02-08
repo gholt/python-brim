@@ -647,6 +647,8 @@ class TestServer(TestCase):
         self.orig_send_pid_sig = server._send_pid_sig
         self.orig_droppriv = server.droppriv
         self.orig_get_logger = server.get_logger
+        self.orig_capture_exceptions_stdout_stderr = \
+            server.capture_exceptions_stdout_stderr
         self.read_conf_calls = []
         self.conf = Conf({})
         self.fork_calls = []
@@ -656,6 +658,7 @@ class TestServer(TestCase):
         self.send_pid_sig_retval = [True, 12345]
         self.droppriv_calls = []
         self.get_logger_calls = []
+        self.capture_calls = []
 
         def _read_conf(*args):
             self.read_conf_calls.append(args)
@@ -681,12 +684,17 @@ class TestServer(TestCase):
             self.get_logger_calls.append(args)
             return FakeLogger()
 
+        def _capture_exceptions_stdout_stderr(*args, **kwargs):
+            self.capture_calls.append((args, kwargs))
+
         server.read_conf = _read_conf
         server.fork = _fork
         server.sleep = _sleep
         server._send_pid_sig = _send_pid_sig
         server.droppriv = _droppriv
         server.get_logger = _get_logger
+        server.capture_exceptions_stdout_stderr = \
+            _capture_exceptions_stdout_stderr
         self.stdin = StringIO()
         self.stdout = StringIO()
         self.stderr = StringIO()
@@ -699,6 +707,8 @@ class TestServer(TestCase):
         server._send_pid_sig = self.orig_send_pid_sig
         server.droppriv = self.orig_droppriv
         server.get_logger = self.orig_get_logger
+        server.capture_exceptions_stdout_stderr = \
+            self.orig_capture_exceptions_stdout_stderr
 
     def test_uses_standard_items_by_default(self):
         serv = server.Server()
@@ -1869,33 +1879,26 @@ class TestServer(TestCase):
         subserv._configure_daemons(self.conf)
         subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         self.fork_retval[0] = 0
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
 
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
-
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv._capture_exception,
+                  'stdout_func': subserv._capture_stdout,
+                  'stderr_func': subserv._capture_stderr})])
 
     def test_start_daemoned_child_side_console_mode(self):
         self.conf = Conf({'brim': {'port': '0'}})
@@ -1907,30 +1910,20 @@ class TestServer(TestCase):
         subserv._configure_daemons(self.conf)
         subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         self.fork_retval[0] = 0
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
 
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
-
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(capture_calls, [])
+        self.assertEquals(self.capture_calls, [])
 
     def test_start_daemoned_with_daemons_parent_side(self):
         self.conf = Conf({'brim': {'port': '0', 'daemons': 'one'},
@@ -1943,14 +1936,10 @@ class TestServer(TestCase):
         subserv._configure_daemons(self.conf)
         subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         fork_calls = []
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
-
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
 
         def _fork(*args):
             fork_calls.append(args)
@@ -1959,24 +1948,21 @@ class TestServer(TestCase):
             return 12345
 
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             server.fork = _fork
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv._capture_exception,
+                  'stdout_func': subserv._capture_stdout,
+                  'stderr_func': subserv._capture_stderr})])
         self.assertEquals(fork_calls, [(), ()])
 
     def test_start_daemoned_with_daemons_child_side(self):
@@ -1990,50 +1976,33 @@ class TestServer(TestCase):
         subserv._configure_daemons(self.conf)
         subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         self.fork_retval[0] = 0
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
 
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
-
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv._daemon), {'logger': subserv.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv._capture_exception,
+                  'stdout_func': subserv._capture_stdout,
+                  'stderr_func': subserv._capture_stderr})])
 
     def test_capture_exception(self):
-        self.serv.daemon_id = 0
         self.serv.logger = FakeLogger()
         self.serv._capture_exception()
         self.assertEquals(self.serv.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: did:000 None ['None']",)])
+                          [("UNCAUGHT EXCEPTION: main None ['None']",)])
 
-        self.serv.daemon_id = -1
-        self.serv.wsgi_worker_id = 0
-        self.serv.logger = FakeLogger()
-        self.serv._capture_exception()
-        self.assertEquals(self.serv.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: wid:000 None ['None']",)])
-
-        self.serv.daemon_id = -1
-        self.serv.wsgi_worker_id = 0
         self.serv.logger = FakeLogger()
         try:
             raise Exception('testing')
@@ -2042,40 +2011,98 @@ class TestServer(TestCase):
         self.assertEquals(len(self.serv.logger.error_calls), 1)
         self.assertEquals(len(self.serv.logger.error_calls[0]), 1)
         self.assertTrue(self.serv.logger.error_calls[0][0].startswith(
-            'UNCAUGHT EXCEPTION: wid:000 Exception: testing [\'Traceback '
+            'UNCAUGHT EXCEPTION: main Exception: testing [\'Traceback '
             '(most recent call last):\''))
         self.assertTrue(self.serv.logger.error_calls[0][0].endswith(
             '    raise Exception(\'testing\')", \'Exception: testing\']'))
 
+    def test_capture_exception_subserv(self):
+        subserv = server.Subserver(self.serv, 'test')
+        subserv.daemon_id = 0
+        subserv.logger = FakeLogger()
+        subserv._capture_exception()
+        self.assertEquals(subserv.logger.error_calls,
+                          [("UNCAUGHT EXCEPTION: did:000 None ['None']",)])
+
+        subserv.daemon_id = -1
+        subserv.wsgi_worker_id = 0
+        subserv.logger = FakeLogger()
+        subserv._capture_exception()
+        self.assertEquals(subserv.logger.error_calls,
+                          [("UNCAUGHT EXCEPTION: wid:000 None ['None']",)])
+
+        subserv.daemon_id = -1
+        subserv.wsgi_worker_id = 0
+        subserv.logger = FakeLogger()
+        try:
+            raise Exception('testing')
+        except Exception:
+            subserv._capture_exception(*exc_info())
+        self.assertEquals(len(subserv.logger.error_calls), 1)
+        self.assertEquals(len(subserv.logger.error_calls[0]), 1)
+        self.assertTrue(subserv.logger.error_calls[0][0].startswith(
+            'UNCAUGHT EXCEPTION: wid:000 Exception: testing [\'Traceback '
+            '(most recent call last):\''))
+        self.assertTrue(subserv.logger.error_calls[0][0].endswith(
+            '    raise Exception(\'testing\')", \'Exception: testing\']'))
+
     def test_capture_stdout(self):
-        self.serv.daemon_id = 0
         self.serv.logger = FakeLogger()
         self.serv._capture_stdout('one\ntwo\nthree\n')
         self.assertEquals(self.serv.logger.info_calls,
+            [('STDOUT: main one',), ('STDOUT: main two',),
+             ('STDOUT: main three',)])
+
+        self.serv.logger = FakeLogger()
+        self.serv._capture_stdout('one\ntwo\nthree\n')
+        self.assertEquals(self.serv.logger.info_calls,
+            [('STDOUT: main one',), ('STDOUT: main two',),
+             ('STDOUT: main three',)])
+
+    def test_capture_stdout_subserv(self):
+        subserv = server.Subserver(self.serv, 'test')
+        subserv.daemon_id = 0
+        subserv.logger = FakeLogger()
+        subserv._capture_stdout('one\ntwo\nthree\n')
+        self.assertEquals(subserv.logger.info_calls,
             [('STDOUT: did:000 one',), ('STDOUT: did:000 two',),
              ('STDOUT: did:000 three',)])
 
-        self.serv.daemon_id = -1
-        self.serv.wsgi_worker_id = 0
-        self.serv.logger = FakeLogger()
-        self.serv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.info_calls,
+        subserv.daemon_id = -1
+        subserv.wsgi_worker_id = 0
+        subserv.logger = FakeLogger()
+        subserv._capture_stdout('one\ntwo\nthree\n')
+        self.assertEquals(subserv.logger.info_calls,
             [('STDOUT: wid:000 one',), ('STDOUT: wid:000 two',),
              ('STDOUT: wid:000 three',)])
 
     def test_capture_stderr(self):
-        self.serv.daemon_id = 0
         self.serv.logger = FakeLogger()
         self.serv._capture_stderr('one\ntwo\nthree\n')
         self.assertEquals(self.serv.logger.error_calls,
+            [('STDERR: main one',), ('STDERR: main two',),
+             ('STDERR: main three',)])
+
+        self.serv.logger = FakeLogger()
+        self.serv._capture_stderr('one\ntwo\nthree\n')
+        self.assertEquals(self.serv.logger.error_calls,
+            [('STDERR: main one',), ('STDERR: main two',),
+             ('STDERR: main three',)])
+
+    def test_capture_stderr_subserv(self):
+        subserv = server.Subserver(self.serv, 'test')
+        subserv.daemon_id = 0
+        subserv.logger = FakeLogger()
+        subserv._capture_stderr('one\ntwo\nthree\n')
+        self.assertEquals(subserv.logger.error_calls,
             [('STDERR: did:000 one',), ('STDERR: did:000 two',),
              ('STDERR: did:000 three',)])
 
-        self.serv.daemon_id = -1
-        self.serv.wsgi_worker_id = 0
-        self.serv.logger = FakeLogger()
-        self.serv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.error_calls,
+        subserv.daemon_id = -1
+        subserv.wsgi_worker_id = 0
+        subserv.logger = FakeLogger()
+        subserv._capture_stderr('one\ntwo\nthree\n')
+        self.assertEquals(subserv.logger.error_calls,
             [('STDERR: wid:000 one',), ('STDERR: wid:000 two',),
              ('STDERR: wid:000 three',)])
 
@@ -2091,14 +2118,10 @@ class TestServer(TestCase):
         subserv._configure_daemons(self.conf)
         subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         fork_calls = []
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
-
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
 
         def _fork(*args):
             fork_calls.append(args)
@@ -2107,24 +2130,21 @@ class TestServer(TestCase):
             return 12345
 
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             server.fork = _fork
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv._capture_exception,
+                  'stdout_func': subserv._capture_stdout,
+                  'stderr_func': subserv._capture_stderr})])
         self.assertEquals(fork_calls, [(), ()])
         # All the above was to get a daemon environment going.
         t = time()
@@ -2148,33 +2168,26 @@ class TestServer(TestCase):
         subserv._configure_daemons(self.conf)
         subserv._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         self.fork_retval[0] = 0
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
 
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
-
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv._capture_exception,
+                  'stdout_func': subserv._capture_stdout,
+                  'stderr_func': subserv._capture_stderr})])
         # All the above was to get a wsgi worker environment going.
         server_calls = []
 
@@ -2880,33 +2893,26 @@ class TestServer(TestCase):
         subserv2._configure_daemons(self.conf)
         subserv2._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         self.fork_retval = [0, 12345]
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
 
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
-
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv1._wsgi_worker), {'logger': subserv1.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv1._capture_exception,
+                  'stdout_func': subserv1._capture_stdout,
+                  'stderr_func': subserv1._capture_stderr})])
 
     def test_multiconf_wsgi_launch_child_side(self):
         self.conf = Conf({
@@ -2925,33 +2931,26 @@ class TestServer(TestCase):
         subserv2._configure_daemons(self.conf)
         subserv2._configure_wsgi_apps(self.conf)
         sustain_workers_calls = []
-        capture_calls = []
         self.fork_retval = [0, 0]
 
         def _sustain_workers(*args, **kwargs):
             sustain_workers_calls.append((args, kwargs))
 
-        def _capture_exceptions_stdout_stderr(*args, **kwargs):
-            capture_calls.append((args, kwargs))
-
         orig_sustain_workers = server.sustain_workers
-        orig_capture_exceptions_stdout_stderr = \
-            server.capture_exceptions_stdout_stderr
         try:
             server.sustain_workers = _sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-            server.capture_exceptions_stdout_stderr = \
-                orig_capture_exceptions_stdout_stderr
         self.assertEquals(sustain_workers_calls,
             [((1, subserv2._wsgi_worker), {'logger': subserv2.logger})])
-        self.assertEquals(capture_calls, [((), {
-            'exceptions': self.serv._capture_exception,
-            'stdout_func': self.serv._capture_stdout,
-            'stderr_func': self.serv._capture_stderr})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr}),
+            ((), {'exceptions': subserv2._capture_exception,
+                  'stdout_func': subserv2._capture_stdout,
+                  'stderr_func': subserv2._capture_stderr})])
 
 
 if __name__ == '__main__':
