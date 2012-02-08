@@ -82,7 +82,7 @@
 [brim2]
 #   You can have multiple sets of WSGI apps and daemons configured by adding
 #   additional [brim2], [brim3], etc. sections, mostly useful to have a
-#   separate sets of apps listening on a different ips or ports.
+#   separate sets of apps listening on different ips or ports.
 #   Any settings not specified in the subsection will default to the values in
 #   the main [brim] section excepting the wsgi, daemons, and log_name settings.
 #   The wsgi and daemons settings default to no apps or daemons and log_name

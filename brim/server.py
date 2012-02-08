@@ -431,56 +431,56 @@ class Subserver(object):
             call = conf.get(daemon_name, 'call')
             if not call:
                 raise Exception(
-                    "Daemon %r not configured with 'call' option." %
+                    "Daemon [%s] not configured with 'call' option." %
                     daemon_name)
             try:
                 mod, cls = call.rsplit('.', 1)
             except ValueError:
                 raise Exception(
-                    'Invalid call value %r for daemon %r.' %
+                    'Invalid call value %r for daemon [%s].' %
                     (call, daemon_name))
             try:
                 daemon_class = getattr(__import__(mod, fromlist=[cls]), cls)
             except (AttributeError, ImportError):
-                raise Exception('Could not load class %r for daemon %r.' %
+                raise Exception('Could not load class %r for daemon [%s].' %
                                 (call, daemon_name))
             try:
                 args = len(getargspec(daemon_class.__init__).args)
                 if args != 3:
                     raise Exception('Would not be able to instantiate %r for '
-                        'daemon %r. Incorrect number of args, %s, should be 3 '
-                        '(self, name, conf).' % (call, daemon_name, args))
+                        'daemon [%s]. Incorrect number of args, %s, should be '
+                        '3 (self, name, conf).' % (call, daemon_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably not a class.'
                 raise Exception(
-                    'Would not be able to instantiate %r for daemon %r. %s' %
+                    'Would not be able to instantiate %r for daemon [%s]. %s' %
                     (call, daemon_name, err))
             try:
                 args = len(getargspec(daemon_class.__call__).args)
                 if args != 3:
                     raise Exception('Would not be able to use %r for daemon '
-                        '%r. Incorrect number of __call__ args, %s, should be '
-                        '3 (self, subserver, stats).' %
+                        '[%s]. Incorrect number of __call__ args, %s, should '
+                        'be 3 (self, subserver, stats).' %
                         (call, daemon_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably no __call__ method.'
                 raise Exception(
-                    'Would not be able to use %r for daemon %r. %s' %
+                    'Would not be able to use %r for daemon [%s]. %s' %
                     (call, daemon_name, err))
             if hasattr(daemon_class, 'parse_conf'):
                 try:
                     args = len(getargspec(daemon_class.parse_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for daemon %r. '
+                        raise Exception('Cannot use %r for daemon [%s]. '
                             'Incorrect number of parse_conf args, %s, should '
                             'be 3 (self, name, conf).' %
                             (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'parse_conf probably not a method.'
-                    raise Exception('Cannot use %r for daemon %r. %s' %
+                    raise Exception('Cannot use %r for daemon [%s]. %s' %
                                     (call, daemon_name, err))
                 daemon_conf = daemon_class.parse_conf(daemon_name, conf)
             else:
@@ -489,13 +489,14 @@ class Subserver(object):
                 try:
                     args = len(getargspec(daemon_class.stats_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for app %r. Incorrect '
-                            'number of stats_conf args, %s, should be 3 '
-                            '(self, name, conf).' % (call, daemon_name, args))
+                        raise Exception('Cannot use %r for app [%s]. '
+                            'Incorrect number of stats_conf args, %s, should '
+                            'be 3 (self, name, conf).' %
+                            (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'stats_conf probably not a method.'
-                    raise Exception('Cannot use %r for app %r. %s' %
+                    raise Exception('Cannot use %r for app [%s]. %s' %
                                     (call, daemon_name, err))
                 for stat_name in \
                         daemon_class.stats_conf(daemon_name, daemon_conf):
@@ -540,55 +541,56 @@ class Subserver(object):
             call = conf.get(app_name, 'call')
             if not call:
                 raise Exception(
-                    "App %r not configured with 'call' option." % app_name)
+                    "App [%s] not configured with 'call' option." % app_name)
             try:
                 mod, cls = call.rsplit('.', 1)
             except ValueError:
                 raise Exception(
-                    'Invalid call value %r for app %r.' % (call, app_name))
+                    'Invalid call value %r for app [%s].' % (call, app_name))
             try:
                 app_class = getattr(__import__(mod, fromlist=[cls]), cls)
             except (AttributeError, ImportError):
                 raise Exception(
-                    'Could not load class %r for app %r.' % (call, app_name))
+                    'Could not load class %r for app [%s].' % (call, app_name))
             try:
                 args = len(getargspec(app_class.__init__).args)
                 if args != 4:
                     raise Exception('Would not be able to instantiate %r for '
-                        'app %r. Incorrect number of args, %s, should be 4 '
+                        'app [%s]. Incorrect number of args, %s, should be 4 '
                         '(self, name, conf, next_app).' %
                         (call, app_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably not a class.'
                 raise Exception(
-                    'Would not be able to instantiate %r for app %r. %s' %
+                    'Would not be able to instantiate %r for app [%s]. %s' %
                     (call, app_name, err))
             try:
                 args = len(getargspec(app_class.__call__).args)
                 if args != 3:
-                    raise Exception('Would not be able to use %r for app %r. '
-                        'Incorrect number of __call__ args, %s, should be 3 '
-                        '(self, env, start_response).' %
+                    raise Exception('Would not be able to use %r for app '
+                        '[%s]. Incorrect number of __call__ args, %s, should '
+                        'be 3 (self, env, start_response).' %
                         (call, app_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably no __call__ method.'
                 raise Exception(
-                    'Would not be able to use %r for app %r. %s' %
+                    'Would not be able to use %r for app [%s]. %s' %
                     (call, app_name, err))
             if hasattr(app_class, 'parse_conf'):
                 try:
                     args = len(getargspec(app_class.parse_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for app %r. Incorrect '
-                            'number of parse_conf args, %s, should be 3 '
-                            '(self, name, conf).' % (call, app_name, args))
+                        raise Exception('Cannot use %r for app [%s]. '
+                            'Incorrect number of parse_conf args, %s, should '
+                            'be 3 (self, name, conf).' %
+                            (call, app_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'parse_conf probably not a method.'
-                    raise Exception(
-                        'Cannot use %r for app %r. %s' % (call, app_name, err))
+                    raise Exception('Cannot use %r for app [%s]. %s' %
+                                    (call, app_name, err))
                 app_conf = app_class.parse_conf(app_name, conf)
             else:
                 app_conf = conf
@@ -596,14 +598,15 @@ class Subserver(object):
                 try:
                     args = len(getargspec(app_class.stats_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for app %r. Incorrect '
-                            'number of stats_conf args, %s, should be 3 '
-                            '(self, name, conf).' % (call, app_name, args))
+                        raise Exception('Cannot use %r for app [%s]. '
+                            'Incorrect number of stats_conf args, %s, should '
+                            'be 3 (self, name, conf).' %
+                            (call, app_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'stats_conf probably not a method.'
-                    raise Exception(
-                        'Cannot use %r for app %r. %s' % (call, app_name, err))
+                    raise Exception('Cannot use %r for app [%s]. %s' %
+                                    (call, app_name, err))
                 for stat_name, stat_type in \
                         app_class.stats_conf(app_name, app_conf):
                     self.wsgi_worker_stats_conf[stat_name] = stat_type
@@ -864,7 +867,6 @@ class Server(object):
             self._start()
             return 0
         except Exception, err:
-            raise
             self.stderr.write('%s\n' % err)
             self.stderr.flush()
             return 1
@@ -1021,13 +1023,12 @@ Command (defaults to 'no-daemon'):
             max_subconfig = max(max_subconfig, int(key[4:]))
         self.subservers = [None] * max_subconfig
 
+        subserver = self.subservers[0] = Subserver(self, 'brim')
+        subserver._parse_conf(conf)
         for key in conf.store.keys():
-            if key == 'brim':
-                subserver_index = 0
-            elif not key.startswith('brim') or not key[4:].isdigit():
+            if not key.startswith('brim') or not key[4:].isdigit():
                 continue
-            else:
-                subserver_index = int(key[4:]) - 1
+            subserver_index = int(key[4:]) - 1
             if self.subservers[subserver_index]:
                 raise Exception('Multiple config sections [%s].\n' % key)
             subserver = self.subservers[subserver_index] = Subserver(self, key)

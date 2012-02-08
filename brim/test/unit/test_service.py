@@ -18,8 +18,8 @@ import time
 from errno import EADDRINUSE, EPERM
 from os import devnull
 from StringIO import StringIO
-from unittest import TestCase
-from nose import main, SkipTest
+from unittest import main, TestCase
+from nose import SkipTest
 
 from brim import service
 
