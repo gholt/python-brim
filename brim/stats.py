@@ -57,38 +57,25 @@ class Stats(object):
         if env['REQUEST_METHOD'] not in ('GET', 'HEAD'):
             start_response('501 Not Implemented', [('Content-Length', '0')])
             return []
-        subserver = env['brim']
+        server = env['brim'].server
         body = {}
-        daemon_stats = subserver.daemon_bucket_stats
-        for daemon_id in xrange(daemon_stats.bucket_count):
-            daemon_body = {}
-            for stat_name in daemon_stats.names:
-                v = daemon_stats.get(daemon_id, stat_name)
-                daemon_body[stat_name] = v
-            body['daemon_' + subserver.daemons[daemon_id][0]] = daemon_body
-        wsgi_worker_stats = subserver.wsgi_worker_bucket_stats
-        sums = dict((n, 0) for n, t in
-                    subserver.wsgi_worker_stats_conf.iteritems() if t == 'sum')
-        mins = dict((n, maxint) for n, t in
-                    subserver.wsgi_worker_stats_conf.iteritems() if t == 'min')
-        maxs = dict((n, 0) for n, t in
-                    subserver.wsgi_worker_stats_conf.iteritems() if t == 'max')
-        for wsgi_worker_id in xrange(wsgi_worker_stats.bucket_count):
-            wsgi_worker_body = {}
-            for stat_name in wsgi_worker_stats.names:
-                v = wsgi_worker_stats.get(wsgi_worker_id, stat_name)
-                wsgi_worker_body[stat_name] = v
-                if stat_name in sums:
-                    sums[stat_name] += v
-                if stat_name in mins:
-                    mins[stat_name] = min(mins[stat_name], v)
-                if stat_name in maxs:
-                    maxs[stat_name] = max(maxs[stat_name], v)
-            body['worker_%s' % wsgi_worker_id] = wsgi_worker_body
-        body.update(sums)
-        body.update(mins)
-        body.update(maxs)
-        body['start_time'] = subserver.start_time
+        for index, subserver in enumerate(server.subservers):
+            body[subserver.name] = {}
+            stats = server.bucket_stats[index]
+            for name, typ in stats.stats_conf.iteritems():
+                if typ == 'sum':
+                    body[subserver.name][name] = sum(stats.get(i, name)
+                        for i in xrange(stats.bucket_count))
+                elif typ == 'min':
+                    body[subserver.name][name] = min(stats.get(i, name)
+                        for i in xrange(stats.bucket_count))
+                elif typ == 'max':
+                    body[subserver.name][name] = max(stats.get(i, name)
+                        for i in xrange(stats.bucket_count))
+                for i in xrange(stats.bucket_count):
+                    body[subserver.name].setdefault(stats.bucket_names[i],
+                        {})[name] = stats.get(i, name)
+        body['start_time'] = server.start_time
         body = env['brim.json_dumps'](body) + '\n'
         start_response('200 OK', [('Content-Length', str(len(body))),
                                   ('Content-Type', 'application/json')])

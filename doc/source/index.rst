@@ -161,7 +161,7 @@ You can see the new section [brim2] that defines the second listening port with 
     $ curl -i http://127.0.0.1/echo2 --data-binary 'Just a test.'
     $ curl -i http://127.0.0.1:81/echo --data-binary 'Just a test.'
 
-* Access the "stats" app and see it's configured on both ports. You can perform extra requests on one port to ensure the stats returned are different::
+* Access the "stats" app and see it's configured on both ports::
 
     $ curl -s http://127.0.0.1/stats | python -mjson.tool
     $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
@@ -386,7 +386,7 @@ Let's try it out::
     "helloworld.last_called": 1326602976,
     "helloworld.requests": 1,
     ...
-    "worker_0": {
+    "0": {
         "helloworld.last_called": 1,
         "helloworld.requests": 1326602976,
     ...
@@ -399,7 +399,7 @@ Let's try it out::
     "helloworld.last_called": 1326603159,
     "helloworld.requests": 3,
     ...
-    "worker_0": {
+    "0": {
         "helloworld.last_called": 3,
         "helloworld.requests": 1326603159,
     ...
@@ -474,6 +474,7 @@ The brimd server tracks various statistics, such as the server start time and nu
     #   restriction to accessing the stats by setting it to a hard to guess
     #   value. Default: /stats
 
+TODO: Update this:
 After restarting the server, you can now access these stats::
 
     $ curl s- http://127.0.0.1/stats | python -mjson.tool
