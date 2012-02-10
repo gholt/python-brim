@@ -50,7 +50,7 @@ class TestLogQuote(TestCase):
 class TestStats(TestCase):
 
     def test_bucket_stats(self):
-        bs = server._BucketStats(1, ['test'])
+        bs = server._BucketStats(['testbucket'], {'test': 'worker'})
         self.assertEquals(bs.get(0, 'test'), 0)
         bs.set(0, 'test', 123)
         self.assertEquals(bs.get(0, 'test'), 123)
@@ -68,14 +68,14 @@ class TestStats(TestCase):
         self.assertRaises(IndexError, bs.incr, 1, 'test')
 
     def test_null_bucket_stats(self):
-        bs = server._BucketStats(0, [])
+        bs = server._BucketStats([], {})
         self.assertEquals(bs.get(0, 'test'), 0)
         bs.set(0, 'test', 123)
         self.assertEquals(bs.get(0, 'test'), 0)
         bs.incr(0, 'test')
         self.assertEquals(bs.get(0, 'test'), 0)
 
-        bs = server._BucketStats(0, ['test'])
+        bs = server._BucketStats([], {'test': 'worker'})
         self.assertEquals(bs.get(0, 'test'), 0)
         bs.set(0, 'test', 123)
         self.assertEquals(bs.get(0, 'test'), 0)
@@ -83,7 +83,7 @@ class TestStats(TestCase):
         self.assertEquals(bs.get(0, 'test'), 0)
 
     def test_stats(self):
-        bs = server._BucketStats(1, ['test'])
+        bs = server._BucketStats(['testbucket'], ['test'])
         s = server._Stats(bs, 0)
         self.assertEquals(s.get('test'), 0)
         s.set('test', 123)
@@ -718,7 +718,7 @@ class TestServer(TestCase):
         self.assertEquals(serv.stderr, server.sys_stderr)
 
     def test_main(self):
-        self.conf = Conf({'brim': {'port': '0'}})
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         server_calls = []
@@ -798,7 +798,7 @@ class TestServer(TestCase):
         self.assertEquals(self.serv.main(), 1)
         self.assertEquals(self.serv.pid_file, '/var/run/brimd.pid')
 
-    def test_args_override_pid_file(self):
+    def test_args_override_pid_file1(self):
         self.serv.args = ['-p', 'pidfile']
         self.assertEquals(self.serv.main(), 1)
         self.assertEquals(self.serv.pid_file, 'pidfile')
@@ -808,17 +808,25 @@ class TestServer(TestCase):
         self.assertEquals(self.serv.main(), 1)
         self.assertEquals(self.serv.pid_file, 'pidfile')
 
-    def test_args_default_output(self):
+    def test_args_default_nodaemon_output(self):
+        self.assertEquals(self.serv.main(), 1)
+        self.assertTrue(self.serv.output)
+
+    def test_args_default_start_output(self):
+        self.serv.args = ['start']
+        self.send_pid_sig_retval[0] = False
         self.assertEquals(self.serv.main(), 1)
         self.assertFalse(self.serv.output)
 
-    def test_args_override_output(self):
-        self.serv.args = ['-o']
+    def test_args_override_output1(self):
+        self.serv.args = ['start', '-o']
+        self.send_pid_sig_retval[0] = False
         self.assertEquals(self.serv.main(), 1)
         self.assertTrue(self.serv.output)
 
     def test_args_override_output2(self):
-        self.serv.args = ['--output']
+        self.serv.args = ['start', '--output']
+        self.send_pid_sig_retval[0] = False
         self.assertEquals(self.serv.main(), 1)
         self.assertTrue(self.serv.output)
 
@@ -843,7 +851,7 @@ class TestServer(TestCase):
         self.assertEquals(self.stderr.getvalue(),
                           'Too many commands given; only one allowed.\n')
 
-    def test_default_command_no_daemon(self):
+    def test_default_command_no_daemon1(self):
         self.assertEquals(self.serv.main(), 1)
         self.assertTrue(self.serv.no_daemon)
         self.assertEquals(self.stdout.getvalue(), '')
@@ -1026,10 +1034,13 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({}))
+        self.serv._parse_conf(Conf({'wsgi': {}}))
         self.assertEquals(self.serv.user, None)
         self.assertEquals(self.serv.group, None)
         self.assertEquals(self.serv.umask, 0022)
+        self.assertEquals(self.serv.log_name, 'brim')
+        self.assertEquals(self.serv.log_level, 'INFO')
+        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL0')
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.ip, '*')
         self.assertEquals(subserv.port, 80)
@@ -1037,8 +1048,8 @@ class TestServer(TestCase):
         self.assertEquals(subserv.listen_retry, 30)
         self.assertEquals(subserv.certfile, None)
         self.assertEquals(subserv.keyfile, None)
-        self.assertEquals(subserv.wsgi_worker_count, 0)
-        self.assertEquals(subserv.log_name, 'brim')
+        self.assertEquals(subserv.worker_count, 0)
+        self.assertEquals(subserv.log_name, 'brimwsgi')
         self.assertEquals(subserv.log_level, 'INFO')
         self.assertEquals(subserv.log_facility, 'LOG_LOCAL0')
         self.assertEquals(subserv.client_timeout, 60)
@@ -1054,7 +1065,7 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'ip': '1.2.3.4'}}))
+        self.serv._parse_conf(Conf({'brim': {'ip': '1.2.3.4'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.ip, '1.2.3.4')
 
@@ -1062,7 +1073,7 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'port': '1234'}}))
+        self.serv._parse_conf(Conf({'brim': {'port': '1234'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.port, 1234)
         exc = None
@@ -1077,7 +1088,7 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'backlog': '123'}}))
+        self.serv._parse_conf(Conf({'brim': {'backlog': '123'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.backlog, 123)
         exc = None
@@ -1092,7 +1103,8 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'listen_retry': '123'}}))
+        self.serv._parse_conf(
+            Conf({'brim': {'listen_retry': '123'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.listen_retry, 123)
         exc = None
@@ -1107,7 +1119,7 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'certfile': 'file'}}))
+        self.serv._parse_conf(Conf({'brim': {'certfile': 'file'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.certfile, 'file')
 
@@ -1115,7 +1127,7 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'keyfile': 'file'}}))
+        self.serv._parse_conf(Conf({'brim': {'keyfile': 'file'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.keyfile, 'file')
 
@@ -1152,13 +1164,13 @@ class TestServer(TestCase):
             exc = err
         self.assertEquals(str(exc), "Invalid umask value '99'.")
 
-    def test_parse_conf_wsgi_worker_count(self):
+    def test_parse_conf_worker_count(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'workers': '123'}}))
+        self.serv._parse_conf(Conf({'brim': {'workers': '123'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
-        self.assertEquals(subserv.wsgi_worker_count, 123)
+        self.assertEquals(subserv.worker_count, 123)
         exc = None
         try:
             self.serv._parse_conf(Conf({'brim': {'workers': 'abc'}}))
@@ -1167,31 +1179,29 @@ class TestServer(TestCase):
         self.assertEquals(str(exc), "Configuration value [brim] "
             "workers of 'abc' cannot be converted to int.")
 
-    def test_parse_conf_wsgi_worker_count_no_daemon(self):
+    def test_parse_conf_worker_count_no_daemon(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'workers': '123'}}))
+        self.serv._parse_conf(Conf({'brim': {'workers': '123'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
-        self.assertEquals(subserv.wsgi_worker_count, 0)
+        self.assertEquals(subserv.worker_count, 0)
         self.serv._parse_conf(Conf({'brim': {'workers': 'abc'}}))
-        self.assertEquals(subserv.wsgi_worker_count, 0)
+        self.assertEquals(subserv.worker_count, 0)
 
     def test_parse_conf_log_name(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'log_name': 'name'}}))
-        subserv = self.serv.subservers[0]
-        self.assertEquals(subserv.log_name, 'name')
+        self.assertEquals(self.serv.log_name, 'name')
 
     def test_parse_conf_log_level(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'log_level': 'DEBUG'}}))
-        subserv = self.serv.subservers[0]
-        self.assertEquals(subserv.log_level, 'DEBUG')
+        self.assertEquals(self.serv.log_level, 'DEBUG')
         exc = None
         try:
             self.serv._parse_conf(Conf({'brim': {'log_level': 'invalid'}}))
@@ -1205,11 +1215,9 @@ class TestServer(TestCase):
         self.serv._parse_args()
         self.serv._parse_conf(
             Conf({'brim': {'log_facility': 'LOG_LOCAL1'}}))
-        subserv = self.serv.subservers[0]
-        self.assertEquals(subserv.log_facility, 'LOG_LOCAL1')
+        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL1')
         self.serv._parse_conf(Conf({'brim': {'log_facility': 'LOCAL2'}}))
-        subserv = self.serv.subservers[0]
-        self.assertEquals(subserv.log_facility, 'LOG_LOCAL2')
+        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL2')
         exc = None
         try:
             self.serv._parse_conf(
@@ -1223,7 +1231,8 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'client_timeout': '123'}}))
+        self.serv._parse_conf(
+            Conf({'brim': {'client_timeout': '123'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.client_timeout, 123)
         exc = None
@@ -1239,7 +1248,8 @@ class TestServer(TestCase):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'eventlet_hub': 'name'}}))
+        self.serv._parse_conf(
+            Conf({'brim': {'eventlet_hub': 'name'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.eventlet_hub, 'name')
 
@@ -1248,7 +1258,7 @@ class TestServer(TestCase):
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(
-            Conf({'brim': {'concurrent_per_worker': '123'}}))
+            Conf({'brim': {'concurrent_per_worker': '123'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.concurrent_per_worker, 123)
         exc = None
@@ -1265,23 +1275,23 @@ class TestServer(TestCase):
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(
-            Conf({'brim': {'wsgi_input_iter_chunk_size': '123'}}))
+            Conf({'wsgi': {'wsgi_input_iter_chunk_size': '123'}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.wsgi_input_iter_chunk_size, 123)
         exc = None
         try:
             self.serv._parse_conf(
-                Conf({'brim': {'wsgi_input_iter_chunk_size': 'abc'}}))
+                Conf({'wsgi': {'wsgi_input_iter_chunk_size': 'abc'}}))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
+        self.assertEquals(str(exc), "Configuration value [wsgi] "
             "wsgi_input_iter_chunk_size of 'abc' cannot be converted to int.")
 
     def test_parse_conf_log_headers(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
-        self.serv._parse_conf(Conf({'brim': {'log_headers': 'yes'}}))
+        self.serv._parse_conf(Conf({'wsgi': {'log_headers': 'yes'}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.log_headers, True)
         exc = None
@@ -1297,79 +1307,79 @@ class TestServer(TestCase):
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(
-            Conf({'brim': {'json_dumps': 'pickle.dumps'}}))
+            Conf({'brim': {'json_dumps': 'pickle.dumps'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.json_dumps, pickle_dumps)
         exc = None
         try:
-            self.serv._parse_conf(Conf({'brim': {'json_dumps': 'abc'}}))
+            self.serv._parse_conf(Conf({'wsgi': {'json_dumps': 'abc'}}))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [brim] json_dumps value 'abc'.")
+        self.assertEquals(str(exc), "Invalid [wsgi] json_dumps value 'abc'.")
         exc = None
         try:
             self.serv._parse_conf(
-                Conf({'brim': {'json_dumps': 'pickle.blah'}}))
+                Conf({'wsgi': {'json_dumps': 'pickle.blah'}}))
         except Exception, err:
             exc = err
         self.assertEquals(str(exc),
-            "Could not load function 'pickle.blah' for [brim] json_dumps.")
+            "Could not load function 'pickle.blah' for [wsgi] json_dumps.")
 
     def test_parse_conf_json_loads(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(
-            Conf({'brim': {'json_loads': 'pickle.loads'}}))
+            Conf({'brim': {'json_loads': 'pickle.loads'}, 'wsgi': {}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.json_loads, pickle_loads)
         exc = None
         try:
-            self.serv._parse_conf(Conf({'brim': {'json_loads': 'abc'}}))
+            self.serv._parse_conf(Conf({'wsgi': {'json_loads': 'abc'}}))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [brim] json_loads value 'abc'.")
+        self.assertEquals(str(exc), "Invalid [wsgi] json_loads value 'abc'.")
         exc = None
         try:
             self.serv._parse_conf(
-                Conf({'brim': {'json_loads': 'pickle.blah'}}))
+                Conf({'wsgi': {'json_loads': 'pickle.blah'}}))
         except Exception, err:
             exc = err
         self.assertEquals(str(exc),
-            "Could not load function 'pickle.blah' for [brim] json_loads.")
+            "Could not load function 'pickle.blah' for [wsgi] json_loads.")
 
     def test_parse_conf_count_status_codes(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(
-            Conf({'brim': {'count_status_codes': '1'}}))
+            Conf({'wsgi': {'count_status_codes': '1'}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.count_status_codes, [1])
         self.serv._parse_conf(
-            Conf({'brim': {'count_status_codes': '1 2 345'}}))
+            Conf({'wsgi': {'count_status_codes': '1 2 345'}}))
         subserv = self.serv.subservers[0]
         self.assertEquals(subserv.count_status_codes, [1, 2, 345])
         exc = None
         try:
             self.serv._parse_conf(
-                Conf({'brim': {'count_status_codes': 'abc'}}))
+                Conf({'wsgi': {'count_status_codes': 'abc'}}))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [brim] count_status_codes 'abc'.")
+        self.assertEquals(str(exc), "Invalid [wsgi] count_status_codes 'abc'.")
 
     def test_configure_daemons_none(self):
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_daemons(Conf({}))
+        subserv = server.DaemonsSubserver(self.serv)
+        subserv._parse_conf(Conf({}))
         self.assertEquals(subserv.daemons, [])
 
     def test_configure_daemons(self):
         conf = Conf({
-            'brim': {'daemons': 'one two'},
+            'daemons': {'daemons': 'one two'},
             'one': {'call': 'brim.daemon_sample.DaemonSample'},
             'two': {'call': 'brim.daemon_sample.DaemonSample'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_daemons(conf)
+        subserv = server.DaemonsSubserver(self.serv)
+        subserv._parse_conf(conf)
         self.assertEquals(len(subserv.daemons), 2)
         self.assertEquals(subserv.daemons[0][0], 'one')
         self.assertEquals(subserv.daemons[1][0], 'two')
@@ -1382,11 +1392,11 @@ class TestServer(TestCase):
 
     def test_configure_daemons_conf_no_call(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'cll': 'brim.daemon_sample.DaemonSample'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc),
@@ -1394,11 +1404,11 @@ class TestServer(TestCase):
 
     def test_configure_daemons_conf_invalid_call(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call': 'brim_daemon_sample_DaemonSample'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Invalid call value "
@@ -1406,11 +1416,11 @@ class TestServer(TestCase):
 
     def test_configure_daemons_no_load(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call': 'brim.daemon_sample.aemonSample'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Could not load class "
@@ -1418,11 +1428,11 @@ class TestServer(TestCase):
 
     def test_configure_daemons_not_a_class(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call': 'brim.server._send_pid_sig'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to instantiate "
@@ -1431,12 +1441,12 @@ class TestServer(TestCase):
 
     def test_configure_daemons_invalid_init(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {
               'call': 'brim.test.unit.test_server.DaemonWithInvalidInit'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to instantiate "
@@ -1446,12 +1456,12 @@ class TestServer(TestCase):
 
     def test_configure_daemons_invalid_call(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {
               'call': 'brim.test.unit.test_server.DaemonWithInvalidCall'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to use "
@@ -1461,41 +1471,41 @@ class TestServer(TestCase):
 
     def test_configure_daemons_no_call(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {
               'call': 'brim.test.unit.test_server.DaemonWithNoCall'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to use "
             "'brim.test.unit.test_server.DaemonWithNoCall' for daemon "
             "[one]. Probably no __call__ method.")
 
-    def test_configure_daemons_invalid_parse_conf(self):
+    def test_configure_daemons_invalid_parse_conf1(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithInvalidParseConf'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidParseConf' for "
             "daemon [one]. Incorrect number of parse_conf args, 1, should be "
-            "3 (self, name, conf).")
+            "3 (cls, name, conf).")
 
     def test_configure_daemons_invalid_parse_conf2(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithInvalidParseConf2'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
@@ -1504,45 +1514,45 @@ class TestServer(TestCase):
 
     def test_configure_daemons_no_parse_conf(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithNoParseConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_daemons(conf)
+        subserv = server.DaemonsSubserver(self.serv)
+        subserv._parse_conf(conf)
         self.assertEquals(subserv.daemons[0][2], conf)
 
     def test_configure_daemons_with_parse_conf(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithParseConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_daemons(conf)
+        subserv = server.DaemonsSubserver(self.serv)
+        subserv._parse_conf(conf)
         self.assertEquals(subserv.daemons[0][2], {'ok': True})
 
-    def test_configure_daemons_invalid_stats_conf(self):
+    def test_configure_daemons_invalid_stats_conf1(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithInvalidStatsConf'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf' for "
             "app [one]. Incorrect number of stats_conf args, 1, should be 3 "
-            "(self, name, conf).")
+            "(cls, name, conf).")
 
     def test_configure_daemons_invalid_stats_conf2(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithInvalidStatsConf2'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_daemons(conf)
+            server.DaemonsSubserver(self.serv)._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
@@ -1551,88 +1561,94 @@ class TestServer(TestCase):
 
     def test_configure_daemons_no_stats_conf(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithNoStatsConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_daemons(conf)
-        self.assertEquals(subserv.daemon_stats_conf, {'start_time': ''})
+        subserv = server.DaemonsSubserver(self.serv)
+        subserv._parse_conf(conf)
+        self.assertEquals(subserv.stats_conf, {'start_time': 'worker'})
 
     def test_configure_daemons_with_stats_conf(self):
         conf = Conf({
-            'brim': {'daemons': 'one'},
+            'daemons': {'daemons': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.DaemonWithStatsConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_daemons(conf)
-        self.assertEquals(subserv.daemon_stats_conf,
-                          {'start_time': '', 'ok': ''})
+        subserv = server.DaemonsSubserver(self.serv)
+        subserv._parse_conf(conf)
+        self.assertEquals(subserv.stats_conf,
+                          {'start_time': 'worker', 'ok': 'worker'})
 
     def test_configure_wsgi_apps_none(self):
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_wsgi_apps(Conf({}))
-        self.assertEquals(subserv.wsgi_apps, [])
+        self.serv.no_daemon = False
+        subserv = server.WSGISubserver(self.serv, 'wsgi')
+        subserv._parse_conf(Conf({}))
+        self.assertEquals(subserv.apps, [])
 
     def test_configure_wsgi_apps(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one two'},
+            'wsgi': {'apps': 'one two'},
             'one': {'call': 'brim.wsgi_echo.WSGIEcho'},
             'two': {'call': 'brim.wsgi_echo.WSGIEcho'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_wsgi_apps(conf)
-        self.assertEquals(len(subserv.wsgi_apps), 2)
-        self.assertEquals(subserv.wsgi_apps[0][0], 'one')
-        self.assertEquals(subserv.wsgi_apps[1][0], 'two')
-        self.assertEquals(subserv.wsgi_apps[0][1].__name__, 'WSGIEcho')
-        self.assertEquals(subserv.wsgi_apps[1][1].__name__, 'WSGIEcho')
-        self.assertEquals(subserv.wsgi_apps[0][2],
-                          subserv.wsgi_apps[0][1].parse_conf('one', conf))
-        self.assertEquals(subserv.wsgi_apps[1][2],
-                          subserv.wsgi_apps[1][1].parse_conf('two', conf))
+        subserv = server.WSGISubserver(self.serv, 'wsgi')
+        subserv._parse_conf(conf)
+        self.assertEquals(len(subserv.apps), 2)
+        self.assertEquals(subserv.apps[0][0], 'one')
+        self.assertEquals(subserv.apps[1][0], 'two')
+        self.assertEquals(subserv.apps[0][1].__name__, 'WSGIEcho')
+        self.assertEquals(subserv.apps[1][1].__name__, 'WSGIEcho')
+        self.assertEquals(subserv.apps[0][2],
+                          subserv.apps[0][1].parse_conf('one', conf))
+        self.assertEquals(subserv.apps[1][2],
+                          subserv.apps[1][1].parse_conf('two', conf))
 
     def test_configure_wsgi_apps_conf_no_call(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'cll': 'brim.wsgi_echo.WSGIEcho'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc),
                           "App [one] not configured with 'call' option.")
 
     def test_configure_wsgi_apps_conf_invalid_call(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call': 'brim_wsgi_echo_WSGIEcho'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Invalid call value "
             "'brim_wsgi_echo_WSGIEcho' for app [one].")
 
     def test_configure_wsgi_apps_no_load(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call': 'brim.wsgi_echo.sgi_cho'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Could not load class "
             "'brim.wsgi_echo.sgi_cho' for app [one].")
 
     def test_configure_wsgi_apps_not_a_class(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call': 'brim.server._send_pid_sig'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to instantiate "
@@ -1640,13 +1656,14 @@ class TestServer(TestCase):
             "class.")
 
     def test_configure_wsgi_apps_invalid_init(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {
               'call': 'brim.test.unit.test_server.AppWithInvalidInit'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to instantiate "
@@ -1655,13 +1672,14 @@ class TestServer(TestCase):
             "conf, next_app).")
 
     def test_configure_wsgi_apps_invalid_call(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {
               'call': 'brim.test.unit.test_server.AppWithInvalidCall'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to use "
@@ -1670,42 +1688,45 @@ class TestServer(TestCase):
             "env, start_response).")
 
     def test_configure_wsgi_apps_no_call(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {
               'call': 'brim.test.unit.test_server.AppWithNoCall'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Would not be able to use "
             "'brim.test.unit.test_server.AppWithNoCall' for app "
             "[one]. Probably no __call__ method.")
 
-    def test_configure_wsgi_apps_invalid_parse_conf(self):
+    def test_configure_wsgi_apps_invalid_parse_conf1(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithInvalidParseConf'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
             "'brim.test.unit.test_server.AppWithInvalidParseConf' for "
             "app [one]. Incorrect number of parse_conf args, 1, should be "
-            "3 (self, name, conf).")
+            "3 (cls, name, conf).")
 
     def test_configure_wsgi_apps_invalid_parse_conf2(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithInvalidParseConf2'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
@@ -1713,46 +1734,50 @@ class TestServer(TestCase):
             "app [one]. parse_conf probably not a method.")
 
     def test_configure_wsgi_apps_no_parse_conf(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithNoParseConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_wsgi_apps(conf)
-        self.assertEquals(subserv.wsgi_apps[0][2], conf)
+        subserv = server.WSGISubserver(self.serv, 'wsgi')
+        subserv._parse_conf(conf)
+        self.assertEquals(subserv.apps[0][2], conf)
 
     def test_configure_wsgi_apps_with_parse_conf(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithParseConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_wsgi_apps(conf)
-        self.assertEquals(subserv.wsgi_apps[0][2], {'ok': True})
+        subserv = server.WSGISubserver(self.serv, 'wsgi')
+        subserv._parse_conf(conf)
+        self.assertEquals(subserv.apps[0][2], {'ok': True})
 
-    def test_configure_wsgi_apps_invalid_stats_conf(self):
+    def test_configure_wsgi_apps_invalid_stats_conf1(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithInvalidStatsConf'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
             "'brim.test.unit.test_server.AppWithInvalidStatsConf' for "
             "app [one]. Incorrect number of stats_conf args, 1, should be 3 "
-            "(self, name, conf).")
+            "(cls, name, conf).")
 
     def test_configure_wsgi_apps_invalid_stats_conf2(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithInvalidStatsConf2'}})
         exc = None
         try:
-            server.Subserver(self.serv, 'brim')._configure_wsgi_apps(conf)
+            server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
         except Exception, err:
             exc = err
         self.assertEquals(str(exc), "Cannot use "
@@ -1760,38 +1785,39 @@ class TestServer(TestCase):
             "app [one]. stats_conf probably not a method.")
 
     def test_configure_wsgi_apps_no_stats_conf(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithNoStatsConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_wsgi_apps(conf)
-        self.assertEquals(subserv.wsgi_worker_stats_conf,
+        subserv = server.WSGISubserver(self.serv, 'wsgi')
+        subserv._parse_conf(conf)
+        self.assertEquals(subserv.stats_conf,
             {'start_time': 'worker', 'status_5xx_count': 'sum',
              'status_3xx_count': 'sum', 'request_count': 'sum',
              'status_4xx_count': 'sum', 'status_2xx_count': 'sum'})
 
     def test_configure_wsgi_apps_with_stats_conf(self):
+        self.serv.no_daemon = False
         conf = Conf({
-            'brim': {'wsgi': 'one'},
+            'wsgi': {'apps': 'one'},
             'one': {'call':
                 'brim.test.unit.test_server.AppWithStatsConf'}})
-        subserv = server.Subserver(self.serv, 'brim')
-        subserv._configure_wsgi_apps(conf)
-        self.assertEquals(subserv.wsgi_worker_stats_conf,
+        subserv = server.WSGISubserver(self.serv, 'wsgi')
+        subserv._parse_conf(conf)
+        self.assertEquals(subserv.stats_conf,
             {'ok': 'sum', 'start_time': 'worker', 'status_5xx_count': 'sum',
              'status_3xx_count': 'sum', 'request_count': 'sum',
              'status_4xx_count': 'sum', 'status_2xx_count': 'sum'})
 
     def test_start(self):
-        self.conf = Conf({'brim': {'port': '0'}})
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
         subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
+        subserv._parse_conf(self.conf)
         sustain_workers_calls = []
 
         def _sustain_workers(*args, **kwargs):
@@ -1809,14 +1835,13 @@ class TestServer(TestCase):
     def test_start_no_bind(self):
         sock = get_listening_tcp_socket('*', 0)
         self.conf = Conf({'brim': {'port': sock.getsockname()[1],
-                                       'listen_retry': '0'}})
+                                       'listen_retry': '0'}, 'wsgi': {}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
         subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
+        subserv._parse_conf(self.conf)
         sustain_workers_calls = []
 
         def _sustain_workers(*args, **kwargs):
@@ -1837,14 +1862,13 @@ class TestServer(TestCase):
         self.assertEquals(sustain_workers_calls, [])
 
     def test_start_daemoned_parent_side(self):
-        self.conf = Conf({'brim': {'port': '0'}})
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
         subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
+        subserv._parse_conf(self.conf)
         sustain_workers_calls = []
         open_retval = [StringIO()]
         open_calls = []
@@ -1870,14 +1894,13 @@ class TestServer(TestCase):
         self.assertEquals(open_retval[0].getvalue(), '12345\n')
 
     def test_start_daemoned_child_side(self):
-        self.conf = Conf({'brim': {'port': '0'}})
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
         subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
+        subserv._parse_conf(self.conf)
         sustain_workers_calls = []
         self.fork_retval[0] = 0
 
@@ -1891,24 +1914,20 @@ class TestServer(TestCase):
         finally:
             server.sustain_workers = orig_sustain_workers
         self.assertEquals(sustain_workers_calls,
-            [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
+            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
         self.assertEquals(self.capture_calls, [
             ((), {'exceptions': self.serv._capture_exception,
                   'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv._capture_exception,
-                  'stdout_func': subserv._capture_stdout,
-                  'stderr_func': subserv._capture_stderr})])
+                  'stderr_func': self.serv._capture_stderr})])
 
     def test_start_daemoned_child_side_console_mode(self):
-        self.conf = Conf({'brim': {'port': '0'}})
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
         self.conf.files = ['ok.conf']
         self.serv.args = ['-o', 'start']
         self.serv._parse_args()
         self.serv._parse_conf(self.conf)
         subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
+        subserv._parse_conf(self.conf)
         sustain_workers_calls = []
         self.fork_retval[0] = 0
 
@@ -1922,80 +1941,8 @@ class TestServer(TestCase):
         finally:
             server.sustain_workers = orig_sustain_workers
         self.assertEquals(sustain_workers_calls,
-            [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
+            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
         self.assertEquals(self.capture_calls, [])
-
-    def test_start_daemoned_with_daemons_parent_side(self):
-        self.conf = Conf({'brim': {'port': '0', 'daemons': 'one'},
-            'one': {'call': 'brim.daemon_sample.DaemonSample'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(self.conf)
-        subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
-        sustain_workers_calls = []
-        fork_calls = []
-
-        def _sustain_workers(*args, **kwargs):
-            sustain_workers_calls.append((args, kwargs))
-
-        def _fork(*args):
-            fork_calls.append(args)
-            if len(fork_calls) == 1:
-                return 0
-            return 12345
-
-        orig_sustain_workers = server.sustain_workers
-        try:
-            server.sustain_workers = _sustain_workers
-            server.fork = _fork
-            self.serv._start()
-        finally:
-            server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(self.capture_calls, [
-            ((), {'exceptions': self.serv._capture_exception,
-                  'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv._capture_exception,
-                  'stdout_func': subserv._capture_stdout,
-                  'stderr_func': subserv._capture_stderr})])
-        self.assertEquals(fork_calls, [(), ()])
-
-    def test_start_daemoned_with_daemons_child_side(self):
-        self.conf = Conf({'brim': {'port': '0', 'daemons': 'one'},
-            'one': {'call': 'brim.daemon_sample.DaemonSample'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(self.conf)
-        subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
-        sustain_workers_calls = []
-        self.fork_retval[0] = 0
-
-        def _sustain_workers(*args, **kwargs):
-            sustain_workers_calls.append((args, kwargs))
-
-        orig_sustain_workers = server.sustain_workers
-        try:
-            server.sustain_workers = _sustain_workers
-            self.serv._start()
-        finally:
-            server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, subserv._daemon), {'logger': subserv.logger})])
-        self.assertEquals(self.capture_calls, [
-            ((), {'exceptions': self.serv._capture_exception,
-                  'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv._capture_exception,
-                  'stdout_func': subserv._capture_stdout,
-                  'stderr_func': subserv._capture_stderr})])
 
     def test_capture_exception(self):
         self.serv.logger = FakeLogger()
@@ -2016,36 +1963,6 @@ class TestServer(TestCase):
         self.assertTrue(self.serv.logger.error_calls[0][0].endswith(
             '    raise Exception(\'testing\')", \'Exception: testing\']'))
 
-    def test_capture_exception_subserv(self):
-        subserv = server.Subserver(self.serv, 'test')
-        subserv.daemon_id = 0
-        subserv.logger = FakeLogger()
-        subserv._capture_exception()
-        self.assertEquals(subserv.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: did:000 None ['None']",)])
-
-        subserv.daemon_id = -1
-        subserv.wsgi_worker_id = 0
-        subserv.logger = FakeLogger()
-        subserv._capture_exception()
-        self.assertEquals(subserv.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: wid:000 None ['None']",)])
-
-        subserv.daemon_id = -1
-        subserv.wsgi_worker_id = 0
-        subserv.logger = FakeLogger()
-        try:
-            raise Exception('testing')
-        except Exception:
-            subserv._capture_exception(*exc_info())
-        self.assertEquals(len(subserv.logger.error_calls), 1)
-        self.assertEquals(len(subserv.logger.error_calls[0]), 1)
-        self.assertTrue(subserv.logger.error_calls[0][0].startswith(
-            'UNCAUGHT EXCEPTION: wid:000 Exception: testing [\'Traceback '
-            '(most recent call last):\''))
-        self.assertTrue(subserv.logger.error_calls[0][0].endswith(
-            '    raise Exception(\'testing\')", \'Exception: testing\']'))
-
     def test_capture_stdout(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_stdout('one\ntwo\nthree\n')
@@ -2059,23 +1976,6 @@ class TestServer(TestCase):
             [('STDOUT: main one',), ('STDOUT: main two',),
              ('STDOUT: main three',)])
 
-    def test_capture_stdout_subserv(self):
-        subserv = server.Subserver(self.serv, 'test')
-        subserv.daemon_id = 0
-        subserv.logger = FakeLogger()
-        subserv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(subserv.logger.info_calls,
-            [('STDOUT: did:000 one',), ('STDOUT: did:000 two',),
-             ('STDOUT: did:000 three',)])
-
-        subserv.daemon_id = -1
-        subserv.wsgi_worker_id = 0
-        subserv.logger = FakeLogger()
-        subserv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(subserv.logger.info_calls,
-            [('STDOUT: wid:000 one',), ('STDOUT: wid:000 two',),
-             ('STDOUT: wid:000 three',)])
-
     def test_capture_stderr(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_stderr('one\ntwo\nthree\n')
@@ -2088,869 +1988,6 @@ class TestServer(TestCase):
         self.assertEquals(self.serv.logger.error_calls,
             [('STDERR: main one',), ('STDERR: main two',),
              ('STDERR: main three',)])
-
-    def test_capture_stderr_subserv(self):
-        subserv = server.Subserver(self.serv, 'test')
-        subserv.daemon_id = 0
-        subserv.logger = FakeLogger()
-        subserv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(subserv.logger.error_calls,
-            [('STDERR: did:000 one',), ('STDERR: did:000 two',),
-             ('STDERR: did:000 three',)])
-
-        subserv.daemon_id = -1
-        subserv.wsgi_worker_id = 0
-        subserv.logger = FakeLogger()
-        subserv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(subserv.logger.error_calls,
-            [('STDERR: wid:000 one',), ('STDERR: wid:000 two',),
-             ('STDERR: wid:000 three',)])
-
-    def test_daemon_launch(self):
-        self.conf = Conf({'brim': {'port': '0', 'daemons': 'one'},
-            'one': {'call':
-                'brim.test.unit.test_server.DaemonWithStatsConf'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(self.conf)
-        subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
-        sustain_workers_calls = []
-        fork_calls = []
-
-        def _sustain_workers(*args, **kwargs):
-            sustain_workers_calls.append((args, kwargs))
-
-        def _fork(*args):
-            fork_calls.append(args)
-            if len(fork_calls) == 1:
-                return 0
-            return 12345
-
-        orig_sustain_workers = server.sustain_workers
-        try:
-            server.sustain_workers = _sustain_workers
-            server.fork = _fork
-            self.serv._start()
-        finally:
-            server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(self.capture_calls, [
-            ((), {'exceptions': self.serv._capture_exception,
-                  'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv._capture_exception,
-                  'stdout_func': subserv._capture_stdout,
-                  'stderr_func': subserv._capture_stderr})])
-        self.assertEquals(fork_calls, [(), ()])
-        # All the above was to get a daemon environment going.
-        t = time()
-        subserv._daemon(0)
-        self.assertEquals(len(subserv.daemons[0][1].call_calls), 1)
-        self.assertEquals(len(subserv.daemons[0][1].call_calls[0]), 2)
-        self.assertEquals(subserv.daemons[0][1].call_calls[0][0], subserv)
-        s = subserv.daemons[0][1].call_calls[0][1]
-        self.assertTrue(t - s.get('start_time') < 2)
-        self.assertEquals(s.get('ok'), 123)
-
-    def test_wsgi_worker_launch(self):
-        self.conf = Conf({'brim': {'port': '0', 'wsgi': 'one'},
-            'one': {'call':
-                'brim.test.unit.test_server.AppWithStatsConf'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(self.conf)
-        subserv = self.serv.subservers[0]
-        subserv._configure_daemons(self.conf)
-        subserv._configure_wsgi_apps(self.conf)
-        sustain_workers_calls = []
-        self.fork_retval[0] = 0
-
-        def _sustain_workers(*args, **kwargs):
-            sustain_workers_calls.append((args, kwargs))
-
-        orig_sustain_workers = server.sustain_workers
-        try:
-            server.sustain_workers = _sustain_workers
-            self.serv._start()
-        finally:
-            server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, subserv._wsgi_worker), {'logger': subserv.logger})])
-        self.assertEquals(self.capture_calls, [
-            ((), {'exceptions': self.serv._capture_exception,
-                  'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv._capture_exception,
-                  'stdout_func': subserv._capture_stdout,
-                  'stderr_func': subserv._capture_stderr})])
-        # All the above was to get a wsgi worker environment going.
-        server_calls = []
-
-        def _server(*args, **kwargs):
-            server_calls.append((args, kwargs))
-            if len(server_calls) > 1:
-                raise socket_error('testing')
-
-        orig_wsgi_server = server.wsgi.server
-        try:
-            server.wsgi.server = _server
-            subserv = self.serv.subservers[0]
-            subserv._wsgi_worker(0)
-        finally:
-            server.wsgi.server = orig_wsgi_server
-        self.assertEquals(len(server_calls), 1)
-        self.assertEquals(len(server_calls[0]), 2)
-        self.assertEquals(len(server_calls[0][0]), 3)
-        self.assertEquals(server_calls[0][0][0], subserv.sock)
-        self.assertEquals(server_calls[0][0][1], subserv._wsgi_entry)
-        self.assertEquals(server_calls[0][0][2].__class__.__name__,
-                          '_EventletWSGINullLogger')
-        self.assertEquals(server_calls[0][1].keys(), ['custom_pool'])
-        self.assertEquals(server_calls[0][1]['custom_pool'].size,
-                          subserv.concurrent_per_worker)
-
-        orig_wsgi_server = server.wsgi.server
-        exc = None
-        try:
-            server.wsgi.server = _server
-            subserv._wsgi_worker(0)
-        except Exception, err:
-            exc = err
-        finally:
-            server.wsgi.server = orig_wsgi_server
-        self.assertEquals(str(exc), 'testing')
-
-    def test_wsgi_entry(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': []}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserver = self.serv.subservers[0]
-        subserver._wsgi_entry(env, _start_response)
-        self.assertEquals(subserver.logger.error_calls, [])
-        self.assertEquals(subserver.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-
-    def test_wsgi_entry_exception(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/exception',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': []}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserver = self.serv.subservers[0]
-        subserver._wsgi_entry(env, _start_response)
-        self.assertEquals(subserver.logger.error_calls, [])
-        self.assertEquals(len(subserver.logger.exception_calls), 1)
-        self.assertEquals(len(subserver.logger.exception_calls[0]), 2)
-        self.assertEquals(subserver.logger.exception_calls[0][0],
-                          ('WSGI EXCEPTION:',))
-        self.assertEquals(len(subserver.logger.exception_calls[0][1]), 3)
-        self.assertEquals(str(subserver.logger.exception_calls[0][1][1]),
-                          'testing')
-        self.assertEquals(start_response_calls,
-            [(('500 Internal Server Error',
-               [('Content-Length', '0')], None), {})])
-
-    def test_default_call(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': []}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        self.assertEquals(subserv(env, _start_response), [])
-        self.assertEquals(start_response_calls,
-            [(('404 Not Found', [('Content-Length', '0')]), {})])
-
-    def test_log_request1(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': []}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['-', '-', '-', '-', 'timestamp', 'GET',
-                                  '/~user%20dir', 'HTTP/1.0', '200', '-', '-',
-                                  '-', '-', env['brim.txn'], 'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_remote_addr(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['1.2.3.4', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir', 'HTTP/1.0', '200',
-                                  '-', '-', '-', '-', env['brim.txn'],
-                                  'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_query_string(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['1.2.3.4', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_cluster_client(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_CLUSTER_CLIENT_IP': '5.6.7.8'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['5.6.7.8', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_cluster_client_and_forwarded_for(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_CLUSTER_CLIENT_IP': '5.6.7.8',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['5.6.7.8', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_forwarded_for(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_forwarded_for_list(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_log_headers(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed', 'headers:',
-                                  'X-Forwarded-For:9.0.1.2,%203.4.5.6'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_client_disconnect(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        env['brim._client_disconnect'] = True
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '499', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed', 'headers:',
-                                  'X-Forwarded-For:9.0.1.2,%203.4.5.6'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_bad_code(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        env['brim._start_response'] = list(env['brim._start_response'])
-        env['brim._start_response'][0] = 'xxx xxx'
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '-', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed', 'headers:',
-                                  'X-Forwarded-For:9.0.1.2,%203.4.5.6'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_additional(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        env['brim.additional_request_log_info'] = ['add:', 'something']
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '200', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed', 'add:',
-                                  'something', 'headers:',
-                                  'X-Forwarded-For:9.0.1.2,%203.4.5.6'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-
-    def test_log_request_exception(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        env['brim.additional_request_log_info'] = 1
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 0)
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(len(subserv.logger.exception_calls), 1)
-        self.assertEquals(len(subserv.logger.exception_calls[0]), 2)
-        self.assertEquals(subserv.logger.exception_calls[0][0],
-                          ('WSGI EXCEPTION:',))
-        self.assertEquals(len(subserv.logger.exception_calls[0][1]), 3)
-        self.assertEquals(str(subserv.logger.exception_calls[0][1][1]),
-                          "'int' object is not iterable")
-
-    def test_log_request_5xx(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        env['brim._start_response'] = list(env['brim._start_response'])
-        env['brim._start_response'][0] = '501 Not Implemented'
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '501', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed', 'headers:',
-                                  'X-Forwarded-For:9.0.1.2,%203.4.5.6'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(subserv.wsgi_worker_bucket_stats.get(
-            subserv.wsgi_worker_id, 'request_count'), 1)
-        self.assertEquals(subserv.wsgi_worker_bucket_stats.get(
-            subserv.wsgi_worker_id, 'status_5xx_count'), 1)
-        self.assertEquals(subserv.wsgi_worker_bucket_stats.get(
-            subserv.wsgi_worker_id, 'status_501_count'), 1)
-
-    def test_log_request_3xx(self):
-        self.test_wsgi_worker_launch()
-        env = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/%7Euser%20dir',
-               'SERVER_PROTOCOL': 'HTTP/1.0', 'CONTENT_LENGTH': '0',
-               'wsgi.input': StringIO(), 'eventlet.posthooks': [],
-               'REMOTE_ADDR': '1.2.3.4', 'QUERY_STRING': 'abc=1&d+f=2',
-               'HTTP_X_FORWARDED_FOR': '9.0.1.2, 3.4.5.6'}
-        start_response_calls = []
-
-        def _start_response(*args, **kwargs):
-            start_response_calls.append((args, kwargs))
-
-        subserv = self.serv.subservers[0]
-        subserv._wsgi_entry(env, _start_response)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(subserv.logger.notice_calls, [])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(start_response_calls,
-                          [(('200 OK', [('Content-Length', '0')], None), {})])
-        env['brim._start_response'] = list(env['brim._start_response'])
-        env['brim._start_response'][0] = '302 Found'
-        subserv.log_headers = True
-        subserv._log_request(env)
-        self.assertEquals(subserv.logger.info_calls, [])
-        self.assertEquals(len(subserv.logger.notice_calls), 1)
-        self.assertEquals(len(subserv.logger.notice_calls[0]), 1)
-        items = subserv.logger.notice_calls[0][0].split()
-        self.assertTrue(
-            time() - mktime(strptime(items[4], '%Y%m%dT%H%M%SZ')) < 2)
-        items[4] = 'timestamp'
-        self.assertTrue(float(items[14]) > 0)
-        items[14] = 'elapsed'
-        self.assertEquals(items, ['9.0.1.2', '1.2.3.4', '-', '-', 'timestamp',
-                                  'GET', '/~user%20dir?abc=1&d%20f=2',
-                                  'HTTP/1.0', '302', '-', '-', '-', '-',
-                                  env['brim.txn'], 'elapsed', 'headers:',
-                                  'X-Forwarded-For:9.0.1.2,%203.4.5.6'])
-        self.assertEquals(subserv.logger.error_calls, [])
-        self.assertEquals(subserv.logger.exception_calls, [])
-        self.assertEquals(subserv.wsgi_worker_bucket_stats.get(
-            subserv.wsgi_worker_id, 'request_count'), 1)
-        self.assertEquals(subserv.wsgi_worker_bucket_stats.get(
-            subserv.wsgi_worker_id, 'status_3xx_count'), 1)
-
-    def test_multiconf(self):
-        conf = Conf({
-            'brim': {'wsgi': 'one', 'daemons': 'two', 'log_name': 'test'},
-            'brim2': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
-            'one': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/one'},
-            'two': {'call': 'brim.daemon_sample.DaemonSample',
-                    'interval': '60'},
-            'three': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/three'},
-            'four': {'call': 'brim.daemon_sample.DaemonSample',
-                     'interval': '120'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(conf)
-        self.assertEquals(len(self.serv.subservers), 2)
-        subserv1, subserv2 = self.serv.subservers
-        self.assertEquals(subserv1.ip, '*')
-        self.assertEquals(subserv2.ip, '*')
-        self.assertEquals(subserv1.port, 80)
-        self.assertEquals(subserv2.port, 81)
-        self.assertEquals(subserv1.log_name, 'test')
-        self.assertEquals(subserv2.log_name, 'test2')
-        subserv1._configure_daemons(conf)
-        subserv1._configure_wsgi_apps(conf)
-        subserv2._configure_daemons(conf)
-        subserv2._configure_wsgi_apps(conf)
-        self.assertEquals(subserv1.wsgi_apps[0][2]['path'], '/one')
-        self.assertEquals(subserv2.wsgi_apps[0][2]['path'], '/three')
-        self.assertEquals(subserv1.daemons[0][2]['interval'], 60)
-        self.assertEquals(subserv2.daemons[0][2]['interval'], 120)
-
-    def test_multiconf_conflict(self):
-        conf = Conf({
-            'brim': {'wsgi': 'one', 'daemons': 'two', 'log_name': 'test'},
-            'brim2': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
-            'brim02': {'port': '81', 'wsgi': 'three', 'daemons': 'four'},
-            'one': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/one'},
-            'two': {'call': 'brim.daemon_sample.DaemonSample',
-                    'interval': '60'},
-            'three': {'call': 'brim.wsgi_echo.WSGIEcho', 'path': '/three'},
-            'four': {'call': 'brim.daemon_sample.DaemonSample',
-                     'interval': '120'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        exc = None
-        try:
-            self.serv._parse_conf(conf)
-        except Exception, err:
-            exc = err
-        self.assertEquals(str(exc), 'Multiple config sections [brim02].\n')
-
-    def test_multiconf_wsgi_launch_parent_side(self):
-        self.conf = Conf({
-            'brim': {'port': '0', 'wsgi': 'one'},
-            'brim2': {'port': '0', 'wsgi': 'one'},
-            'one': {'call':
-                'brim.test.unit.test_server.AppWithStatsConf'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(self.conf)
-        subserv1 = self.serv.subservers[0]
-        subserv1._configure_daemons(self.conf)
-        subserv1._configure_wsgi_apps(self.conf)
-        subserv2 = self.serv.subservers[1]
-        subserv2._configure_daemons(self.conf)
-        subserv2._configure_wsgi_apps(self.conf)
-        sustain_workers_calls = []
-        self.fork_retval = [0, 12345]
-
-        def _sustain_workers(*args, **kwargs):
-            sustain_workers_calls.append((args, kwargs))
-
-        orig_sustain_workers = server.sustain_workers
-        try:
-            server.sustain_workers = _sustain_workers
-            self.serv._start()
-        finally:
-            server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, subserv1._wsgi_worker), {'logger': subserv1.logger})])
-        self.assertEquals(self.capture_calls, [
-            ((), {'exceptions': self.serv._capture_exception,
-                  'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv1._capture_exception,
-                  'stdout_func': subserv1._capture_stdout,
-                  'stderr_func': subserv1._capture_stderr})])
-
-    def test_multiconf_wsgi_launch_child_side(self):
-        self.conf = Conf({
-            'brim': {'port': '0', 'wsgi': 'one'},
-            'brim2': {'port': '0', 'wsgi': 'one'},
-            'one': {'call':
-                'brim.test.unit.test_server.AppWithStatsConf'}})
-        self.conf.files = ['ok.conf']
-        self.serv.args = ['start']
-        self.serv._parse_args()
-        self.serv._parse_conf(self.conf)
-        subserv1 = self.serv.subservers[0]
-        subserv1._configure_daemons(self.conf)
-        subserv1._configure_wsgi_apps(self.conf)
-        subserv2 = self.serv.subservers[1]
-        subserv2._configure_daemons(self.conf)
-        subserv2._configure_wsgi_apps(self.conf)
-        sustain_workers_calls = []
-        self.fork_retval = [0, 0]
-
-        def _sustain_workers(*args, **kwargs):
-            sustain_workers_calls.append((args, kwargs))
-
-        orig_sustain_workers = server.sustain_workers
-        try:
-            server.sustain_workers = _sustain_workers
-            self.serv._start()
-        finally:
-            server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, subserv2._wsgi_worker), {'logger': subserv2.logger})])
-        self.assertEquals(self.capture_calls, [
-            ((), {'exceptions': self.serv._capture_exception,
-                  'stdout_func': self.serv._capture_stdout,
-                  'stderr_func': self.serv._capture_stderr}),
-            ((), {'exceptions': subserv2._capture_exception,
-                  'stdout_func': subserv2._capture_stdout,
-                  'stderr_func': subserv2._capture_stderr})])
 
 
 if __name__ == '__main__':

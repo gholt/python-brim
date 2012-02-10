@@ -62,19 +62,23 @@ class Stats(object):
         for index, subserver in enumerate(server.subservers):
             body[subserver.name] = {}
             stats = server.bucket_stats[index]
-            for name, typ in stats.stats_conf.iteritems():
-                if typ == 'sum':
-                    body[subserver.name][name] = sum(stats.get(i, name)
-                        for i in xrange(stats.bucket_count))
-                elif typ == 'min':
-                    body[subserver.name][name] = min(stats.get(i, name)
-                        for i in xrange(stats.bucket_count))
-                elif typ == 'max':
-                    body[subserver.name][name] = max(stats.get(i, name)
-                        for i in xrange(stats.bucket_count))
-                for i in xrange(stats.bucket_count):
-                    body[subserver.name].setdefault(stats.bucket_names[i],
-                        {})[name] = stats.get(i, name)
+            if stats.bucket_count == 1:
+                for name, typ in stats.stats_conf.iteritems():
+                    body[subserver.name][name] = stats.get(0, name)
+            else:
+                for name, typ in stats.stats_conf.iteritems():
+                    if typ == 'sum':
+                        body[subserver.name][name] = sum(stats.get(i, name)
+                            for i in xrange(stats.bucket_count))
+                    elif typ == 'min':
+                        body[subserver.name][name] = min(stats.get(i, name)
+                            for i in xrange(stats.bucket_count))
+                    elif typ == 'max':
+                        body[subserver.name][name] = max(stats.get(i, name)
+                            for i in xrange(stats.bucket_count))
+                    for i in xrange(stats.bucket_count):
+                        body[subserver.name].setdefault(stats.bucket_names[i],
+                            {})[name] = stats.get(i, name)
         body['start_time'] = server.start_time
         body = env['brim.json_dumps'](body) + '\n'
         start_response('200 OK', [('Content-Length', str(len(body))),

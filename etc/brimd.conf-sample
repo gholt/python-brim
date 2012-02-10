@@ -88,6 +88,8 @@ call = <package.module.Class>
 #   Set to the Python class that will handle the incoming connections.
 #   Additional options are described in the above [brim] section. The Python
 #   handler class may have options of its own as well.
+# chunk_read = <bytes>
+#   The maximum number of bytes to read before echoing it back. Default: 65536
 
 [tcp2]
 #   You can have multiple sets of TCP socket handlers configured by adding
@@ -98,6 +100,8 @@ call = <package.module.Class>
 #   Set to the Python class that will handle the incoming datagrams.
 #   Additional options are described in the above [brim] section. The Python
 #   handler class may have options of its own as well.
+# max_datagram_size = <bytes>
+#   The maximum sized UDP datagram to receive. Default: 65536
 
 [udp2]
 #   You can have multiple sets of UDP socket handlers configured by adding

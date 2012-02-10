@@ -238,6 +238,67 @@ def get_listening_tcp_socket(ip, port, backlog=4096, retry=30, certfile=None,
     return good_sock
 
 
+def get_listening_udp_socket(ip, port, retry=30, style=None):
+    """
+    Returns a socket.socket bound to the given ip and tcp port with
+    other optional parameters.
+
+    :param ip: The ip address to listen on. ``''`` and ``'*'`` are
+               translated to ``'0.0.0.0'`` which will listen on all
+               configured addresses.
+    :param port: The udp port to listen on.
+    :param retry: The number seconds to keep trying to bind the
+                  socket, in case there's another process bound but
+                  exiting soon. This allows near zero-downtime
+                  process handoffs as you start the new one and kill
+                  the old.
+    :param style: The libraries you'd like to use in creating the
+                  socket. The default will use the standard Python
+                  libraries. ``'Eventlet'`` is recognized and will
+                  use the Eventlet libraries. Other styles may added
+                  in the future.
+    """
+    if not style:
+        from socket import AF_INET, AF_INET6, AF_UNSPEC, \
+            error as socket_error, getaddrinfo, socket, SOCK_DGRAM, \
+            SOL_SOCKET, SO_REUSEADDR
+        from time import sleep
+    elif style.lower() == 'eventlet':
+        from eventlet.green.socket import AF_INET, AF_INET6, AF_UNSPEC, \
+            error as socket_error, getaddrinfo, socket, SOCK_DGRAM, \
+            SOL_SOCKET, SO_REUSEADDR
+        from eventlet import sleep
+    else:
+        from socket import error as socket_error
+        raise socket_error('Socket style %r not understood.' % style)
+    if not ip or ip == '*':
+        ip = '0.0.0.0'
+    family = None
+    for a in getaddrinfo(ip, port, AF_UNSPEC, SOCK_DGRAM):
+        if a[0] in (AF_INET, AF_INET6):
+            family = a[0]
+            break
+    if not family:
+        raise socket_error('Could not determine address family of %s:%s for '
+                           'binding.' % (ip, port))
+    good_sock = None
+    retry_until = time() + retry
+    while not good_sock and time() < retry_until:
+        try:
+            sock = socket(family, SOCK_DGRAM)
+            sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            sock.bind((ip, port))
+            good_sock = sock
+        except socket_error, err:
+            if err.errno != EADDRINUSE:
+                raise
+            sleep(0.1)
+    if not good_sock:
+        raise socket_error('Could not bind to %s:%s after trying for %s '
+                           'seconds.' % (ip, port, retry))
+    return good_sock
+
+
 def signum2str(signum):
     """
     Translates a signal number to a str. Example::

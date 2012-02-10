@@ -13,22 +13,22 @@
 # limitations under the License.
 
 """
-Contains a simple straight TCP socket application that just echoes
-the incoming data back. This is a good starting point for other TCP
+Contains a simple straight UDP datagram application that just echoes
+the incoming data back. This is a good starting point for other UDP
 applications. See the source for what's implemented and why.
 
-See :py:func:`TCPEcho.parse_conf` for configuration options.
+See :py:func:`UDPEcho.parse_conf` for configuration options.
 """
 
 
-class TCPEcho(object):
+class UDPEcho(object):
     """
-    A simple straight TCP socket application that just echoes the
-    incoming data back. This is a good starting point for other TCP
+    A simple straight UDP datagram application that just echoes the
+    incoming data back. This is a good starting point for other UDP
     applications. See the source for what's implemented and why.
 
     :param name: The name of the app, indicates the app's section in
-                 the overall configuration for the TCP server.
+                 the overall configuration for the server.
     :param parsed_conf: The conf result from :py:func:`parse_conf`.
     """
 
@@ -38,7 +38,7 @@ class TCPEcho(object):
             setattr(self, k, v)
         self.name = name
 
-    def __call__(self, subserver, stats, sock):
+    def __call__(self, subserver, stats, sock, datagram, ip, port):
         """
         Simply echo the incoming data back.
 
@@ -63,94 +63,51 @@ class TCPEcho(object):
                           this daemon.
         :param stats: Shared memory statistics object as defined
                       above.
-        :param sock: The just connected socket.
+        :param datagram: The just received datagram.
+        :param ip: The remote IP address.
+        :param port: The remote IP port.
         """
         try:
-            stats.incr('%s.connections' % self.name)
-            while True:
-                data = sock.recv(65536)
-                if not data:
-                    break
-                while data:
-                    i = sock.send(data)
-                    data = data[i:]
+            stats.set('byte_count', stats.get('byte_count') + len(datagram))
+            sock.sendto(datagram, (ip, port))
         finally:    
-            sock.close()
+            subserver.logger.notice('served request of %s bytes from %s:%s' %
+                                    (len(datagram), ip, port))
 
     @classmethod
     def parse_conf(cls, name, conf):
         """
         Translates the overall server configuration into an
         app-specific configuration dict suitable for passing as
-        ``parsed_conf`` in the TCPEcho constructor.
+        ``parsed_conf`` in the UDPEcho constructor.
 
         Sample Configuration File::
 
-            [tcp_echo]
-            call = brim.tcp_echo.TCPEcho
+            [udp_echo]
+            call = brim.udp_echo.UDPEcho
 
         :param name: The name of the app, indicates the app's section
                      in the overall configuration for the server.
         :param conf: The brim.conf.Conf instance representing the
                      overall configuration of the server.
         :returns: A dict suitable for passing as ``parsed_conf`` in
-                  the TCPEcho constructor.
+                  the UDPEcho constructor.
         """
         return {}
 
     @classmethod
     def stats_conf(cls, name, parsed_conf):
         """
-        Returns a list of (stat_name, stat_type) pairs that specifies
-        the stat variables this app wants established. stat_name is
-        the str name of the stat and stat_type is one of the
-        following:
-
-        worker
-
-            Indicates a worker only stat. No overall stat will be
-            reported.
-
-        sum
-
-            Indicates an overall stat should be reported that is a
-            sum of the stat from all workers.
-
-        min
-
-            Indicates an overall stat should be reported that is the
-            smallest value of the stat from all workers.
-
-        max
-
-            Indicates an overall stat should be reported that is the
-            largest value of the stat from all workers.
-
-        Within the app itself, these stats can be accessed through
-        the object at ``env['brim.stats']``. This object will
-        support the following methods:
-
-        get(<name>)
-
-            Return the int value of the stat <name>.
-
-        set(<name>, value)
-
-            Sets the value of the stat <name>. The value will be
-            treated as an unsigned integer.
-
-
-        incr(<name>)
-
-            Increments the value of the stat <name> by 1.
+        Returns a list of names that specifies the stat variables this app
+        wants established.
 
         Retreiving stats can be accomplished through WSGI apps like
         brim.stats.Stats.
 
         :param name: The name of the app, indicates the app's section
-                     in the overall configuration for the server.
+                     in the overall configuration for the WSGI
+                     server.
         :param parsed_conf: The conf result from
                             :py:func:`parse_conf`.
-        :returns: A list of (stat_name, stat_type) pairs.
         """
-        return [('%s.connections' % name, 'sum')]
+        return ['byte_count']

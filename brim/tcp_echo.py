@@ -28,7 +28,7 @@ class TCPEcho(object):
     applications. See the source for what's implemented and why.
 
     :param name: The name of the app, indicates the app's section in
-                 the overall configuration for the TCP server.
+                 the overall configuration for the server.
     :param parsed_conf: The conf result from :py:func:`parse_conf`.
     """
 
@@ -38,7 +38,7 @@ class TCPEcho(object):
             setattr(self, k, v)
         self.name = name
 
-    def __call__(self, subserver, stats, sock):
+    def __call__(self, subserver, stats, sock, ip, port):
         """
         Simply echo the incoming data back.
 
@@ -66,15 +66,17 @@ class TCPEcho(object):
         :param sock: The just connected socket.
         """
         try:
-            stats.incr('%s.connections' % self.name)
             while True:
-                data = sock.recv(65536)
+                data = sock.recv(self.chunk_read)
                 if not data:
                     break
+                stats.set('%s.byte_count' % self.name,
+                          stats.get('%s.byte_count' % self.name) + len(data))
                 while data:
                     i = sock.send(data)
                     data = data[i:]
         finally:    
+            subserver.logger.notice('served request from %s:%s' % (ip, port))
             sock.close()
 
     @classmethod
@@ -96,7 +98,7 @@ class TCPEcho(object):
         :returns: A dict suitable for passing as ``parsed_conf`` in
                   the TCPEcho constructor.
         """
-        return {}
+        return {'chunk_read': conf.get_int(name, 'chunk_read', 65536)}
 
     @classmethod
     def stats_conf(cls, name, parsed_conf):
@@ -153,4 +155,4 @@ class TCPEcho(object):
                             :py:func:`parse_conf`.
         :returns: A list of (stat_name, stat_type) pairs.
         """
-        return [('%s.connections' % name, 'sum')]
+        return [('%s.byte_count' % name, 'sum')]

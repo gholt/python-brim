@@ -37,7 +37,7 @@ from uuid import uuid4
 
 from brim.conf import read_conf
 from brim.service import capture_exceptions_stdout_stderr, droppriv, \
-    get_listening_tcp_socket, sustain_workers
+    get_listening_tcp_socket, get_listening_udp_socket, sustain_workers
 from eventlet import GreenPool, sleep, wsgi
 from eventlet.greenio import shutdown_safe
 from eventlet.hubs import use_hub
@@ -474,7 +474,7 @@ class WSGISubserver(IPSubserver):
                 conf.get_int('brim', 'wsgi_input_iter_chunk_size', 4096))
 
         self.apps = []
-        app_names = conf.get(self.name, 'wsgi', '').strip().split()
+        app_names = conf.get(self.name, 'apps', '').strip().split()
         for app_name in app_names:
             call = conf.get(app_name, 'call')
             if not call:
@@ -522,7 +522,7 @@ class WSGISubserver(IPSubserver):
                     if args != 3:
                         raise Exception('Cannot use %r for app [%s]. '
                             'Incorrect number of parse_conf args, %s, should '
-                            'be 3 (self, name, conf).' %
+                            'be 3 (cls, name, conf).' %
                             (call, app_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
@@ -538,7 +538,7 @@ class WSGISubserver(IPSubserver):
                     if args != 3:
                         raise Exception('Cannot use %r for app [%s]. '
                             'Incorrect number of stats_conf args, %s, should '
-                            'be 3 (self, name, conf).' %
+                            'be 3 (cls, name, conf).' %
                             (call, app_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
@@ -746,6 +746,329 @@ class WSGISubserver(IPSubserver):
                                   (self.worker_id, line))
 
 
+class TCPSubserver(IPSubserver):
+    """
+    Created for each [tcp], [tcp2], [tcp3] config section to hold the
+    attributes specific to that subconfig.
+
+    :param server: The parent brim.server.Server.
+    :param name: The name of the subserver ('tcp', 'tcp2', 'tcp3',
+                 etc.)
+    """
+
+    def __init__(self, server, name):
+        IPSubserver.__init__(self, server, name)
+        self.stats_conf.update({'connection_count': 'sum'})
+
+    def _parse_conf(self, conf):
+        IPSubserver._parse_conf(self, conf)
+        call = conf.get(self.name, 'call')
+        if not call:
+            raise Exception(
+                "[%s] not configured with 'call' option." % self.name)
+        try:
+            mod, cls = call.rsplit('.', 1)
+        except ValueError:
+            raise Exception(
+                'Invalid call value %r for [%s].' % (call, self.name))
+        try:
+            self.handler = getattr(__import__(mod, fromlist=[cls]), cls)
+        except (AttributeError, ImportError):
+            raise Exception(
+                'Could not load class %r for [%s].' % (call, self.name))
+        try:
+            args = len(getargspec(self.handler.__init__).args)
+            if args != 3:
+                raise Exception('Would not be able to instantiate %r for '
+                    '[%s]. Incorrect number of args, %s, should be 3 (self, '
+                    'name, parsed_conf).' % (call, self.name, args))
+        except TypeError, err:
+            if str(err) == 'arg is not a Python function':
+                err = 'Probably not a class.'
+            raise Exception(
+                'Would not be able to instantiate %r for [%s]. %s' %
+                (call, self.name, err))
+        try:
+            args = len(getargspec(self.handler.__call__).args)
+            if args != 6:
+                raise Exception('Would not be able to use %r for [%s]. '
+                    'Incorrect number of __call__ args, %s, should be 6 '
+                    '(self, subserver, stats, sock, ip, port).' %
+                    (call, self.name, args))
+        except TypeError, err:
+            if str(err) == 'arg is not a Python function':
+                err = 'Probably no __call__ method.'
+            raise Exception('Would not be able to use %r for [%s]. %s' %
+                            (call, self.name, err))
+        if hasattr(self.handler, 'parse_conf'):
+            try:
+                args = len(getargspec(self.handler.parse_conf).args)
+                if args != 3:
+                    raise Exception('Cannot use %r for [%s]. Incorrect number '
+                        'of parse_conf args, %s, should be 3 (cls, name, '
+                        'conf).' % (call, self.name, args))
+            except TypeError, err:
+                if str(err) == 'arg is not a Python function':
+                    err = 'parse_conf probably not a method.'
+                raise Exception('Cannot use %r for [%s]. %s' %
+                                (call, self.name, err))
+            self.handler_conf = self.handler.parse_conf(self.name, conf)
+        else:
+            self.handler_conf = conf
+        if hasattr(self.handler, 'stats_conf'):
+            try:
+                args = len(getargspec(self.handler.stats_conf).args)
+                if args != 3:
+                    raise Exception('Cannot use %r for [%s]. Incorrect number '
+                        'of stats_conf args, %s, should be 3 (cls, name, '
+                        'conf).' % (call, self.name, args))
+            except TypeError, err:
+                if str(err) == 'arg is not a Python function':
+                    err = 'stats_conf probably not a method.'
+                raise Exception('Cannot use %r for [%s]. %s' %
+                                (call, self.name, err))
+            for stat_name, stat_type in \
+                    self.handler.stats_conf(self.name, self.handler_conf):
+                self.stats_conf[stat_name] = stat_type
+
+    def _privileged_start(self):
+        try:
+            self.sock = get_listening_tcp_socket(self.ip, self.port,
+                backlog=self.backlog, retry=self.listen_retry,
+                certfile=self.certfile, keyfile=self.keyfile, style='eventlet')
+        except socket_error, err:
+                raise Exception(
+                    'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
+
+    def _start(self, bucket_stats):
+        self.bucket_stats = bucket_stats
+        self.worker_id = -1
+        if not self.server.output:
+            capture_exceptions_stdout_stderr(
+                exceptions=self._capture_exception,
+                stdout_func=self._capture_stdout,
+                stderr_func=self._capture_stderr)
+        self.start_time = int(time())
+        self.logger = get_logger(self.name, self.log_name, self.log_level,
+                                 self.log_facility, self.server.no_daemon)
+        self.handler = self.handler(self.name, self.handler_conf)
+        sustain_workers(self.worker_count, self._tcp_worker,
+                        logger=self.logger)
+        if self.worker_id == -1:
+            shutdown_safe(self.sock)
+            self.sock.close()
+
+    def _tcp_worker(self, worker_id):
+        """
+        This method is called for each TCP worker subprocess spawned
+        and it simply constructs the configured handler and then
+        begins sending incoming connections to it.
+        """
+        if setproctitle:
+            if not self.server.no_daemon:
+                setproctitle('%d:%s:brimd' % (worker_id, self.name))
+        self.worker_id = worker_id
+        self.bucket_stats.set(worker_id, 'start_time', time())
+        if not self.server.no_daemon:
+            use_hub(self.eventlet_hub)
+        stats = _Stats(self.bucket_stats, self.worker_id)
+        pool = GreenPool(size=self.concurrent_per_worker)
+        try:
+            while True:
+                sock, (ip, port) = self.sock.accept()
+                stats.incr('connection_count')
+                pool.spawn_n(self.handler, self, stats, sock, ip, port)
+        except socket_error, err:
+            if err[0] != EINVAL:
+                raise
+        pool.waitall()
+
+    def _capture_exception(self, *excinfo):
+        """
+        Used by capture_exceptions_stdout_stderr to catch any
+        completely uncaught exceptions and redirect them to the
+        logger.
+        """
+        self.logger.error('UNCAUGHT EXCEPTION: tid:%03d %s' %
+                          (self.worker_id, sysloggable_excinfo(*excinfo)))
+
+    def _capture_stdout(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard output and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                self.logger.info('STDOUT: tid:%03d %s' %
+                                 (self.worker_id, line))
+
+    def _capture_stderr(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard error and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                self.logger.error('STDERR: tid:%03d %s' %
+                                  (self.worker_id, line))
+
+
+class UDPSubserver(IPSubserver):
+    """
+    Created for each [udp], [udp2], [udp3] config section to hold the
+    attributes specific to that subconfig.
+
+    :param server: The parent brim.server.Server.
+    :param name: The name of the subserver ('udp', 'udp2', 'udp3',
+                 etc.)
+    """
+
+    def __init__(self, server, name):
+        IPSubserver.__init__(self, server, name)
+        self.stats_conf.update({'datagram_count': 'worker'})
+
+    def _parse_conf(self, conf):
+        IPSubserver._parse_conf(self, conf)
+        self.worker_count = 1
+        self.worker_names = ['0']
+        self.max_datagram_size = \
+            conf.get_int(self.name, 'max_datagram_size', 65536)
+        call = conf.get(self.name, 'call')
+        if not call:
+            raise Exception(
+                "[%s] not configured with 'call' option." % self.name)
+        try:
+            mod, cls = call.rsplit('.', 1)
+        except ValueError:
+            raise Exception(
+                'Invalid call value %r for [%s].' % (call, self.name))
+        try:
+            self.handler = getattr(__import__(mod, fromlist=[cls]), cls)
+        except (AttributeError, ImportError):
+            raise Exception(
+                'Could not load class %r for [%s].' % (call, self.name))
+        try:
+            args = len(getargspec(self.handler.__init__).args)
+            if args != 3:
+                raise Exception('Would not be able to instantiate %r for '
+                    '[%s]. Incorrect number of args, %s, should be 3 (self, '
+                    'name, parsed_conf).' % (call, self.name, args))
+        except TypeError, err:
+            if str(err) == 'arg is not a Python function':
+                err = 'Probably not a class.'
+            raise Exception(
+                'Would not be able to instantiate %r for [%s]. %s' %
+                (call, self.name, err))
+        try:
+            args = len(getargspec(self.handler.__call__).args)
+            if args != 7:
+                raise Exception('Would not be able to use %r for [%s]. '
+                    'Incorrect number of __call__ args, %s, should be 7 '
+                    '(self, subserver, stats, sock, datagram, ip, port).' %
+                    (call, self.name, args))
+        except TypeError, err:
+            if str(err) == 'arg is not a Python function':
+                err = 'Probably no __call__ method.'
+            raise Exception('Would not be able to use %r for [%s]. %s' %
+                            (call, self.name, err))
+        if hasattr(self.handler, 'parse_conf'):
+            try:
+                args = len(getargspec(self.handler.parse_conf).args)
+                if args != 3:
+                    raise Exception('Cannot use %r for [%s]. Incorrect number '
+                        'of parse_conf args, %s, should be 3 (cls, name, '
+                        'conf).' % (call, self.name, args))
+            except TypeError, err:
+                if str(err) == 'arg is not a Python function':
+                    err = 'parse_conf probably not a method.'
+                raise Exception('Cannot use %r for [%s]. %s' %
+                                (call, self.name, err))
+            self.handler_conf = self.handler.parse_conf(self.name, conf)
+        else:
+            self.handler_conf = conf
+        if hasattr(self.handler, 'stats_conf'):
+            try:
+                args = len(getargspec(self.handler.stats_conf).args)
+                if args != 3:
+                    raise Exception('Cannot use %r for [%s]. Incorrect number '
+                        'of stats_conf args, %s, should be 3 (cls, name, '
+                        'conf).' % (call, self.name, args))
+            except TypeError, err:
+                if str(err) == 'arg is not a Python function':
+                    err = 'stats_conf probably not a method.'
+                raise Exception('Cannot use %r for [%s]. %s' %
+                                (call, self.name, err))
+            for stat_name in self.handler.stats_conf(self.name,
+                                                     self.handler_conf):
+                self.stats_conf[stat_name] = 'worker'
+
+    def _privileged_start(self):
+        try:
+            self.sock = get_listening_udp_socket(self.ip, self.port,
+                retry=self.listen_retry, style='eventlet')
+        except socket_error, err:
+                raise Exception(
+                    'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
+
+    def _start(self, bucket_stats):
+        self.bucket_stats = bucket_stats
+        self.worker_id = 0
+        if not self.server.output:
+            capture_exceptions_stdout_stderr(
+                exceptions=self._capture_exception,
+                stdout_func=self._capture_stdout,
+                stderr_func=self._capture_stderr)
+        self.start_time = int(time())
+        self.logger = get_logger(self.name, self.log_name, self.log_level,
+                                 self.log_facility, self.server.no_daemon)
+        self.handler = self.handler(self.name, self.handler_conf)
+        self.bucket_stats.set(self.worker_id, 'start_time', time())
+        if not self.server.no_daemon:
+            use_hub(self.eventlet_hub)
+        stats = _Stats(self.bucket_stats, self.worker_id)
+        pool = GreenPool(size=self.concurrent_per_worker)
+        try:
+            while True:
+                datagram, (ip, port) = \
+                    self.sock.recvfrom(self.max_datagram_size)
+                stats.incr('datagram_count')
+                pool.spawn_n(self.handler, self, stats, self.sock, datagram,
+                             ip, port)
+        except socket_error, err:
+            if err[0] != EINVAL:
+                raise
+        pool.waitall()
+
+    def _capture_exception(self, *excinfo):
+        """
+        Used by capture_exceptions_stdout_stderr to catch any
+        completely uncaught exceptions and redirect them to the
+        logger.
+        """
+        self.logger.error('UNCAUGHT EXCEPTION: uid:%03d %s' %
+                          (self.worker_id, sysloggable_excinfo(*excinfo)))
+
+    def _capture_stdout(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard output and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                self.logger.info('STDOUT: uid:%03d %s' %
+                                 (self.worker_id, line))
+
+    def _capture_stderr(self, value):
+        """
+        Used by capture_exceptions_stdout_stderr to catch anything
+        sent to standard error and redirect it to the logger.
+        """
+        for line in value.split('\n'):
+            if line:
+                self.logger.error('STDERR: uid:%03d %s' %
+                                  (self.worker_id, line))
+
+
 class DaemonsSubserver(Subserver):
     """
     Created for a [daemons] config section to hold the attributes
@@ -809,7 +1132,7 @@ class DaemonsSubserver(Subserver):
                     if args != 3:
                         raise Exception('Cannot use %r for daemon [%s]. '
                             'Incorrect number of parse_conf args, %s, should '
-                            'be 3 (self, name, conf).' %
+                            'be 3 (cls, name, conf).' %
                             (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
@@ -825,7 +1148,7 @@ class DaemonsSubserver(Subserver):
                     if args != 3:
                         raise Exception('Cannot use %r for app [%s]. '
                             'Incorrect number of stats_conf args, %s, should '
-                            'be 3 (self, name, conf).' %
+                            'be 3 (cls, name, conf).' %
                             (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
@@ -945,7 +1268,6 @@ class Server(object):
             self._start()
             return 0
         except Exception, err:
-            raise
             self.stderr.write('%s\n' % err)
             self.stderr.flush()
             return 1
@@ -1116,6 +1438,10 @@ Command (defaults to 'no-daemon'):
         for key in conf.store.keys():
             if key == 'wsgi' or key.startswith('wsgi') and key[4:].isdigit():
                 self.subservers.append(WSGISubserver(self, key))
+            elif key == 'tcp' or key.startswith('tcp') and key[4:].isdigit():
+                self.subservers.append(TCPSubserver(self, key))
+            elif key == 'udp' or key.startswith('udp') and key[4:].isdigit():
+                self.subservers.append(UDPSubserver(self, key))
             elif key == 'daemons' and not self.no_daemon:
                 self.subservers.append(DaemonsSubserver(self))
         for subserver in self.subservers:
@@ -1168,15 +1494,14 @@ Command (defaults to 'no-daemon'):
         else:
             if setproctitle:
                 setproctitle('main:brimd')
-
-            def _start_subservers(index):
-                subserver = self.subservers[index]
-                if setproctitle:
-                    setproctitle('%s:brimd' % subserver.name)
-                return subserver._start(self.bucket_stats[index])
-
-            sustain_workers(len(self.subservers), _start_subservers,
+            sustain_workers(len(self.subservers), self._start_subserver,
                             logger=self.logger)
+
+    def _start_subserver(self, index):
+        subserver = self.subservers[index]
+        if setproctitle:
+            setproctitle('%s:brimd' % subserver.name)
+        return subserver._start(self.bucket_stats[index])
 
     def _capture_exception(self, *excinfo):
         """
