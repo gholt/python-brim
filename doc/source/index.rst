@@ -27,7 +27,7 @@ Overview
 
     This is a prerelease version of this project. As such, even as the author I don't completely trust this code yet. It works for the specific cases I've tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible "oddities", please file issues on github: http://github.com/gholt/brim Thanks, and be careful!
 
-This is the core project for Brim.Net Python-based applications. It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server) and maintaining background daemons. The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency -- when a subprocess exits without being requested to, it will be restarted automatically.
+This is the core project for Brim.Net Python-based applications. It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server), straight TCP and UDP socket applications, and maintaining background daemons. The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency -- when a subprocess exits without being requested to, it will be restarted automatically.
 
 Required Dependencies
 ---------------------
@@ -66,8 +66,9 @@ Example Install for Build and Test on Ubuntu 10.04
 ::
 
     $ sudo apt-get install gitcore python python-setuptools python-nose \
-      python-coverage python-sphinx python-eventlet python-simplejson
+      python-coverage python-eventlet python-simplejson
     $ sudo easy_install setproctitle
+    $ sudo easy_install sphinx
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py develop
@@ -176,13 +177,17 @@ The included brimd.conf-sample shows a full set of configuration options availab
 Example TCP Straight Socket Application Usage
 ---------------------------------------------
 
-TODO
+TODO: For now, see the [tcp] section in the brimd.conf-sample and the brim.tcp_echo.py sample application.
+
+The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
 Example UDP Application Usage
 -----------------------------
 
-TODO
+TODO: For now, see the [udp] section in the brimd.conf-sample and the brim.udp_echo.py sample application.
+
+The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
 Example Daemon Usage
@@ -566,19 +571,19 @@ start_time
 TCP Straight Socket Application Development
 -------------------------------------------
 
-TODO
+TODO: For now, see the [tcp] section in the brimd.conf-sample and the brim.tcp_echo.py sample application.
 
 
 UDP Socket Application Development
 ----------------------------------
 
-TODO
+TODO: For now, see the [udp] section in the brimd.conf-sample and the brim.udp_echo.py sample application.
 
 
 Daemon Development
 ------------------
 
-TODO
+TODO: For now, see the [daemons] section in the brimd.conf-sample and the brim.daemon_sample.py sample application.
 
 
 Code-Generated Documentation

@@ -18,8 +18,9 @@
 
 This is the core project for Brim.Net Python-based applications. It provides
 some reusable utility code and provides brimd, a launcher offering ease of
-deployment of WSGI applications (currently just using the Eventlet WSGI server)
-and maintaining background daemons.
+deployment of WSGI applications (currently just using the Eventlet WSGI
+server), straight TCP and UDP socket applications, and maintaining background
+daemons.
 
 For more in-depth documentation see <http://gholt.github.com/brim/>.
 
@@ -60,8 +61,9 @@ For more in-depth documentation see <http://gholt.github.com/brim/>.
 ### Example Install for Build and Test on Ubuntu 10.04
 
     $ sudo apt-get install gitcore python python-setuptools python-nose \
-      python-coverage python-sphinx python-eventlet python-simplejson
+      python-coverage python-eventlet python-simplejson
     $ sudo easy_install setproctitle
+    $ sudo easy_install sphinx
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py develop
