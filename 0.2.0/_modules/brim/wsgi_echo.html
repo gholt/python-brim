@@ -7,13 +7,13 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim.echo &mdash; Brim.Net Core Package v0.1.0 documentation</title>
+    <title>brim.wsgi_echo &mdash; Brim.Net Core Package v0.2.0 documentation</title>
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.0',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="../../index.html" />
+    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="../../index.html" />
     <link rel="up" title="brim" href="../brim.html" /> 
   </head>
   <body>
@@ -35,7 +35,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
       </ul>
@@ -46,7 +46,7 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <h1>Source code for brim.echo</h1><div class="highlight"><pre>
+  <h1>Source code for brim.wsgi_echo</h1><div class="highlight"><pre>
 <span class="c"># Copyright 2012 Gregory Holt</span>
 <span class="c">#</span>
 <span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -66,18 +66,18 @@
 <span class="sd">back in the response. This is a good starting point for other WSGI</span>
 <span class="sd">applications. See the source for what&#39;s implemented and why.</span>
 
-<span class="sd">See :py:func:`Echo.parse_conf` for configuration options.</span>
+<span class="sd">See :py:func:`WSGIEcho.parse_conf` for configuration options.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 
-<div class="viewcode-block" id="Echo"><a class="viewcode-back" href="../../brim.html#brim.echo.Echo">[docs]</a><span class="k">class</span> <span class="nc">Echo</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="WSGIEcho"><a class="viewcode-back" href="../../brim.html#brim.wsgi_echo.WSGIEcho">[docs]</a><span class="k">class</span> <span class="nc">WSGIEcho</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A simple WSGI application that just echoes the request body back</span>
 <span class="sd">    in the response. This is a good starting point for other WSGI</span>
 <span class="sd">    applications. See the source for what&#39;s implemented and why.</span>
 
 <span class="sd">    :param name: The name of the app, indicates the app&#39;s section in</span>
-<span class="sd">                 the overall configuration for the WSGI server.</span>
+<span class="sd">                 the overall configuration for the server.</span>
 <span class="sd">    :param parsed_conf: The conf result from :py:func:`parse_conf`.</span>
 <span class="sd">    :param next_app: The next WSGI app in the chain.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -99,7 +99,7 @@
 <span class="sd">        :param env: The WSGI env as per the spec.</span>
 <span class="sd">        :param start_response: The WSGI start_response as per the</span>
 <span class="sd">                               spec.</span>
-<span class="sd">        :returns: Calls start_response and returns an iteratable as</span>
+<span class="sd">        :returns: Calls start_response and returns an iterable as</span>
 <span class="sd">                  per the WSGI spec.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;PATH_INFO&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
@@ -120,16 +120,16 @@
         <span class="k">return</span> <span class="n">body</span>
 
     <span class="nd">@classmethod</span>
-<div class="viewcode-block" id="Echo.parse_conf"><a class="viewcode-back" href="../../brim.html#brim.echo.Echo.parse_conf">[docs]</a>    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+<div class="viewcode-block" id="WSGIEcho.parse_conf"><a class="viewcode-back" href="../../brim.html#brim.wsgi_echo.WSGIEcho.parse_conf">[docs]</a>    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Translates the overall WSGI server configuration into an</span>
+<span class="sd">        Translates the overall server configuration into an</span>
 <span class="sd">        app-specific configuration dict suitable for passing as</span>
-<span class="sd">        ``parsed_conf`` in the Echo constructor.</span>
+<span class="sd">        ``parsed_conf`` in the WSGIEcho constructor.</span>
 
 <span class="sd">        Sample Configuration File::</span>
 
-<span class="sd">            [echo]</span>
-<span class="sd">            call = brim.echo.Echo</span>
+<span class="sd">            [wsgi_echo]</span>
+<span class="sd">            call = brim.wsgi_echo.WSGIEcho</span>
 <span class="sd">            # path = &lt;path&gt;</span>
 <span class="sd">            #   The request path to match and serve; any other paths</span>
 <span class="sd">            #   will be passed on to the next WSGI app in the chain.</span>
@@ -139,18 +139,17 @@
 <span class="sd">            #   be ignored. Default: 65536</span>
 
 <span class="sd">        :param name: The name of the app, indicates the app&#39;s section</span>
-<span class="sd">                     in the overall configuration for the WSGI</span>
-<span class="sd">                     server.</span>
+<span class="sd">                     in the overall configuration for the server.</span>
 <span class="sd">        :param conf: The brim.conf.Conf instance representing the</span>
-<span class="sd">                     overall configuration of the WSGI server.</span>
+<span class="sd">                     overall configuration of the server.</span>
 <span class="sd">        :returns: A dict suitable for passing as ``parsed_conf`` in</span>
-<span class="sd">                  the Echo constructor.</span>
+<span class="sd">                  the WSGIEcho constructor.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">{</span><span class="s">&#39;path&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;path&#39;</span><span class="p">,</span> <span class="s">&#39;/echo&#39;</span><span class="p">),</span>
                 <span class="s">&#39;max_echo&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;max_echo&#39;</span><span class="p">,</span> <span class="mi">65536</span><span class="p">)}</span>
 </div>
     <span class="nd">@classmethod</span>
-<div class="viewcode-block" id="Echo.stats_conf"><a class="viewcode-back" href="../../brim.html#brim.echo.Echo.stats_conf">[docs]</a>    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
+<div class="viewcode-block" id="WSGIEcho.stats_conf"><a class="viewcode-back" href="../../brim.html#brim.wsgi_echo.WSGIEcho.stats_conf">[docs]</a>    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a list of (stat_name, stat_type) pairs that specifies</span>
 <span class="sd">        the stat variables this app wants established. stat_name is</span>
@@ -199,8 +198,7 @@
 <span class="sd">        brim.stats.Stats.</span>
 
 <span class="sd">        :param name: The name of the app, indicates the app&#39;s section</span>
-<span class="sd">                     in the overall configuration for the WSGI</span>
-<span class="sd">                     server.</span>
+<span class="sd">                     in the overall configuration for the server.</span>
 <span class="sd">        :param parsed_conf: The conf result from</span>
 <span class="sd">                            :py:func:`parse_conf`.</span>
 <span class="sd">        :returns: A list of (stat_name, stat_type) pairs.</span>
@@ -239,7 +237,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" >brim</a> &raquo;</li> 
       </ul>

@@ -7,13 +7,13 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Brim.Net Core Package &mdash; Brim.Net Core Package v0.1.0 documentation</title>
+    <title>Brim.Net Core Package &mdash; Brim.Net Core Package v0.2.0 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.1.0',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="#" />
+    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="#" />
     <link rel="next" title="LICENSE" href="license.html" /> 
   </head>
   <body>
@@ -38,7 +38,7 @@
         <li class="right" >
           <a href="license.html" title="LICENSE"
              accesskey="N">next</a> |</li>
-        <li><a href="#">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li> 
+        <li><a href="#">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -73,7 +73,7 @@ limitations under the License.</p>
 <p class="first admonition-title">Warning</p>
 <p class="last">This is a prerelease version of this project. As such, even as the author I don&#8217;t completely trust this code yet. It works for the specific cases I&#8217;ve tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible &#8220;oddities&#8221;, please file issues on github: <a class="reference external" href="http://github.com/gholt/brim">http://github.com/gholt/brim</a> Thanks, and be careful!</p>
 </div>
-<p>This is the core project for Brim.Net Python-based applications. It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server) and maintaining background daemons. The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency &#8211; when a subprocess exits without being requested to, it will be restarted automatically.</p>
+<p>This is the core project for Brim.Net Python-based applications. It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server), straight TCP and UDP socket applications, and maintaining background daemons. The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency &#8211; when a subprocess exits without being requested to, it will be restarted automatically.</p>
 <div class="section" id="required-dependencies">
 <h3>Required Dependencies<a class="headerlink" href="#required-dependencies" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -111,8 +111,9 @@ $ sudo python setup.py install</pre>
 <div class="section" id="example-install-for-build-and-test-on-ubuntu-10-04">
 <h3>Example Install for Build and Test on Ubuntu 10.04<a class="headerlink" href="#example-install-for-build-and-test-on-ubuntu-10-04" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-python"><pre>$ sudo apt-get install gitcore python python-setuptools python-nose \
-  python-coverage python-sphinx python-eventlet python-simplejson
+  python-coverage python-eventlet python-simplejson
 $ sudo easy_install setproctitle
+$ sudo easy_install sphinx
 $ git clone git://github.com/gholt/brim
 $ cd brim
 $ sudo python setup.py develop
@@ -121,15 +122,17 @@ $ ./.unittests</pre>
 </div>
 </div>
 </div>
-<div class="section" id="example-usage">
-<h2>Example Usage<a class="headerlink" href="#example-usage" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="usage-examples">
+<h2>Usage Examples<a class="headerlink" href="#usage-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="example-wsgi-usage">
+<h3>Example WSGI Usage<a class="headerlink" href="#example-wsgi-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
 <li><p class="first">Create /etc/brim/brimd.conf:</p>
-<div class="highlight-python"><pre>[brim]
+<div class="highlight-python"><pre>[wsgi]
 apps = echo stats
 
 [echo]
-call = brim.echo.Echo
+call = brim.wsgi_echo.WSGIEcho
 
 [stats]
 call = brim.stats.Stats</pre>
@@ -139,15 +142,15 @@ call = brim.stats.Stats</pre>
 <div class="highlight-python"><pre>$ sudo brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; app:</p>
+<li><p class="first">Access the &#8220;echo&#8221; app (echos <em>Just a test.</em> back):</p>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1/echo --data-binary 'Just a test.'</pre>
 </div>
 </li>
-<li><p class="first">Access a non-existent path:</p>
+<li><p class="first">Access a non-existent path (404s):</p>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1/invalid</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;stats&#8221; app:</p>
+<li><p class="first">Access the &#8220;stats&#8221; app (returns JSON formatted server stats):</p>
 <div class="highlight-python"><pre>$ curl -s http://127.0.0.1/stats | python -mjson.tool</pre>
 </div>
 </li>
@@ -157,10 +160,90 @@ call = brim.stats.Stats</pre>
 </li>
 </ul>
 <p>Run <tt class="docutils literal"><span class="pre">brimd</span> <span class="pre">-h</span></tt> for more details on server control. It supports the standard init.d-style commands as well a special no-daemon mode for debugging.</p>
-<p>Also, see the included brimd.conf-sample for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdeamons to start, etc.</p>
+<p>Also, see the included brimd.conf-sample for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.</p>
 </div>
+<div class="section" id="example-wsgi-multi-configuration-usage">
+<h3>Example WSGI Multi-Configuration Usage<a class="headerlink" href="#example-wsgi-multi-configuration-usage" title="Permalink to this headline">¶</a></h3>
+<p>You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:</p>
+<ul>
+<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<div class="highlight-python"><pre>[wsgi]
+apps = echo stats
+
+[wsgi]
+port = 81
+apps = echo2 stats
+
+[echo]
+call = brim.wsgi_echo.WSGIEcho
+
+[stats]
+call = brim.stats.Stats
+
+[echo2]
+call = brim.wsgi_echo.WSGIEcho
+path = /echo2</pre>
+</div>
+</li>
+</ul>
+<p>You can see the new section [brim2] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.</p>
+<ul>
+<li><p class="first">Start the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd start</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;echo&#8221; app on the main port:</p>
+<div class="highlight-python"><pre>$ curl -i http://127.0.0.1/echo --data-binary 'Just a test.'</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;echo&#8221; app on the second port:</p>
+<div class="highlight-python"><pre>$ curl -i http://127.0.0.1:81/echo2 --data-binary 'Just a test.'</pre>
+</div>
+</li>
+<li><p class="first">Note that the apps don&#8217;t answer on the other ports:</p>
+<div class="highlight-python"><pre>$ curl -i http://127.0.0.1/echo2 --data-binary 'Just a test.'
+$ curl -i http://127.0.0.1:81/echo --data-binary 'Just a test.'</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;stats&#8221; app and see it&#8217;s configured on both ports:</p>
+<div class="highlight-python"><pre>$ curl -s http://127.0.0.1/stats | python -mjson.tool
+$ curl -s http://127.0.0.1:81/stats | python -mjson.tool</pre>
+</div>
+</li>
+<li><p class="first">Stop the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd stop</pre>
+</div>
+</li>
+</ul>
+<p>The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
+</div>
+<div class="section" id="example-tcp-straight-socket-application-usage">
+<h3>Example TCP Straight Socket Application Usage<a class="headerlink" href="#example-tcp-straight-socket-application-usage" title="Permalink to this headline">¶</a></h3>
+<p>TODO: For now, see the [tcp] section in the brimd.conf-sample and the brim.tcp_echo.py sample application.</p>
+<p>The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
+</div>
+<div class="section" id="example-udp-application-usage">
+<h3>Example UDP Application Usage<a class="headerlink" href="#example-udp-application-usage" title="Permalink to this headline">¶</a></h3>
+<p>TODO: For now, see the [udp] section in the brimd.conf-sample and the brim.udp_echo.py sample application.</p>
+<p>The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
+</div>
+<div class="section" id="example-daemon-usage">
+<h3>Example Daemon Usage<a class="headerlink" href="#example-daemon-usage" title="Permalink to this headline">¶</a></h3>
+<p>The brimd server can manage additional daemons as well as the main WSGI server. You configure them much like WSGI apps, but with the daemons configuration value. There is a brim.daemon_sample.DaemonSample that can be a good start for writing new daemons.</p>
+<p>Here&#8217;s an example brimd.conf that starts the sample daemon:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">daemons</span><span class="p">]</span>
+<span class="n">daemons</span> <span class="o">=</span> <span class="n">sample</span>
+
+<span class="p">[</span><span class="n">sample</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">daemon_sample</span><span class="o">.</span><span class="n">DaemonSample</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="development-examples">
+<h2>Development Examples<a class="headerlink" href="#development-examples" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="wsgi-application-development">
-<h2>WSGI Application Development<a class="headerlink" href="#wsgi-application-development" title="Permalink to this headline">¶</a></h2>
+<h3>WSGI Application Development<a class="headerlink" href="#wsgi-application-development" title="Permalink to this headline">¶</a></h3>
 <p>Developing WSGI applications for brimd is quite similar to other Python WSGI servers. Here&#8217;s a simple example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
@@ -177,7 +260,7 @@ call = brim.stats.Stats</pre>
 </div>
 <p>Here&#8217;s an example /etc/brim/brimd.conf with this app active:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">brimd</span><span class="p">]</span>
-<span class="n">apps</span> <span class="o">=</span> <span class="n">helloworld</span>
+<span class="n">wsgi</span> <span class="o">=</span> <span class="n">helloworld</span>
 
 <span class="p">[</span><span class="n">helloworld</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
@@ -226,7 +309,7 @@ Hello World!</pre>
 <p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
 <p>Now, let&#8217;s update our configuration:</p>
 <div class="highlight-python"><pre>[brimd]
-apps = helloworld
+wsgi = helloworld
 
 [helloworld]
 call = mypackage.mymodule.HelloWorld
@@ -306,7 +389,7 @@ Hello World!</pre>
 </div></blockquote>
 <p>So now, let&#8217;s add the brim.stats.Stats app to our configuration so we&#8217;ll be able to get a report on the server stats:</p>
 <div class="highlight-python"><pre>[brimd]
-apps = helloworld stats
+wsgi = helloworld stats
 
 [helloworld]
 call = mypackage.mymodule.HelloWorld
@@ -324,7 +407,7 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 "helloworld.last_called": 1326602976,
 "helloworld.requests": 1,
 ...
-"worker_0": {
+"0": {
     "helloworld.last_called": 1,
     "helloworld.requests": 1326602976,
 ...
@@ -337,15 +420,14 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 "helloworld.last_called": 1326603159,
 "helloworld.requests": 3,
 ...
-"worker_0": {
+"0": {
     "helloworld.last_called": 3,
     "helloworld.requests": 1326603159,
 ...</pre>
 </div>
 <p>Of course, we only have one worker so the overall stats just mirror that worker. You can add <tt class="docutils literal"><span class="pre">workers</span> <span class="pre">=</span> <span class="pre">&lt;number&gt;</span></tt> to your brimd.conf if you want more workers.</p>
-</div>
 <div class="section" id="extra-wsgi-env-items">
-<h2>Extra WSGI env Items<a class="headerlink" href="#extra-wsgi-env-items" title="Permalink to this headline">¶</a></h2>
+<h4>Extra WSGI env Items<a class="headerlink" href="#extra-wsgi-env-items" title="Permalink to this headline">¶</a></h4>
 <p>brim</p>
 <blockquote>
 <div>This is the brim.server.Server instance itself. Normally you don&#8217;t need access to this, but some apps like brim.stats.Stats do.</div></blockquote>
@@ -367,7 +449,7 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 </div></blockquote>
 <p>brim.stats</p>
 <blockquote>
-<div><p>An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app&#8217;s stats_conf class method. See the brim.echo.Echo and brim.stats.Stats apps for examples of how to use these stats. This stats object will implement the following methods:</p>
+<div><p>An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app&#8217;s stats_conf class method. See the brim.wsgi_echo.WSGIEcho and brim.stats.Stats apps for examples of how to use these stats. This stats object will implement the following methods:</p>
 <blockquote>
 <div><p>get(&lt;name&gt;)</p>
 <blockquote>
@@ -388,22 +470,23 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 <div>These are the JSON dumps and loads functions for converting to and from JSON and Python objects. By default, these are json.dumps and json.loads, but faster libraries are out there and can be configured in brimd.conf. Using these env items means you&#8217;ll automatically use whatever is configured.</div></blockquote>
 </div>
 <div class="section" id="server-stats">
-<h2>Server Stats<a class="headerlink" href="#server-stats" title="Permalink to this headline">¶</a></h2>
+<h4>Server Stats<a class="headerlink" href="#server-stats" title="Permalink to this headline">¶</a></h4>
 <p>The brimd server tracks various statistics, such as the server start time and number of requests processed. The brim.stats.Stats app can be configured to provide access to these stats via a JSON response:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">brim</span><span class="p">]</span>
-<span class="n">apps</span> <span class="o">=</span> <span class="n">stats</span>
+<span class="n">wsgi</span> <span class="o">=</span> <span class="n">stats</span>
 <span class="n">workers</span> <span class="o">=</span> <span class="mi">4</span>
 
 <span class="p">[</span><span class="n">stats</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">Stats</span>
 <span class="c"># path = &lt;path&gt;</span>
-    <span class="c"># The request path to match and serve; any other paths will be passed</span>
-    <span class="c"># on to the next WSGI app in the chain. This can serve as a basic</span>
-    <span class="c"># restriction to accessing the stats by setting it to a hard to guess</span>
-    <span class="c"># value. Default: /stats</span>
+<span class="c">#   The request path to match and serve; any other paths will be passed on</span>
+<span class="c">#   to the next WSGI app in the chain. This can serve as a basic</span>
+<span class="c">#   restriction to accessing the stats by setting it to a hard to guess</span>
+<span class="c">#   value. Default: /stats</span>
 </pre></div>
 </div>
-<p>After restarting the server, you can now access these stats:</p>
+<p>TODO: Update this:
+After restarting the server, you can now access these stats:</p>
 <div class="highlight-python"><pre>$ curl s- http://127.0.0.1/stats | python -mjson.tool
 {
     "request_count": 18317,
@@ -489,16 +572,18 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 <blockquote>
 <div>These track specific response codes. Which response codes are tracked can be configured in brimd.conf, but are 404, 408, 499, and 501 by default. A high 404 count on a server that normally shouldn&#8217;t do so can indicate missing files or a bad incoming link. 408 Request Timeout and 499 Disconnect can indicate network problems or perhaps too aggressive timeouts. 501 Not Implemented counts can often be subtracted from the status_5xx_count to get a true count of real server problems.</div></blockquote>
 </div>
-<div class="section" id="additional-daemons">
-<h2>Additional Daemons<a class="headerlink" href="#additional-daemons" title="Permalink to this headline">¶</a></h2>
-<p>The brimd server can manage additional daemons as well as the main WSGI server. You configure them much like WSGI apps, but with the daemons configuration value. There is a brim.sample_daemon.SampleDaemon that can be a good start for writing new daemons.</p>
-<p>Here&#8217;s an example brimd.conf that starts the sample daemon:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">brim</span><span class="p">]</span>
-<span class="n">daemons</span> <span class="o">=</span> <span class="n">sample</span>
-
-<span class="p">[</span><span class="n">sample</span><span class="p">]</span>
-<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">sample_daemon</span><span class="o">.</span><span class="n">SampleDaemon</span>
-</pre></div>
+</div>
+<div class="section" id="tcp-straight-socket-application-development">
+<h3>TCP Straight Socket Application Development<a class="headerlink" href="#tcp-straight-socket-application-development" title="Permalink to this headline">¶</a></h3>
+<p>TODO: For now, see the [tcp] section in the brimd.conf-sample and the brim.tcp_echo.py sample application.</p>
+</div>
+<div class="section" id="udp-socket-application-development">
+<h3>UDP Socket Application Development<a class="headerlink" href="#udp-socket-application-development" title="Permalink to this headline">¶</a></h3>
+<p>TODO: For now, see the [udp] section in the brimd.conf-sample and the brim.udp_echo.py sample application.</p>
+</div>
+<div class="section" id="daemon-development">
+<h3>Daemon Development<a class="headerlink" href="#daemon-development" title="Permalink to this headline">¶</a></h3>
+<p>TODO: For now, see the [daemons] section in the brimd.conf-sample and the brim.daemon_sample.py sample application.</p>
 </div>
 </div>
 <div class="section" id="code-generated-documentation">
@@ -507,14 +592,16 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="brim.html">brim</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.conf">brim.conf</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.echo">brim.echo</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.http">brim.http</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.log">brim.log</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.sample_daemon">brim.sample_daemon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.daemon_sample">brim.daemon_sample</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.server">brim.server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.service">brim.service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.stats">brim.stats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.tcp_echo">brim.tcp_echo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.udp_echo">brim.udp_echo</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.util">brim.util</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brim.html#module-brim.wsgi_echo">brim.wsgi_echo</a></li>
 </ul>
 </div>
 </div>
@@ -545,11 +632,25 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 <li><a class="reference internal" href="#example-install-for-build-and-test-on-ubuntu-10-04">Example Install for Build and Test on Ubuntu 10.04</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#example-usage">Example Usage</a></li>
-<li><a class="reference internal" href="#wsgi-application-development">WSGI Application Development</a></li>
+<li><a class="reference internal" href="#usage-examples">Usage Examples</a><ul>
+<li><a class="reference internal" href="#example-wsgi-usage">Example WSGI Usage</a></li>
+<li><a class="reference internal" href="#example-wsgi-multi-configuration-usage">Example WSGI Multi-Configuration Usage</a></li>
+<li><a class="reference internal" href="#example-tcp-straight-socket-application-usage">Example TCP Straight Socket Application Usage</a></li>
+<li><a class="reference internal" href="#example-udp-application-usage">Example UDP Application Usage</a></li>
+<li><a class="reference internal" href="#example-daemon-usage">Example Daemon Usage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#development-examples">Development Examples</a><ul>
+<li><a class="reference internal" href="#wsgi-application-development">WSGI Application Development</a><ul>
 <li><a class="reference internal" href="#extra-wsgi-env-items">Extra WSGI env Items</a></li>
 <li><a class="reference internal" href="#server-stats">Server Stats</a></li>
-<li><a class="reference internal" href="#additional-daemons">Additional Daemons</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tcp-straight-socket-application-development">TCP Straight Socket Application Development</a></li>
+<li><a class="reference internal" href="#udp-socket-application-development">UDP Socket Application Development</a></li>
+<li><a class="reference internal" href="#daemon-development">Daemon Development</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#code-generated-documentation">Code-Generated Documentation</a><ul>
 </ul>
 </li>
@@ -595,7 +696,7 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
         <li class="right" >
           <a href="license.html" title="LICENSE"
              >next</a> |</li>
-        <li><a href="#">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li> 
+        <li><a href="#">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

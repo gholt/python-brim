@@ -7,13 +7,13 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim.service &mdash; Brim.Net Core Package v0.1.0 documentation</title>
+    <title>brim.service &mdash; Brim.Net Core Package v0.2.0 documentation</title>
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.0',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package v0.1.0 documentation" href="../../index.html" />
+    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="../../index.html" />
     <link rel="up" title="brim" href="../brim.html" /> 
   </head>
   <body>
@@ -35,7 +35,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
       </ul>
@@ -287,6 +287,67 @@
     <span class="k">return</span> <span class="n">good_sock</span>
 
 </div>
+<div class="viewcode-block" id="get_listening_udp_socket"><a class="viewcode-back" href="../../brim.html#brim.service.get_listening_udp_socket">[docs]</a><span class="k">def</span> <span class="nf">get_listening_udp_socket</span><span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a socket.socket bound to the given ip and tcp port with</span>
+<span class="sd">    other optional parameters.</span>
+
+<span class="sd">    :param ip: The ip address to listen on. ``&#39;&#39;`` and ``&#39;*&#39;`` are</span>
+<span class="sd">               translated to ``&#39;0.0.0.0&#39;`` which will listen on all</span>
+<span class="sd">               configured addresses.</span>
+<span class="sd">    :param port: The udp port to listen on.</span>
+<span class="sd">    :param retry: The number seconds to keep trying to bind the</span>
+<span class="sd">                  socket, in case there&#39;s another process bound but</span>
+<span class="sd">                  exiting soon. This allows near zero-downtime</span>
+<span class="sd">                  process handoffs as you start the new one and kill</span>
+<span class="sd">                  the old.</span>
+<span class="sd">    :param style: The libraries you&#39;d like to use in creating the</span>
+<span class="sd">                  socket. The default will use the standard Python</span>
+<span class="sd">                  libraries. ``&#39;Eventlet&#39;`` is recognized and will</span>
+<span class="sd">                  use the Eventlet libraries. Other styles may added</span>
+<span class="sd">                  in the future.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">style</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">AF_INET</span><span class="p">,</span> <span class="n">AF_INET6</span><span class="p">,</span> <span class="n">AF_UNSPEC</span><span class="p">,</span> \
+            <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">getaddrinfo</span><span class="p">,</span> <span class="n">socket</span><span class="p">,</span> <span class="n">SOCK_DGRAM</span><span class="p">,</span> \
+            <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span>
+        <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+    <span class="k">elif</span> <span class="n">style</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;eventlet&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">eventlet.green.socket</span> <span class="kn">import</span> <span class="n">AF_INET</span><span class="p">,</span> <span class="n">AF_INET6</span><span class="p">,</span> <span class="n">AF_UNSPEC</span><span class="p">,</span> \
+            <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">getaddrinfo</span><span class="p">,</span> <span class="n">socket</span><span class="p">,</span> <span class="n">SOCK_DGRAM</span><span class="p">,</span> \
+            <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span>
+        <span class="kn">from</span> <span class="nn">eventlet</span> <span class="kn">import</span> <span class="n">sleep</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span>
+        <span class="k">raise</span> <span class="n">socket_error</span><span class="p">(</span><span class="s">&#39;Socket style </span><span class="si">%r</span><span class="s"> not understood.&#39;</span> <span class="o">%</span> <span class="n">style</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ip</span> <span class="ow">or</span> <span class="n">ip</span> <span class="o">==</span> <span class="s">&#39;*&#39;</span><span class="p">:</span>
+        <span class="n">ip</span> <span class="o">=</span> <span class="s">&#39;0.0.0.0&#39;</span>
+    <span class="n">family</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">getaddrinfo</span><span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">AF_UNSPEC</span><span class="p">,</span> <span class="n">SOCK_DGRAM</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">AF_INET6</span><span class="p">):</span>
+            <span class="n">family</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">family</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">socket_error</span><span class="p">(</span><span class="s">&#39;Could not determine address family of </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s"> for &#39;</span>
+                           <span class="s">&#39;binding.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+    <span class="n">good_sock</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">retry_until</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="n">retry</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">good_sock</span> <span class="ow">and</span> <span class="n">time</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">retry_until</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="n">SOCK_DGRAM</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+            <span class="n">good_sock</span> <span class="o">=</span> <span class="n">sock</span>
+        <span class="k">except</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EADDRINUSE</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">good_sock</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">socket_error</span><span class="p">(</span><span class="s">&#39;Could not bind to </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s"> after trying for </span><span class="si">%s</span><span class="s"> &#39;</span>
+                           <span class="s">&#39;seconds.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">retry</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">good_sock</span>
+
+</div>
 <div class="viewcode-block" id="signum2str"><a class="viewcode-back" href="../../brim.html#brim.service.signum2str">[docs]</a><span class="k">def</span> <span class="nf">signum2str</span><span class="p">(</span><span class="n">signum</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Translates a signal number to a str. Example::</span>
@@ -447,7 +508,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package v0.1.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" >brim</a> &raquo;</li> 
       </ul>

@@ -16,14 +16,6 @@ brim.conf
     :undoc-members:
     :show-inheritance:
 
-brim.echo
-=========
-
-.. automodule:: brim.echo
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 brim.http
 =========
 
@@ -40,10 +32,10 @@ brim.log
     :undoc-members:
     :show-inheritance:
 
-brim.sample_daemon
+brim.daemon_sample
 ==================
 
-.. automodule:: brim.sample_daemon
+.. automodule:: brim.daemon_sample
     :members:
     :undoc-members:
     :show-inheritance:
@@ -72,10 +64,34 @@ brim.stats
     :undoc-members:
     :show-inheritance:
 
+brim.tcp_echo
+=============
+
+.. automodule:: brim.tcp_echo
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+brim.udp_echo
+=============
+
+.. automodule:: brim.udp_echo
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 brim.util
 =========
 
 .. automodule:: brim.util
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+brim.wsgi_echo
+==============
+
+.. automodule:: brim.wsgi_echo
     :members:
     :undoc-members:
     :show-inheritance:

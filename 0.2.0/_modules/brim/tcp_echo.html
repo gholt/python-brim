@@ -1,0 +1,251 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim.tcp_echo &mdash; Brim.Net Core Package v0.2.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="brim" href="../brim.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brim.tcp_echo</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2012 Gregory Holt</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains a simple straight TCP socket application that just echoes</span>
+<span class="sd">the incoming data back. This is a good starting point for other TCP</span>
+<span class="sd">applications. See the source for what&#39;s implemented and why.</span>
+
+<span class="sd">See :py:func:`TCPEcho.parse_conf` for configuration options.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="TCPEcho"><a class="viewcode-back" href="../../brim.html#brim.tcp_echo.TCPEcho">[docs]</a><span class="k">class</span> <span class="nc">TCPEcho</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple straight TCP socket application that just echoes the</span>
+<span class="sd">    incoming data back. This is a good starting point for other TCP</span>
+<span class="sd">    applications. See the source for what&#39;s implemented and why.</span>
+
+<span class="sd">    :param name: The name of the app, indicates the app&#39;s section in</span>
+<span class="sd">                 the overall configuration for the server.</span>
+<span class="sd">    :param parsed_conf: The conf result from :py:func:`parse_conf`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
+        <span class="c"># Copy all items from the parsed_conf to actual instance attributes.</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">parsed_conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Simply echo the incoming data back.</span>
+
+<span class="sd">        The stats object will have at least the stat variables asked</span>
+<span class="sd">        for in :py:func:``stats_conf``. This stats object will</span>
+<span class="sd">        support the following methods:</span>
+
+<span class="sd">        get(&lt;name&gt;)</span>
+
+<span class="sd">            Return the int value of the stat &lt;name&gt;.</span>
+
+<span class="sd">        set(&lt;name&gt;, value)</span>
+
+<span class="sd">            Sets the value of the stat &lt;name&gt;. The value will be</span>
+<span class="sd">            treated as an unsigned integer.</span>
+
+<span class="sd">        incr(&lt;name&gt;)</span>
+
+<span class="sd">            Increments the value of the stat &lt;name&gt; by 1.</span>
+
+<span class="sd">        :param subserver: The brim.server.Subserver that is managing</span>
+<span class="sd">                          this daemon.</span>
+<span class="sd">        :param stats: Shared memory statistics object as defined</span>
+<span class="sd">                      above.</span>
+<span class="sd">        :param sock: The just connected socket.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chunk_read</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.byte_count&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                          <span class="n">stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.byte_count&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+                <span class="k">while</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
+        <span class="k">finally</span><span class="p">:</span>    
+            <span class="n">subserver</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">notice</span><span class="p">(</span><span class="s">&#39;served request from </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="TCPEcho.parse_conf"><a class="viewcode-back" href="../../brim.html#brim.tcp_echo.TCPEcho.parse_conf">[docs]</a>    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Translates the overall server configuration into an</span>
+<span class="sd">        app-specific configuration dict suitable for passing as</span>
+<span class="sd">        ``parsed_conf`` in the TCPEcho constructor.</span>
+
+<span class="sd">        Sample Configuration File::</span>
+
+<span class="sd">            [tcp_echo]</span>
+<span class="sd">            call = brim.tcp_echo.TCPEcho</span>
+
+<span class="sd">        :param name: The name of the app, indicates the app&#39;s section</span>
+<span class="sd">                     in the overall configuration for the server.</span>
+<span class="sd">        :param conf: The brim.conf.Conf instance representing the</span>
+<span class="sd">                     overall configuration of the server.</span>
+<span class="sd">        :returns: A dict suitable for passing as ``parsed_conf`` in</span>
+<span class="sd">                  the TCPEcho constructor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;chunk_read&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;chunk_read&#39;</span><span class="p">,</span> <span class="mi">65536</span><span class="p">)}</span>
+</div>
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="TCPEcho.stats_conf"><a class="viewcode-back" href="../../brim.html#brim.tcp_echo.TCPEcho.stats_conf">[docs]</a>    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a list of (stat_name, stat_type) pairs that specifies</span>
+<span class="sd">        the stat variables this app wants established. stat_name is</span>
+<span class="sd">        the str name of the stat and stat_type is one of the</span>
+<span class="sd">        following:</span>
+
+<span class="sd">        worker</span>
+
+<span class="sd">            Indicates a worker only stat. No overall stat will be</span>
+<span class="sd">            reported.</span>
+
+<span class="sd">        sum</span>
+
+<span class="sd">            Indicates an overall stat should be reported that is a</span>
+<span class="sd">            sum of the stat from all workers.</span>
+
+<span class="sd">        min</span>
+
+<span class="sd">            Indicates an overall stat should be reported that is the</span>
+<span class="sd">            smallest value of the stat from all workers.</span>
+
+<span class="sd">        max</span>
+
+<span class="sd">            Indicates an overall stat should be reported that is the</span>
+<span class="sd">            largest value of the stat from all workers.</span>
+
+<span class="sd">        Within the app itself, these stats can be accessed through</span>
+<span class="sd">        the object at ``env[&#39;brim.stats&#39;]``. This object will</span>
+<span class="sd">        support the following methods:</span>
+
+<span class="sd">        get(&lt;name&gt;)</span>
+
+<span class="sd">            Return the int value of the stat &lt;name&gt;.</span>
+
+<span class="sd">        set(&lt;name&gt;, value)</span>
+
+<span class="sd">            Sets the value of the stat &lt;name&gt;. The value will be</span>
+<span class="sd">            treated as an unsigned integer.</span>
+
+
+<span class="sd">        incr(&lt;name&gt;)</span>
+
+<span class="sd">            Increments the value of the stat &lt;name&gt; by 1.</span>
+
+<span class="sd">        Retreiving stats can be accomplished through WSGI apps like</span>
+<span class="sd">        brim.stats.Stats.</span>
+
+<span class="sd">        :param name: The name of the app, indicates the app&#39;s section</span>
+<span class="sd">                     in the overall configuration for the server.</span>
+<span class="sd">        :param parsed_conf: The conf result from</span>
+<span class="sd">                            :py:func:`parse_conf`.</span>
+<span class="sd">        :returns: A list of (stat_name, stat_type) pairs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.byte_count&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;sum&#39;</span><span class="p">)]</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" >brim</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
