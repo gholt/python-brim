@@ -1,3 +1,8 @@
+brim (0.2.0)
+
+    * Refactored to a true set of Subservers, adding the possibility of
+      straight TCP and UDP socket servers.
+
 brim (0.1.0)
 
     * Folded brimwsgi in.
