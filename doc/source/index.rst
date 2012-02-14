@@ -129,7 +129,7 @@ You can even set up multiple listening address or ports and control them with a 
     [wsgi]
     apps = echo stats
 
-    [wsgi]
+    [wsgi2]
     port = 81
     apps = echo2 stats
 
