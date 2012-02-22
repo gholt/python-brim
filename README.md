@@ -42,12 +42,12 @@ For more in-depth documentation see <http://gholt.github.com/brim/>.
 
 ### Build and Test Dependencies
 
-* [Git](http://git-scm.com/) since the code is hosted on
-  [GitHub](http://github.com/gholt/brim).
-* [SetupTools](http://packages.python.org/distribute/) for setup.py usage.
-* [Nose](http://readthedocs.org/docs/nose/en/latest/) for the test suite.
 * [Coverage](http://nedbatchelder.com/code/coverage/) to report on test
   coverage.
+* [Git](http://git-scm.com/) since the code is hosted on
+  [GitHub](http://github.com/gholt/brim).
+* [Nose](http://readthedocs.org/docs/nose/en/latest/) for the test suite.
+* [PIP](http://pypi.python.org/pypi/pip) for setup.py usage.
 * [Sphinx](http://sphinx.pocoo.org/) to build documentation.
 
 ### Example Install on Ubuntu 10.04
@@ -61,8 +61,8 @@ For more in-depth documentation see <http://gholt.github.com/brim/>.
 
 ### Example Install for Build and Test on Ubuntu 10.04
 
-    $ sudo apt-get install git-core python python-setuptools python-nose \
-      python-coverage python-simplejson
+    $ sudo apt-get install git-core python python-coverage python-nose \
+      python-pip python-simplejson
     $ sudo pip install eventlet
     $ sudo pip install setproctitle
     $ sudo pip install sphinx

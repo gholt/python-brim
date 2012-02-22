@@ -45,10 +45,10 @@ Optional Dependencies
 Build and Test Dependencies
 ---------------------------
 
-* `Git <http://git-scm.com/>`_ since the code is hosted on `GitHub <http://github.com/gholt/brim>`_.
-* `SetupTools <http://packages.python.org/distribute/>`_ for setup.py usage.
-* `Nose <http://readthedocs.org/docs/nose/en/latest/>`_ for the test suite.
 * `Coverage <http://nedbatchelder.com/code/coverage/>`_ to report on test coverage.
+* `Git <http://git-scm.com/>`_ since the code is hosted on `GitHub <http://github.com/gholt/brim>`_.
+* `Nose <http://readthedocs.org/docs/nose/en/latest/>`_ for the test suite.
+* `PIP` <http://pypi.python.org/pypi/pip>`_ to install additional Python packages.
 * `Sphinx <http://sphinx.pocoo.org/>`_ to build documentation.
 
 Example Install on Ubuntu 10.04
@@ -66,8 +66,8 @@ Example Install for Build and Test on Ubuntu 10.04
 --------------------------------------------------
 ::
 
-    $ sudo apt-get install git-core python python-setuptools python-nose \
-      python-coverage python-simplejson
+    $ sudo apt-get install git-core python python-coverage python-nose \
+      python-pip python-simplejson
     $ sudo pip install eventlet
     $ sudo pip install setproctitle
     $ sudo pip install sphinx
