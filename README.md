@@ -52,18 +52,20 @@ For more in-depth documentation see <http://gholt.github.com/brim/>.
 
 ### Example Install on Ubuntu 10.04
 
-    $ sudo apt-get install gitcore python python-eventlet
-    $ sudo easy_install setproctitle  # optional
+    $ sudo apt-get install git-core python python-pip
+    $ sudo pip install eventlet
+    $ sudo pip install setproctitle  # optional
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py install
 
 ### Example Install for Build and Test on Ubuntu 10.04
 
-    $ sudo apt-get install gitcore python python-setuptools python-nose \
-      python-coverage python-eventlet python-simplejson
-    $ sudo easy_install setproctitle
-    $ sudo easy_install sphinx
+    $ sudo apt-get install git-core python python-setuptools python-nose \
+      python-coverage python-simplejson
+    $ sudo pip install eventlet
+    $ sudo pip install setproctitle
+    $ sudo pip install sphinx
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py develop
