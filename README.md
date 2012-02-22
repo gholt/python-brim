@@ -47,7 +47,7 @@ For more in-depth documentation see <http://gholt.github.com/brim/>.
 * [Git](http://git-scm.com/) since the code is hosted on
   [GitHub](http://github.com/gholt/brim).
 * [Nose](http://readthedocs.org/docs/nose/en/latest/) for the test suite.
-* [PIP](http://pypi.python.org/pypi/pip) for setup.py usage.
+* [PIP](http://pypi.python.org/pypi/pip) to install additional Python packages.
 * [Sphinx](http://sphinx.pocoo.org/) to build documentation.
 
 ### Example Install on Ubuntu 10.04
