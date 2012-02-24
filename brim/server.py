@@ -297,6 +297,7 @@ class _WsgiOutput(object):
         self.env['brim._bytes_out'] += len(rv)
         return rv
 
+
 class Subserver(object):
     """
     Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc.
@@ -389,11 +390,14 @@ class Subserver(object):
         """
         pass
 
-    def _start(self):
+    def _start(self, bucket_stats):
         """
         This is the last method run by the main brimd server process.
+
+        :param bucket_stats: The _BucketStats instance for use by
+                             this subserver.
         """
-        pass
+        self.bucket_stats = bucket_stats
 
 
 class IPSubserver(Subserver):
@@ -560,7 +564,7 @@ class WSGISubserver(IPSubserver):
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
 
     def _start(self, bucket_stats):
-        self.bucket_stats = bucket_stats
+        IPSubserver._start(self, bucket_stats)
         self.worker_id = -1
         if not self.server.output:
             capture_exceptions_stdout_stderr(
@@ -605,7 +609,7 @@ class WSGISubserver(IPSubserver):
             wsgi.server(self.sock, self._wsgi_entry, _EventletWSGINullLogger(),
                         custom_pool=pool)
         except socket_error, err:
-            if err[0] != EINVAL:
+            if err.errno != EINVAL:
                 raise
         pool.waitall()
 
@@ -632,9 +636,9 @@ class WSGISubserver(IPSubserver):
             env['wsgi.input'] = \
                 _WsgiInput(env, self.wsgi_input_iter_chunk_size)
             env['brim.additional_request_log_info'] = []
-            env['eventlet.posthooks'].append((self._log_request, (), {}))
             env['brim.json_dumps'] = self.json_dumps
             env['brim.json_loads'] = self.json_loads
+            env['eventlet.posthooks'].append((self._log_request, (), {}))
             return _WsgiOutput(self.first_app(env, _start_response), env)
         except Exception, err:
             self.logger.exception('WSGI EXCEPTION:')
@@ -712,9 +716,10 @@ class WSGISubserver(IPSubserver):
                 log_items.extend(['headers:', headers])
             self.logger.notice(' '.join(_log_quote(str(x or '-'))
                                         for x in log_items))
-            self.logger.txn = None
         except Exception:
             self.logger.exception('WSGI EXCEPTION:')
+        finally:
+            self.logger.txn = None
 
     def _capture_exception(self, *excinfo):
         """
@@ -841,7 +846,7 @@ class TCPSubserver(IPSubserver):
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
 
     def _start(self, bucket_stats):
-        self.bucket_stats = bucket_stats
+        IPSubserver._start(self, bucket_stats)
         self.worker_id = -1
         if not self.server.output:
             capture_exceptions_stdout_stderr(
@@ -879,7 +884,7 @@ class TCPSubserver(IPSubserver):
                 stats.incr('connection_count')
                 pool.spawn_n(self.handler, self, stats, sock, ip, port)
         except socket_error, err:
-            if err[0] != EINVAL:
+            if err.errno != EINVAL:
                 raise
         pool.waitall()
 
@@ -931,8 +936,8 @@ class UDPSubserver(IPSubserver):
         IPSubserver._parse_conf(self, conf)
         self.worker_count = 1
         self.worker_names = ['0']
-        self.max_datagram_size = \
-            conf.get_int(self.name, 'max_datagram_size', 65536)
+        self.max_datagram_size = conf.get_int(self.name, 'max_datagram_size',
+            conf.get_int('brim', 'max_datagram_size', 65536))
         call = conf.get(self.name, 'call')
         if not call:
             raise Exception(
@@ -1011,7 +1016,7 @@ class UDPSubserver(IPSubserver):
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
 
     def _start(self, bucket_stats):
-        self.bucket_stats = bucket_stats
+        IPSubserver._start(self, bucket_stats)
         self.worker_id = 0
         if not self.server.output:
             capture_exceptions_stdout_stderr(
@@ -1022,7 +1027,7 @@ class UDPSubserver(IPSubserver):
         self.logger = get_logger(self.name, self.log_name, self.log_level,
                                  self.log_facility, self.server.no_daemon)
         self.handler = self.handler(self.name, self.handler_conf)
-        self.bucket_stats.set(self.worker_id, 'start_time', time())
+        self.bucket_stats.set(self.worker_id, 'start_time', self.start_time)
         if not self.server.no_daemon:
             use_hub(self.eventlet_hub)
         stats = _Stats(self.bucket_stats, self.worker_id)
@@ -1035,7 +1040,7 @@ class UDPSubserver(IPSubserver):
                 pool.spawn_n(self.handler, self, stats, self.sock, datagram,
                              ip, port)
         except socket_error, err:
-            if err[0] != EINVAL:
+            if err.errno != EINVAL:
                 raise
         pool.waitall()
 
@@ -1077,8 +1082,8 @@ class DaemonsSubserver(Subserver):
     :param server: The parent brim.server.Server.
     """
 
-    def __init__(self, server):
-        Subserver.__init__(self, server, 'daemons')
+    def __init__(self, server, name='daemons'):
+        Subserver.__init__(self, server, name)
 
     def _parse_conf(self, conf):
         Subserver._parse_conf(self, conf)
@@ -1146,14 +1151,14 @@ class DaemonsSubserver(Subserver):
                 try:
                     args = len(getargspec(daemon_class.stats_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for app [%s]. '
+                        raise Exception('Cannot use %r for daemon [%s]. '
                             'Incorrect number of stats_conf args, %s, should '
                             'be 3 (cls, name, conf).' %
                             (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'stats_conf probably not a method.'
-                    raise Exception('Cannot use %r for app [%s]. %s' %
+                    raise Exception('Cannot use %r for daemon [%s]. %s' %
                                     (call, daemon_name, err))
                 for stat_name in \
                         daemon_class.stats_conf(daemon_name, daemon_conf):
@@ -1165,7 +1170,7 @@ class DaemonsSubserver(Subserver):
             self.worker_names = ['0']
 
     def _start(self, bucket_stats):
-        self.bucket_stats = bucket_stats
+        Subserver._start(self, bucket_stats)
         self.daemon_id = -1
         if not self.server.output:
             capture_exceptions_stdout_stderr(

@@ -70,7 +70,7 @@ class UDPEcho(object):
         try:
             stats.set('byte_count', stats.get('byte_count') + len(datagram))
             sock.sendto(datagram, (ip, port))
-        finally:    
+        finally:
             subserver.logger.notice('served request of %s bytes from %s:%s' %
                                     (len(datagram), ip, port))
 

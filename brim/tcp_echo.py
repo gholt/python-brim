@@ -75,7 +75,7 @@ class TCPEcho(object):
                 while data:
                     i = sock.send(data)
                     data = data[i:]
-        finally:    
+        finally:
             subserver.logger.notice('served request from %s:%s' % (ip, port))
             sock.close()
 
