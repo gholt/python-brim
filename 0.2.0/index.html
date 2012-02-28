@@ -191,7 +191,7 @@ path = /echo2</pre>
 </div>
 </li>
 </ul>
-<p>You can see the new section [brim2] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.</p>
+<p>You can see the new section [wsgi2] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.</p>
 <ul>
 <li><p class="first">Start the server:</p>
 <div class="highlight-python"><pre>$ sudo brimd start</pre>
@@ -224,12 +224,96 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool</pre>
 </div>
 <div class="section" id="example-tcp-straight-socket-application-usage">
 <h3>Example TCP Straight Socket Application Usage<a class="headerlink" href="#example-tcp-straight-socket-application-usage" title="Permalink to this headline">¶</a></h3>
-<p>TODO: For now, see the [tcp] section in the brimd.conf-sample and the brim.tcp_echo.py sample application.</p>
+<ul>
+<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">tcp_echo</span><span class="o">.</span><span class="n">TCPEcho</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Start the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd start</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;echo&#8221; app (echos <em>Just a test.</em> back):</p>
+<div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 127.0.0.1 80</pre>
+</div>
+</li>
+<li><p class="first">Stop the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd stop</pre>
+</div>
+</li>
+<li><p class="first">Create a multi-port /etc/brim/brimd.conf:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">tcp_echo</span><span class="o">.</span><span class="n">TCPEcho</span>
+
+<span class="p">[</span><span class="n">tcp2</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">tcp_echo</span><span class="o">.</span><span class="n">TCPEcho</span>
+<span class="n">port</span> <span class="o">=</span> <span class="mi">81</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Start the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd start</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;echo&#8221; apps (echo <em>Just a test.</em> back):</p>
+<div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 127.0.0.1 80
+$ echo 'Just a test.' | nc -q 2 127.0.0.1 81</pre>
+</div>
+</li>
+<li><p class="first">Stop the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd stop</pre>
+</div>
+</li>
+</ul>
 <p>The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
 </div>
 <div class="section" id="example-udp-application-usage">
 <h3>Example UDP Application Usage<a class="headerlink" href="#example-udp-application-usage" title="Permalink to this headline">¶</a></h3>
-<p>TODO: For now, see the [udp] section in the brimd.conf-sample and the brim.udp_echo.py sample application.</p>
+<ul>
+<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">udp_echo</span><span class="o">.</span><span class="n">UDPEcho</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Start the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd start</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;echo&#8221; app (echos <em>Just a test.</em> back):</p>
+<div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 80</pre>
+</div>
+</li>
+<li><p class="first">Stop the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd stop</pre>
+</div>
+</li>
+<li><p class="first">Create a multi-port /etc/brim/brimd.conf:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">udp_echo</span><span class="o">.</span><span class="n">UDPEcho</span>
+
+<span class="p">[</span><span class="n">udp2</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">udp_echo</span><span class="o">.</span><span class="n">UDPEcho</span>
+<span class="n">port</span> <span class="o">=</span> <span class="mi">81</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Start the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd start</pre>
+</div>
+</li>
+<li><p class="first">Access the &#8220;echo&#8221; apps (echo <em>Just a test.</em> back):</p>
+<div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 80
+$ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 81</pre>
+</div>
+</li>
+<li><p class="first">Stop the server:</p>
+<div class="highlight-python"><pre>$ sudo brimd stop</pre>
+</div>
+</li>
+</ul>
 <p>The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
 </div>
 <div class="section" id="example-daemon-usage">
@@ -264,8 +348,8 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool</pre>
 </pre></div>
 </div>
 <p>Here&#8217;s an example /etc/brim/brimd.conf with this app active:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">brimd</span><span class="p">]</span>
-<span class="n">wsgi</span> <span class="o">=</span> <span class="n">helloworld</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">wsgi</span><span class="p">]</span>
+<span class="n">apps</span> <span class="o">=</span> <span class="n">helloworld</span>
 
 <span class="p">[</span><span class="n">helloworld</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
@@ -313,8 +397,8 @@ Hello World!</pre>
 </div>
 <p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
 <p>Now, let&#8217;s update our configuration:</p>
-<div class="highlight-python"><pre>[brimd]
-wsgi = helloworld
+<div class="highlight-python"><pre>[wsgi]
+apps = helloworld
 
 [helloworld]
 call = mypackage.mymodule.HelloWorld
@@ -392,9 +476,10 @@ Hello World!</pre>
 <blockquote>
 <div>Increments the value of the stat &lt;name&gt; by 1.</div></blockquote>
 </div></blockquote>
-<p>So now, let&#8217;s add the brim.stats.Stats app to our configuration so we&#8217;ll be able to get a report on the server stats:</p>
-<div class="highlight-python"><pre>[brimd]
-wsgi = helloworld stats
+<p>So now, let&#8217;s add the brim.stats.Stats app to our configuration so we&#8217;ll be able to get a report on the server stats; we&#8217;ll also set up two workers to show the separate worker stats:</p>
+<div class="highlight-python"><pre>[wsgi]
+apps = helloworld stats
+workers = 2
 
 [helloworld]
 call = mypackage.mymodule.HelloWorld
@@ -409,12 +494,17 @@ $ curl http://127.0.0.1/here
 Hello World!
 $ curl -s http://127.0.0.1/stats | python -mjson.tool
 ...
-"helloworld.last_called": 1326602976,
-"helloworld.requests": 1,
+    "wsgi": {
+        "0": {
+            "helloworld.last_called": 0,
+            "helloworld.requests": 0,
 ...
-"0": {
-    "helloworld.last_called": 1,
-    "helloworld.requests": 1326602976,
+        "1": {
+            "helloworld.last_called": 1330399869,
+            "helloworld.requests": 1,
+...
+        "helloworld.last_called": 1330399869,
+        "helloworld.requests": 1,
 ...
 $ curl http://127.0.0.1/here
 Hello World!
@@ -422,15 +512,37 @@ $ curl http://127.0.0.1/here
 Hello World!
 $ curl -s http://127.0.0.1/stats | python -mjson.tool
 ...
-"helloworld.last_called": 1326603159,
-"helloworld.requests": 3,
+    "wsgi": {
+        "0": {
+            "helloworld.last_called": 0,
+            "helloworld.requests": 0,
 ...
-"0": {
-    "helloworld.last_called": 3,
-    "helloworld.requests": 1326603159,
+        "1": {
+            "helloworld.last_called": 1330399935,
+            "helloworld.requests": 3,
+...
+        "helloworld.last_called": 1330399935,
+        "helloworld.requests": 3,
 ...</pre>
 </div>
-<p>Of course, we only have one worker so the overall stats just mirror that worker. You can add <tt class="docutils literal"><span class="pre">workers</span> <span class="pre">=</span> <span class="pre">&lt;number&gt;</span></tt> to your brimd.conf if you want more workers.</p>
+<p>With very low load, a single worker often gets all the requests. If you have Apache Bench installed you might try that to get a better load test:</p>
+<div class="highlight-python"><pre>$ ab -n 12345 http://127.0.0.1/here
+...
+$ curl -s http://127.0.0.1/stats | python -mjson.tool
+...
+    "wsgi": {
+        "0": {
+            "helloworld.last_called": 1330399999,
+            "helloworld.requests": 6201,
+...
+        "1": {
+            "helloworld.last_called": 1330399999,
+            "helloworld.requests": 6147,
+...
+        "helloworld.last_called": 1330399999,
+        "helloworld.requests": 12348,
+...</pre>
+</div>
 <div class="section" id="extra-wsgi-env-items">
 <h4>Extra WSGI env Items<a class="headerlink" href="#extra-wsgi-env-items" title="Permalink to this headline">¶</a></h4>
 <p>brim</p>
@@ -477,9 +589,9 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 <div class="section" id="server-stats">
 <h4>Server Stats<a class="headerlink" href="#server-stats" title="Permalink to this headline">¶</a></h4>
 <p>The brimd server tracks various statistics, such as the server start time and number of requests processed. The brim.stats.Stats app can be configured to provide access to these stats via a JSON response:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">brim</span><span class="p">]</span>
-<span class="n">wsgi</span> <span class="o">=</span> <span class="n">stats</span>
-<span class="n">workers</span> <span class="o">=</span> <span class="mi">4</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">wsgi</span><span class="p">]</span>
+<span class="n">apps</span> <span class="o">=</span> <span class="n">stats</span>
+<span class="n">workers</span> <span class="o">=</span> <span class="mi">2</span>
 
 <span class="p">[</span><span class="n">stats</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">Stats</span>
@@ -490,65 +602,42 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
 <span class="c">#   value. Default: /stats</span>
 </pre></div>
 </div>
-<p>TODO: Update this:
-After restarting the server, you can now access these stats:</p>
-<div class="highlight-python"><pre>$ curl s- http://127.0.0.1/stats | python -mjson.tool
+<p>After restarting the server, you can now access these stats:</p>
+<div class="highlight-python"><pre>$ curl -s http://127.0.0.1/stats | python -mjson.tool
 {
-    "request_count": 18317,
-    "start_time": 1326585797,
-    "status_2xx_count": 14326,
-    "status_3xx_count": 0,
-    "status_404_count": 3991,
-    "status_408_count": 0,
-    "status_499_count": 0,
-    "status_4xx_count": 3991,
-    "status_501_count": 0,
-    "status_5xx_count": 0,
-    "worker_0": {
-        "request_count": 4698,
-        "start_time": 1326585797,
-        "status_2xx_count": 3742,
+    "start_time": 1330395908,
+    "wsgi": {
+        "0": {
+            "request_count": 29243,
+            "start_time": 1330395908,
+            "status_2xx_count": 22995,
+            "status_3xx_count": 0,
+            "status_404_count": 0,
+            "status_408_count": 0,
+            "status_499_count": 0,
+            "status_4xx_count": 6248,
+            "status_501_count": 0,
+            "status_5xx_count": 0
+        },
+        "1": {
+            "request_count": 29453,
+            "start_time": 1330395908,
+            "status_2xx_count": 23358,
+            "status_3xx_count": 0,
+            "status_404_count": 0,
+            "status_408_count": 0,
+            "status_499_count": 0,
+            "status_4xx_count": 6095,
+            "status_501_count": 0,
+            "status_5xx_count": 0
+        },
+        "request_count": 58696,
+        "status_2xx_count": 46353,
         "status_3xx_count": 0,
-        "status_404_count": 956,
+        "status_404_count": 0,
         "status_408_count": 0,
         "status_499_count": 0,
-        "status_4xx_count": 956,
-        "status_501_count": 0,
-        "status_5xx_count": 0
-    },
-    "worker_1": {
-        "request_count": 4467,
-        "start_time": 1326585797,
-        "status_2xx_count": 3475,
-        "status_3xx_count": 0,
-        "status_404_count": 992,
-        "status_408_count": 0,
-        "status_499_count": 0,
-        "status_4xx_count": 992,
-        "status_501_count": 0,
-        "status_5xx_count": 0
-    },
-    "worker_2": {
-        "request_count": 4497,
-        "start_time": 1326585797,
-        "status_2xx_count": 3505,
-        "status_3xx_count": 0,
-        "status_404_count": 992,
-        "status_408_count": 0,
-        "status_499_count": 0,
-        "status_4xx_count": 992,
-        "status_501_count": 0,
-        "status_5xx_count": 0
-    },
-    "worker_3": {
-        "request_count": 4655,
-        "start_time": 1326585797,
-        "status_2xx_count": 3604,
-        "status_3xx_count": 0,
-        "status_404_count": 1051,
-        "status_408_count": 0,
-        "status_499_count": 0,
-        "status_4xx_count": 1051,
+        "status_4xx_count": 12343,
         "status_501_count": 0,
         "status_5xx_count": 0
     }
@@ -580,15 +669,492 @@ After restarting the server, you can now access these stats:</p>
 </div>
 <div class="section" id="tcp-straight-socket-application-development">
 <h3>TCP Straight Socket Application Development<a class="headerlink" href="#tcp-straight-socket-application-development" title="Permalink to this headline">¶</a></h3>
-<p>TODO: For now, see the [tcp] section in the brimd.conf-sample and the brim.tcp_echo.py sample application.</p>
+<p>Developing brimd straight TCP socket applications is very simple:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;Hello World!</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an /etc/brim/brimd.conf to run this application:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
+</pre></div>
+</div>
+<p>We can then start the server and access the new app:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ nc -q 2 127.0.0.1 80
+Hello World!</pre>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is called for each incoming connection with the subserver, stats, socket, ip, and port of the connection. The subserver is the brim.server.TCPSubserver that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just established TCP connection.</p>
+<p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of brim.conf.Conf.</p>
+<p>The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.</p>
+<p>The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a message in the config and exit if it doesn&#8217;t exist:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># conf is what was returned from parse_conf now.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;[</span><span class="si">%s</span><span class="s">] you must configure a message to serve.&#39;</span> <span class="o">%</span>
+                            <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message</span>
+</pre></div>
+</div>
+<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+[tcp] you must configure a message to serve.</pre>
+</div>
+<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let&#8217;s update our configuration:</p>
+<div class="highlight-python"><pre>[tcp]
+call = mypackage.mymodule.HelloWorld
+message = Hello, hello!</pre>
+</div>
+<p>And now try using our app again:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ nc -q 2 127.0.0.1 80
+Hello, hello!</pre>
+</div>
+<p>To continue our example, let&#8217;s add stats to our application. We&#8217;ll count how many times we&#8217;re called and the last time we were called:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+
+
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># conf is what was returned from parse_conf now.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c"># Here&#39;s where we update the stats.</span>
+        <span class="n">stats</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.connections&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.last_called&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;[</span><span class="si">%s</span><span class="s">] you must configure a message to serve.&#39;</span> <span class="o">%</span>
+                            <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># This is the new class method to configure additional stats, it</span>
+        <span class="c"># returns a list of (stat_name, stat_type) tuples.</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.connections&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;sum&#39;</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.last_called&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;max&#39;</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>You can see that we configure the stats with the new stats_conf class method. The method returns a list of (stat_name, stat_type) pairs. stat_name is the str name of the stat and stat_type is one of the following:</p>
+<blockquote>
+<div><p>worker</p>
+<blockquote>
+<div>Indicates a worker only stat. No overall stat will be reported.</div></blockquote>
+<p>sum</p>
+<blockquote>
+<div>Indicates an overall stat should be reported that is a sum of the stat from all workers.</div></blockquote>
+<p>min</p>
+<blockquote>
+<div>Indicates an overall stat should be reported that is the smallest value of the stat from all workers.</div></blockquote>
+<p>max</p>
+<blockquote>
+<div>Indicates an overall stat should be reported that is the largest value of the stat from all workers.</div></blockquote>
+</div></blockquote>
+<p>When handling actual requests, we can access the stats via the passed stats object, which supports the following methods:</p>
+<blockquote>
+<div><p>get(&lt;name&gt;)</p>
+<blockquote>
+<div>Return the int value of the stat &lt;name&gt;.</div></blockquote>
+<p>set(&lt;name&gt;, value)</p>
+<blockquote>
+<div>Sets the value of the stat &lt;name&gt;. The value will be treated as an unsigned integer.</div></blockquote>
+<p>incr(&lt;name&gt;)</p>
+<blockquote>
+<div>Increments the value of the stat &lt;name&gt; by 1.</div></blockquote>
+</div></blockquote>
+<p>So now, let&#8217;s add the brim.stats.Stats WSGI app to our configuration so we&#8217;ll be able to get a report on the server stats; we&#8217;ll also set up two workers to show the separate worker stats:</p>
+<div class="highlight-python"><pre>[tcp]
+call = mypackage.mymodule.HelloWorld
+message = Hello, hello!
+workers = 2
+
+[wsgi]
+apps = stats
+port = 81
+
+[stats]
+call = brim.stats.Stats</pre>
+</div>
+<p>Let&#8217;s try it out:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ nc -q 2 127.0.0.1 80
+Hello, hello!
+$ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+...
+    "tcp": {
+        "0": {
+...
+            "tcp.connections": 1,
+            "tcp.last_called": 1330399433
+...
+        "1": {
+...
+            "tcp.connections": 0,
+            "tcp.last_called": 0
+...
+        "tcp.connections": 1,
+        "tcp.last_called": 1330399433
+...
+$ nc -q 2 127.0.0.1 80
+Hello, hello!
+$ nc -q 2 127.0.0.1 80
+Hello, hello!
+$ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+...
+    "tcp": {
+        "0": {
+...
+            "tcp.connections": 3,
+            "tcp.last_called": 1330399486
+...
+        "1": {
+...
+            "tcp.connections": 0,
+            "tcp.last_called": 0
+...
+        "tcp.connections": 3,
+        "tcp.last_called": 1330399486
+...</pre>
+</div>
+<p>With very low load, a single worker often gets all the requests. You might try a simple for loop to try to generate some load:</p>
+<div class="highlight-python"><pre>$ for x in {1..1234}; do nc 127.0.0.1 80; done &gt; /dev/null
+$ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+...
+    "tcp": {
+        "0": {
+...
+            "tcp.connections": 692,
+            "tcp.last_called": 1330399723
+...
+        "1": {
+...
+            "tcp.connections": 545,
+            "tcp.last_called": 1330399723
+...
+        "tcp.connections": 1237,
+        "tcp.last_called": 1330399723
+...</pre>
+</div>
 </div>
 <div class="section" id="udp-socket-application-development">
 <h3>UDP Socket Application Development<a class="headerlink" href="#udp-socket-application-development" title="Permalink to this headline">¶</a></h3>
-<p>TODO: For now, see the [udp] section in the brimd.conf-sample and the brim.udp_echo.py sample application.</p>
+<p>Developing brimd UDP socket applications is also very simple:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">datagram</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="s">&#39;Hello World!</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an /etc/brim/brimd.conf to run this application:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
+</pre></div>
+</div>
+<p>We can then start the server and access the new app:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ echo 'test' | nc -u -q 2 127.0.0.1 80
+Hello World!</pre>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is called for each incoming datagram with the subserver, stats, datagram, socket, ip, and port of the datagram. The subserver is the brim.server.UDPSubserver that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just received datagram. The datagram is the payload of the UDP packet received.</p>
+<p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of brim.conf.Conf.</p>
+<p>The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.</p>
+<p>The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a message in the config and exit if it doesn&#8217;t exist:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># conf is what was returned from parse_conf now.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">datagram</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;[</span><span class="si">%s</span><span class="s">] you must configure a message to serve.&#39;</span> <span class="o">%</span>
+                            <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message</span>
+</pre></div>
+</div>
+<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+[udp] you must configure a message to serve.</pre>
+</div>
+<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let&#8217;s update our configuration:</p>
+<div class="highlight-python"><pre>[udp]
+call = mypackage.mymodule.HelloWorld
+message = Hello, hello!</pre>
+</div>
+<p>And now try using our app again:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ echo 'test' | nc -u -q 2 127.0.0.1 80
+Hello, hello!</pre>
+</div>
+<p>To continue our example, let&#8217;s add stats to our application. We&#8217;ll record the last time we were called:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+
+
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># conf is what was returned from parse_conf now.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">datagram</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+        <span class="c"># Here&#39;s where we update the stats.</span>
+        <span class="n">stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;last_called&#39;</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;[</span><span class="si">%s</span><span class="s">] you must configure a message to serve.&#39;</span> <span class="o">%</span>
+                            <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># This is the new class method to configure additional stats, it</span>
+        <span class="c"># returns a list of names of stats to allow. Since UDP doesn&#39;t</span>
+        <span class="c"># support multiple workers, there&#39;s no need for the stat types like</span>
+        <span class="c"># WSGI and TCP applications.</span>
+        <span class="k">return</span> <span class="p">[</span><span class="s">&#39;last_called&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>You can see that we configure the stats with the new stats_conf class method. The method returns a list of names of stats to enable.</p>
+<p>When handling actual requests, we can access the stats via the passed stats object, which supports the following methods:</p>
+<blockquote>
+<div><p>get(&lt;name&gt;)</p>
+<blockquote>
+<div>Return the int value of the stat &lt;name&gt;.</div></blockquote>
+<p>set(&lt;name&gt;, value)</p>
+<blockquote>
+<div>Sets the value of the stat &lt;name&gt;. The value will be treated as an unsigned integer.</div></blockquote>
+<p>incr(&lt;name&gt;)</p>
+<blockquote>
+<div>Increments the value of the stat &lt;name&gt; by 1.</div></blockquote>
+</div></blockquote>
+<p>So now, let&#8217;s add the brim.stats.Stats WSGI app to our configuration so we&#8217;ll be able to get a report on the server stats:</p>
+<div class="highlight-python"><pre>[udp]
+call = mypackage.mymodule.HelloWorld
+message = Hello, hello!
+
+[wsgi]
+apps = stats
+port = 81
+
+[stats]
+call = brim.stats.Stats</pre>
+</div>
+<p>Let&#8217;s try it out:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ echo 'test' | nc -u -q 2 127.0.0.1 80
+Hello, hello!
+$ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+...
+    "udp": {
+...
+        "last_called": 1330401361,
+...</pre>
+</div>
 </div>
 <div class="section" id="daemon-development">
 <h3>Daemon Development<a class="headerlink" href="#daemon-development" title="Permalink to this headline">¶</a></h3>
-<p>TODO: For now, see the [daemons] section in the brimd.conf-sample and the brim.daemon_sample.py sample application.</p>
+<p>Daemons for brimd are simply background processes you&#8217;d like brimd to ensure are running. If the daemon exits, it&#8217;ll just be restarted automatically. Developing daemons is quite simple:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+
+
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">):</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">subserver</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;sample log line </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">line</span><span class="p">)</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>So let&#8217;s set up an /etc/brim/brimd.conf to run this daemon:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">daemons</span><span class="p">]</span>
+<span class="n">daemons</span> <span class="o">=</span> <span class="n">helloworld</span>
+
+<span class="p">[</span><span class="n">helloworld</span><span class="p">]</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
+</pre></div>
+</div>
+<p>We can then start the server and monitor syslog to see the lines logged:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ sudo tail -F /var/log/syslog
+Feb 27 20:16:08 lucid brimdaemons sample log line 1
+...</pre>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is called to start the daemon subprocess with the subserver and stats object to use. The subserver is the brim.server.DaemonsSubserver that started the subprocess; usually you just use the logger attribute of this class. The stats will be explained a bit further down.</p>
+<p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> takes the name of the daemon as configured in the brimd.conf file, and the full brimd configuration object as an instance of brim.conf.Conf.</p>
+<p>The name lets you know which part of the conf to access for any daemon-specific configuration, though you can always stray outside just that section if needed.</p>
+<p>The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your daemon&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your daemon to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a message in the config and exit if it doesn&#8217;t exist:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+
+
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># conf is what was returned from parse_conf now.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">):</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">subserver</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;[</span><span class="si">%s</span><span class="s">] you must configure a message to log.&#39;</span> <span class="o">%</span>
+                            <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message</span>
+</pre></div>
+</div>
+<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+[helloworld] you must configure a message to log.</pre>
+</div>
+<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let&#8217;s update our configuration:</p>
+<div class="highlight-python"><pre>[daemons]
+daemons = helloworld
+
+[helloworld]
+call = mypackage.mymodule.HelloWorld
+message = Hello, hello!</pre>
+</div>
+<p>And now try running our daemon again:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ sudo tail -F /var/log/syslog
+Feb 27 20:17:11 lucid brimdaemons Hello, hello! 1
+...</pre>
+</div>
+<p>To continue our example, let&#8217;s add stats to our daemon. We&#8217;ll record the last time we logged:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span><span class="p">,</span> <span class="n">time</span>
+
+
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># conf is what was returned from parse_conf now.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">):</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">subserver</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+            <span class="c"># Here&#39;s where we update the stats.</span>
+            <span class="n">stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;last_logged&#39;</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;[</span><span class="si">%s</span><span class="s">] you must configure a message to log.&#39;</span> <span class="o">%</span>
+                            <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">message</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+        <span class="c"># This is the new class method to configure additional stats, it</span>
+        <span class="c"># returns a list of names of stats to allow. Since daemons don&#39;t</span>
+        <span class="c"># have multiple workers, there&#39;s no need for the stat types like</span>
+        <span class="c"># WSGI and TCP applications.</span>
+        <span class="k">return</span> <span class="p">[</span><span class="s">&#39;last_logged&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>You can see that we configure the stats with the new stats_conf class method. The method returns a list of names of stats to enable.</p>
+<p>When handling actual requests, we can access the stats via the passed stats object, which supports the following methods:</p>
+<blockquote>
+<div><p>get(&lt;name&gt;)</p>
+<blockquote>
+<div>Return the int value of the stat &lt;name&gt;.</div></blockquote>
+<p>set(&lt;name&gt;, value)</p>
+<blockquote>
+<div>Sets the value of the stat &lt;name&gt;. The value will be treated as an unsigned integer.</div></blockquote>
+<p>incr(&lt;name&gt;)</p>
+<blockquote>
+<div>Increments the value of the stat &lt;name&gt; by 1.</div></blockquote>
+</div></blockquote>
+<p>So now, let&#8217;s add the brim.stats.Stats WSGI app to our configuration so we&#8217;ll be able to get a report on the server stats:</p>
+<div class="highlight-python"><pre>[daemons]
+daemons = helloworld
+
+[helloworld]
+call = mypackage.mymodule.HelloWorld
+message = Hello, hello!
+
+[wsgi]
+apps = stats
+port = 81
+
+[stats]
+call = brim.stats.Stats</pre>
+</div>
+<p>Let&#8217;s try it out:</p>
+<div class="highlight-python"><pre>$ sudo brimd restart
+$ sudo tail -F /var/log/syslog
+Feb 27 20:18:33 lucid brimdaemons Hello, hello! 1
+...
+$ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+...
+    "daemons": {
+        "last_logged": 1330402713,
+...</pre>
+</div>
 </div>
 </div>
 <div class="section" id="code-generated-documentation">
