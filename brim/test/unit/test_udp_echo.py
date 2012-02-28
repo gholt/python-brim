@@ -19,10 +19,76 @@ from brim import udp_echo
 from brim.conf import Conf
 
 
+class FakeLogger(object):
+
+    def __init__(self):
+        self.notice_calls = []
+
+    def notice(self, *args, **kwargs):
+        self.notice_calls.append((args, kwargs))
+
+
+class FakeSubserver(object):
+
+    def __init__(self):
+        self.logger = FakeLogger()
+
+
+class FakeStats(object):
+
+    def __init__(self):
+        self.stats = {}
+
+    def get(self, name):
+        return self.stats.get(name, 0)
+
+    def set(self, name, value):
+        self.stats[name] = value
+
+    def incr(self, name):
+        self.stats[name] = self.stats.get(name, 0) + 1
+
+
+class FakeSocket(object):
+
+    def __init__(self, content=None, chunk_write=None):
+        self.content = iter(content or [])
+        self.chunk_write = chunk_write
+        self.sendto_calls = []
+
+    def sendto(self, *args, **kwargs):
+        self.sendto_calls.append((args, kwargs))
+
+
 class TestUDPEcho(TestCase):
 
-    def test_TODO(self):
-        pass
+    def test_init_attrs(self):
+        e = udp_echo.UDPEcho('test', {})
+        self.assertEquals(getattr(e, 'testattr', None), None)
+        e = udp_echo.UDPEcho('test', {'testattr': 1})
+        self.assertEquals(getattr(e, 'testattr', None), 1)
+
+    def test_call(self):
+        subserver = FakeSubserver()
+        stats = FakeStats()
+        sock = FakeSocket(['1234'])
+        ip = '1.2.3.4'
+        port = 80
+        datagram = '1234'
+        udp_echo.UDPEcho('test', {})(subserver, stats, sock, datagram, ip,
+                                     port)
+        self.assertEquals(subserver.logger.notice_calls,
+            [(('served request of 4 bytes from %s:%d' % (ip, port),), {})])
+        self.assertEquals(stats.stats, {'byte_count': len(datagram)})
+        self.assertEquals(sock.sendto_calls, [((datagram, (ip, port)), {})])
+
+    def test_parse_conf(self):
+        c = udp_echo.UDPEcho.parse_conf('test', Conf({}))
+        self.assertEquals(c, {})
+
+    def test_stats_conf(self):
+        self.assertEquals(udp_echo.UDPEcho.stats_conf('test', {}),
+                          ['byte_count'])
 
 
 if __name__ == '__main__':
