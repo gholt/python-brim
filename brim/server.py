@@ -25,7 +25,7 @@ from errno import EBADF, EINVAL, ENOENT, ESRCH
 from inspect import getargspec
 from mmap import mmap
 from optparse import OptionParser
-from os import fork, kill, unlink
+from os import fork, environ, kill, unlink
 from signal import signal, SIGHUP, SIGTERM
 from socket import error as socket_error
 from sys import argv as sys_argv, stdin as sys_stdin, stdout as sys_stdout, \
@@ -35,7 +35,7 @@ from traceback import format_exception
 from urllib import unquote, unquote_plus
 from uuid import uuid4
 
-from brim.conf import read_conf
+from brim.conf import read_conf, TRUE_VALUES
 from brim.service import capture_exceptions_stdout_stderr, droppriv, \
     get_listening_tcp_socket, get_listening_udp_socket, sustain_workers
 from eventlet import GreenPool, sleep, wsgi
@@ -1171,7 +1171,7 @@ class DaemonsSubserver(Subserver):
 
     def _start(self, bucket_stats):
         Subserver._start(self, bucket_stats)
-        self.daemon_id = -1
+        self.worker_id = -1
         if not self.server.output:
             capture_exceptions_stdout_stderr(
                 exceptions=self._capture_exception,
@@ -1183,18 +1183,20 @@ class DaemonsSubserver(Subserver):
         sustain_workers(self.worker_count, self._daemon,
                         logger=self.logger)
 
-    def _daemon(self, daemon_id):
+    def _daemon(self, worker_id):
         """
         This method is called for each daemon subprocess spawned and
         it simply constructs and starts the corresponding daemon.
         """
-        name, cls, conf = self.daemons[daemon_id]
+        name, cls, conf = self.daemons[worker_id]
         if setproctitle:
             setproctitle('%s:%s:brimd' % (name, self.name))
-        self.daemon_id = daemon_id
-        stats = _Stats(self.bucket_stats, daemon_id)
+        self.worker_id = worker_id
+        stats = _Stats(self.bucket_stats, worker_id)
         stats.set('start_time', time())
-        cls(name, conf)(self, stats)
+        daemon = cls(name, conf)
+        daemon(self, stats)
+        return daemon  # Really done just for unit testing
 
     def _capture_exception(self, *excinfo):
         """
@@ -1203,7 +1205,7 @@ class DaemonsSubserver(Subserver):
         logger.
         """
         self.logger.error('UNCAUGHT EXCEPTION: did:%03d %s' %
-                          (self.daemon_id, sysloggable_excinfo(*excinfo)))
+                          (self.worker_id, sysloggable_excinfo(*excinfo)))
 
     def _capture_stdout(self, value):
         """
@@ -1213,7 +1215,7 @@ class DaemonsSubserver(Subserver):
         for line in value.split('\n'):
             if line:
                 self.logger.info('STDOUT: did:%03d %s' %
-                                 (self.daemon_id, line))
+                                 (self.worker_id, line))
 
     def _capture_stderr(self, value):
         """
@@ -1223,7 +1225,7 @@ class DaemonsSubserver(Subserver):
         for line in value.split('\n'):
             if line:
                 self.logger.error('STDERR: did:%03d %s' %
-                                  (self.daemon_id, line))
+                                  (self.worker_id, line))
 
 
 class Server(object):
@@ -1443,9 +1445,9 @@ Command (defaults to 'no-daemon'):
         for key in conf.store.keys():
             if key == 'wsgi' or key.startswith('wsgi') and key[4:].isdigit():
                 self.subservers.append(WSGISubserver(self, key))
-            elif key == 'tcp' or key.startswith('tcp') and key[4:].isdigit():
+            elif key == 'tcp' or key.startswith('tcp') and key[3:].isdigit():
                 self.subservers.append(TCPSubserver(self, key))
-            elif key == 'udp' or key.startswith('udp') and key[4:].isdigit():
+            elif key == 'udp' or key.startswith('udp') and key[3:].isdigit():
                 self.subservers.append(UDPSubserver(self, key))
             elif key == 'daemons' and not self.no_daemon:
                 self.subservers.append(DaemonsSubserver(self))

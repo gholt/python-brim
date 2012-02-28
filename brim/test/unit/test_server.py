@@ -103,6 +103,12 @@ class TestStats(TestCase):
         self.assertRaises(IndexError, s.incr, 'test')
 
 
+class TestEventletWSGINullLogger(TestCase):
+
+    def test_write(self):
+        server._EventletWSGINullLogger().write('abc', 'def', 'ghi')
+
+
 class TestWsgiInput(TestCase):
 
     def setUp(self):
@@ -623,13 +629,13 @@ class TestSubserver(TestCase):
         self._class(FakeServer(), 'test')._privileged_start()
 
     def test_start(self, output=False, no_daemon=False, func_before_start=None,
-                   bucket_stats=None):
+                   bucket_stats=None, confd=None):
         if bucket_stats is None:
             bucket_stats = \
                 server._BucketStats(['testbucket'], {'test': 'worker'})
         ss = self._class(FakeServer(output=output, no_daemon=no_daemon),
                          'test')
-        confd = self._get_default_confd()
+        confd = confd if confd else self._get_default_confd()
         confd.setdefault('brim', {})['port'] = '0'
         ss._parse_conf(Conf(confd))
         ss._privileged_start()
@@ -3738,13 +3744,10 @@ class DaemonWithNoStatsConf(object):
 class DaemonWithStatsConf(object):
 
     def __init__(self, name, conf):
-        pass
+        self.calls = []
 
     def __call__(self, subserver, stats):
-        if env['PATH_INFO'] == '/exception':
-            raise Exception('testing')
-        start_response('200 OK', [('Content-Length', '0')])
-        return []
+        self.calls.append((subserver, stats))
 
     @classmethod
     def stats_conf(cls, name, conf):
@@ -3979,1619 +3982,915 @@ class TestDaemonsSubserver(TestSubserver):
         self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
         self.assertEquals(ss.stats_conf.get('ok'), 'worker')
 
+    def test_start(self, output=False):
+        capture_exceptions_stdout_stderr_calls = []
+        time_calls = []
+        get_logger_calls = []
+        fake_logger = FakeLogger()
+        sustain_workers_calls = []
+
+        def _capture_exceptions_stdout_stderr(*args, **kwargs):
+            capture_exceptions_stdout_stderr_calls.append((args, kwargs))
+
+        def _time(*args):
+            time_calls.append(args)
+            return len(time_calls)
+
+        def _get_logger(*args):
+            get_logger_calls.append(args)
+            return fake_logger
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        confd = self._get_default_confd()
+        confd.setdefault('test', {})['daemons'] = 'one'
+        confd.setdefault('one', {})['call'] = 'brim.daemon_sample.DaemonSample'
+        capture_exceptions_stdout_stderr_orig = \
+            server.capture_exceptions_stdout_stderr
+        time_orig = server.time
+        get_logger_orig = server.get_logger
+        sustain_workers_orig = server.sustain_workers
+        try:
+            server.capture_exceptions_stdout_stderr = \
+                _capture_exceptions_stdout_stderr
+            server.time = _time
+            server.get_logger = _get_logger
+            server.sustain_workers = _sustain_workers
+            ss = TestSubserver.test_start(self, output=output, confd=confd)
+        finally:
+            server.capture_exceptions_stdout_stderr = \
+                capture_exceptions_stdout_stderr_orig
+            server.time = time_orig
+            server.get_logger = get_logger_orig
+            server.sustain_workers = sustain_workers_orig
+
+        if output:
+            self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
+        else:
+            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((),
+                {'exceptions': ss._capture_exception,
+                 'stdout_func': ss._capture_stdout,
+                 'stderr_func': ss._capture_stderr})])
+        self.assertEquals(time_calls, [()])
+        self.assertEquals(get_logger_calls, [(ss.name, ss.log_name,
+            ss.log_level, ss.log_facility, ss.server.no_daemon)])
+        self.assertEquals(ss.worker_count, 1)
+        self.assertEquals(sustain_workers_calls,
+            [((ss.worker_count, ss._daemon), {'logger': fake_logger})])
+        self.assertEquals(ss.worker_id, -1)
+        self.assertEquals(ss.start_time, 1)
+        self.assertEquals(ss.logger, fake_logger)
+        self.assertEquals(fake_logger.error_calls, [])
+
+    def test_start_with_output(self):
+        self.test_start(output=True)
+
+    def test_daemon(self, no_setproctitle=False):
+        setproctitle_calls = []
+
+        def _setproctitle(*args):
+            setproctitle_calls.append(args)
+
+        def _time():
+            return 1
+
+        def _sustain_workers(*args, **kwargs):
+            pass
+
+        setproctitle_orig = server.setproctitle
+        time_orig = server.time
+        sustain_workers_orig = server.sustain_workers
+        try:
+            server.setproctitle = None if no_setproctitle else _setproctitle
+            server.time = _time
+            server.sustain_workers = _sustain_workers
+            ss = self._class(FakeServer(output=True), 'test')
+            confd = self._get_default_confd()
+            confd.setdefault('test', {})['daemons'] = 'one'
+            confd.setdefault('one', {})['call'] = \
+                'brim.test.unit.test_server.DaemonWithStatsConf'
+            ss._parse_conf(Conf(confd))
+            ss._privileged_start()
+            bs = server._BucketStats(['0'], {'start_time': 'worker'})
+            ss._start(bs)
+            daemon = ss._daemon(0)
+        finally:
+            server.setproctitle = setproctitle_orig
+            server.time = time_orig
+            server.sustain_workers = sustain_workers_orig
+
+        if no_setproctitle:
+            self.assertEquals(setproctitle_calls, [])
+        else:
+            self.assertEquals(setproctitle_calls, [('one:test:brimd',)])
+        self.assertEquals(ss.worker_id, 0)
+        self.assertEquals(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
+        self.assertEquals(ss.daemons[0][0], 'one')
+        self.assertEquals(ss.daemons[0][1].__name__, 'DaemonWithStatsConf')
+        self.assertEquals(ss.daemons[0][2].store,
+            {'test': {'daemons': 'one'},
+            'one': {'call': 'brim.test.unit.test_server.DaemonWithStatsConf'}})
+        self.assertEquals(len(daemon.calls), 1)
+        self.assertEquals(len(daemon.calls[0]), 2)
+        self.assertEquals(daemon.calls[0][0], ss)
+        self.assertEquals(daemon.calls[0][1].bucket_stats, ss.bucket_stats)
+
+    def test_daemon_no_setproctitle(self):
+        self.test_daemon(no_setproctitle=True)
+
+    def test_capture_exception(self):
+        ss = self._class(FakeServer(output=True), 'test')
+        ss.logger = FakeLogger()
+        ss.worker_id = 123
+        ss._capture_exception(*exc_info())
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [])
+        self.assertEquals(ss.logger.notice_calls, [])
+        self.assertEquals(ss.logger.error_calls,
+                          [("UNCAUGHT EXCEPTION: did:123 None ['None']",)])
+        self.assertEquals(ss.logger.exception_calls, [])
+
+        ss.logger = FakeLogger()
+        try:
+            raise Exception('test')
+        except Exception:
+            ss._capture_exception(*exc_info())
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [])
+        self.assertEquals(ss.logger.notice_calls, [])
+        self.assertEquals(len(ss.logger.error_calls), 1)
+        self.assertEquals(len(ss.logger.error_calls[0]), 1)
+        e = ss.logger.error_calls[0][0]
+        self.assertTrue(e.startswith("UNCAUGHT EXCEPTION: did:123 Exception: "
+            "test ['Traceback (most recent call last):', '  File "))
+        self.assertTrue(e.endswith('\', "    raise Exception(\'test\')", '
+            '\'Exception: test\']'))
+        self.assertEquals(ss.logger.exception_calls, [])
+
+    def test_capture_stdout(self):
+        ss = self._class(FakeServer(output=True), 'test')
+        ss.logger = FakeLogger()
+        ss.worker_id = 123
+        ss._capture_stdout('one\ntwo three\nfour\n')
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [('STDOUT: did:123 one',),
+            ('STDOUT: did:123 two three',), ('STDOUT: did:123 four',)])
+        self.assertEquals(ss.logger.notice_calls, [])
+        self.assertEquals(ss.logger.error_calls, [])
+        self.assertEquals(ss.logger.exception_calls, [])
+
+    def test_capture_stderr(self):
+        ss = self._class(FakeServer(output=True), 'test')
+        ss.logger = FakeLogger()
+        ss.worker_id = 123
+        ss._capture_stderr('one\ntwo three\nfour\n')
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [])
+        self.assertEquals(ss.logger.notice_calls, [])
+        self.assertEquals(ss.logger.error_calls, [('STDERR: did:123 one',),
+            ('STDERR: did:123 two three',), ('STDERR: did:123 four',)])
+        self.assertEquals(ss.logger.exception_calls, [])
+
+
+class TestServer(TestCase):
+
+    def setUp(self):
+        self.orig_read_conf = server.read_conf
+        self.orig_fork = server.fork
+        self.orig_sleep = server.sleep
+        self.orig_send_pid_sig = server._send_pid_sig
+        self.orig_droppriv = server.droppriv
+        self.orig_get_logger = server.get_logger
+        self.orig_capture_exceptions_stdout_stderr = \
+            server.capture_exceptions_stdout_stderr
+        self.read_conf_calls = []
+        self.conf = Conf({})
+        self.fork_calls = []
+        self.fork_retval = [12345]
+        self.sleep_calls = []
+        self.send_pid_sig_calls = []
+        self.send_pid_sig_retval = [True, 12345]
+        self.droppriv_calls = []
+        self.get_logger_calls = []
+        self.capture_calls = []
+
+        def _read_conf(*args):
+            self.read_conf_calls.append(args)
+            return self.conf
+
+        def _fork(*args):
+            self.fork_calls.append(args)
+            if len(self.fork_retval) > 1:
+                return self.fork_retval.pop(0)
+            return self.fork_retval[0]
+
+        def _sleep(*args):
+            self.sleep_calls.append(args)
+
+        def _send_pid_sig(*args, **kwargs):
+            self.send_pid_sig_calls.append((args, kwargs))
+            return self.send_pid_sig_retval
+
+        def _droppriv(*args):
+            self.droppriv_calls.append(args)
+
+        def _get_logger(*args):
+            self.get_logger_calls.append(args)
+            return FakeLogger()
+
+        def _capture_exceptions_stdout_stderr(*args, **kwargs):
+            self.capture_calls.append((args, kwargs))
+
+        server.read_conf = _read_conf
+        server.fork = _fork
+        server.sleep = _sleep
+        server._send_pid_sig = _send_pid_sig
+        server.droppriv = _droppriv
+        server.get_logger = _get_logger
+        server.capture_exceptions_stdout_stderr = \
+            _capture_exceptions_stdout_stderr
+        self.stdin = StringIO()
+        self.stdout = StringIO()
+        self.stderr = StringIO()
+        self.serv = server.Server([], self.stdin, self.stdout, self.stderr)
+
+    def tearDown(self):
+        server.read_conf = self.orig_read_conf
+        server.fork = self.orig_fork
+        server.sleep = self.orig_sleep
+        server._send_pid_sig = self.orig_send_pid_sig
+        server.droppriv = self.orig_droppriv
+        server.get_logger = self.orig_get_logger
+        server.capture_exceptions_stdout_stderr = \
+            self.orig_capture_exceptions_stdout_stderr
+
+    def test_uses_standard_items_by_default(self):
+        serv = server.Server()
+        self.assertEquals(serv.args, server.sys_argv[1:])
+        self.assertEquals(serv.stdin, server.sys_stdin)
+        self.assertEquals(serv.stdout, server.sys_stdout)
+        self.assertEquals(serv.stderr, server.sys_stderr)
+
+    def test_main(self):
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        server_calls = []
+
+        def _server(*args, **kwargs):
+            server_calls.append((args, kwargs))
+
+        orig_wsgi_server = server.wsgi.server
+        try:
+            server.wsgi.server = _server
+            self.assertEquals(self.serv.main(), 0)
+        finally:
+            server.wsgi.server = orig_wsgi_server
+
+        self.assertEquals(len(server_calls), 1)
+
+    def test_args_exception(self):
+        self.serv.args = [123]
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(),
+                          "'int' object is unsubscriptable\n")
+
+    def test_args_help1(self):
+        self.serv.args = ['-?']
+        try:
+            self.assertEquals(self.serv.main(), 0)
+        except SystemExit:
+            pass
+        self.assertTrue('Usage: ' in self.stdout.getvalue())
+        self.assertTrue("Command (defaults to 'no-daemon'):" in
+                        self.stdout.getvalue())
+        self.assertTrue('Options:' in self.stdout.getvalue())
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_args_help2(self):
+        self.serv.args = ['-h']
+        try:
+            self.assertEquals(self.serv.main(), 0)
+        except SystemExit:
+            pass
+        self.assertTrue('Usage: ' in self.stdout.getvalue())
+        self.assertTrue("Command (defaults to 'no-daemon'):" in
+                        self.stdout.getvalue())
+        self.assertTrue('Options:' in self.stdout.getvalue())
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_args_help3(self):
+        self.serv.args = ['--help']
+        try:
+            self.assertEquals(self.serv.main(), 0)
+        except SystemExit:
+            pass
+        self.assertTrue('Usage: ' in self.stdout.getvalue())
+        self.assertTrue("Command (defaults to 'no-daemon'):" in
+                        self.stdout.getvalue())
+        self.assertTrue('Options:' in self.stdout.getvalue())
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_args_default_conf(self):
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.read_conf_calls, [(server.DEFAULT_CONF_FILES,)])
+
+    def test_args_override_conf1(self):
+        self.serv.args = ['-c', 'one.conf']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.read_conf_calls, [(['one.conf'],)])
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_args_override_conf2(self):
+        self.serv.args = ['-c', 'one.conf', '--conf', 'two.conf']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.read_conf_calls, [(['one.conf', 'two.conf'],)])
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_args_default_pid_file(self):
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.serv.pid_file, '/var/run/brimd.pid')
+
+    def test_args_override_pid_file1(self):
+        self.serv.args = ['-p', 'pidfile']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.serv.pid_file, 'pidfile')
+
+    def test_args_override_pid_file2(self):
+        self.serv.args = ['--pid-file', 'pidfile']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.serv.pid_file, 'pidfile')
+
+    def test_args_default_nodaemon_output(self):
+        self.assertEquals(self.serv.main(), 1)
+        self.assertTrue(self.serv.output)
+
+    def test_args_default_start_output(self):
+        self.serv.args = ['start']
+        self.send_pid_sig_retval[0] = False
+        self.assertEquals(self.serv.main(), 1)
+        self.assertFalse(self.serv.output)
+
+    def test_args_override_output1(self):
+        self.serv.args = ['start', '-o']
+        self.send_pid_sig_retval[0] = False
+        self.assertEquals(self.serv.main(), 1)
+        self.assertTrue(self.serv.output)
+
+    def test_args_override_output2(self):
+        self.serv.args = ['start', '--output']
+        self.send_pid_sig_retval[0] = False
+        self.assertEquals(self.serv.main(), 1)
+        self.assertTrue(self.serv.output)
+
+    def test_version(self):
+        self.serv.args = ['--version']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(),
+                          'Brim.Net Core Server %s\n' % version)
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_parser_error(self):
+        self.serv.args = ['--invalid']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(),
+                          'no such option: --invalid\n')
+
+    def test_too_many_commands(self):
+        self.serv.args = ['one', 'two']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(),
+                          'Too many commands given; only one allowed.\n')
+
+    def test_default_command_no_daemon1(self):
+        self.assertEquals(self.serv.main(), 1)
+        self.assertTrue(self.serv.no_daemon)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_default_command_no_daemon2(self):
+        self.serv.args = ['start']
+        self.send_pid_sig_retval[0] = False
+        self.assertEquals(self.serv.main(), 1)
+        self.assertFalse(self.serv.no_daemon)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_start_already_running(self):
+        self.serv.args = ['start']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '12345 already running\n')
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_start_no_conf(self):
+        self.serv.args = ['start']
+        self.send_pid_sig_retval[0] = False
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_start_has_conf(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.send_pid_sig_retval[0] = False
+        self.assertEquals(self.serv._parse_args(), self.conf)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_restart_no_conf(self):
+        self.serv.args = ['restart']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_restart_has_conf(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['restart']
+        self.assertEquals(self.serv._parse_args(), self.conf)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.fork_calls, [()])
+
+    def test_restart_has_conf_fork_side(self):
+        self.fork_retval[0] = 0
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['restart']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.fork_calls, [()])
+        self.assertEquals(self.send_pid_sig_calls,
+            [((self.serv.pid_file, 0), {}),
+             ((self.serv.pid_file, server.SIGHUP),
+              {'expect_exit': True, 'pid_override': 12345})])
+
+    def test_reload_no_conf(self):
+        self.serv.args = ['reload']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_reload_has_conf(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['reload']
+        self.assertEquals(self.serv._parse_args(), self.conf)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.fork_calls, [()])
+
+    def test_reload_has_conf_fork_side(self):
+        self.fork_retval[0] = 0
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['reload']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.fork_calls, [()])
+        self.assertEquals(self.send_pid_sig_calls,
+            [((self.serv.pid_file, 0), {}),
+             ((self.serv.pid_file, server.SIGHUP),
+              {'expect_exit': True, 'pid_override': 12345})])
+
+    def test_force_reload_no_conf(self):
+        self.serv.args = ['force-reload']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_force_reload_has_conf(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['force-reload']
+        self.assertEquals(self.serv._parse_args(), self.conf)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.fork_calls, [()])
+
+    def test_force_reload_has_conf_fork_side(self):
+        self.fork_retval[0] = 0
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['force-reload']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.fork_calls, [()])
+        self.assertEquals(self.send_pid_sig_calls,
+            [((self.serv.pid_file, 0), {}),
+             ((self.serv.pid_file, server.SIGHUP),
+              {'expect_exit': True, 'pid_override': 12345})])
+
+    def test_shutdown(self):
+        self.serv.args = ['shutdown']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.send_pid_sig_calls,
+            [((self.serv.pid_file, server.SIGHUP), {'expect_exit': True})])
+
+    def test_stop(self):
+        self.serv.args = ['stop']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.send_pid_sig_calls,
+            [((self.serv.pid_file, server.SIGTERM), {'expect_exit': True})])
+
+    def test_status_running(self):
+        self.serv.args = ['status']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '12345 is running\n')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.send_pid_sig_calls,
+                          [((self.serv.pid_file, 0), {})])
+
+    def test_status_not_running(self):
+        self.send_pid_sig_retval[0] = False
+        self.serv.args = ['status']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), '12345 is not running\n')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.send_pid_sig_calls,
+                          [((self.serv.pid_file, 0), {})])
+
+    def test_status_not_running_no_pid(self):
+        self.send_pid_sig_retval[0] = False
+        self.send_pid_sig_retval[1] = 0
+        self.serv.args = ['status']
+        self.assertEquals(self.serv.main(), 0)
+        self.assertEquals(self.stdout.getvalue(), 'not running\n')
+        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEquals(self.send_pid_sig_calls,
+                          [((self.serv.pid_file, 0), {})])
+
+    def test_no_daemon_no_conf(self):
+        self.serv.args = ['no-daemon']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+
+    def test_no_daemon_has_conf(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.assertEquals(self.serv._parse_args(), self.conf)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(), '')
+
+    def test_unknown_command(self):
+        self.serv.args = ['unknown']
+        self.assertEquals(self.serv.main(), 1)
+        self.assertEquals(self.stdout.getvalue(), '')
+        self.assertEquals(self.stderr.getvalue(),
+                          "Unknown command 'unknown'.\n")
+
+    def test_parse_conf_default(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(Conf({
+            'wsgi': {'port': '1234'},
+            'wsgi2': {},
+            'tcp': {'call': 'brim.test.unit.test_server.TCPWithStatsConf'},
+            'tcp2': {'call': 'brim.test.unit.test_server.TCPWithStatsConf'},
+            'udp': {'call': 'brim.test.unit.test_server.UDPWithStatsConf'},
+            'udp2': {'call': 'brim.test.unit.test_server.UDPWithStatsConf'},
+            'daemons': {}}))
+        self.assertEquals(self.serv.user, None)
+        self.assertEquals(self.serv.group, None)
+        self.assertEquals(self.serv.umask, 0022)
+        self.assertEquals(self.serv.log_name, 'brim')
+        self.assertEquals(self.serv.log_level, 'INFO')
+        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL0')
+        self.assertEquals(sorted(s.name for s in self.serv.subservers),
+            ['daemons', 'tcp', 'tcp2', 'udp', 'udp2', 'wsgi', 'wsgi2'])
+        # Just verifies subserver._parse_conf was called.
+        wsgi = [s for s in self.serv.subservers if s.name == 'wsgi'][0]
+        self.assertEquals(wsgi.port, 1234)
+
+    def test_parse_conf_sets_error_handler(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        conf = Conf({'brim': {'test': 'abc'}})
+        # Asserts conf.error is still the default behavior of SystemExit.
+        exc = None
+        try:
+            conf.get_int('brim', 'test', 0)
+        except SystemExit, err:
+            exc = err
+        self.assertEquals(str(exc), "Configuration value [brim] test of 'abc' "
+                                    "cannot be converted to int.")
+        self.serv._parse_conf(conf)
+        # Asserts conf.error is now the new behavior of just raising Exception.
+        exc = None
+        try:
+            conf.get_int('brim', 'test', 0)
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc), "Configuration value [brim] test of 'abc' "
+                                    "cannot be converted to int.")
+
+    def test_parse_conf_user(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(Conf({'brim': {'user': 'name'}}))
+        self.assertEquals(self.serv.user, 'name')
+
+    def test_parse_conf_group(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(Conf({'brim': {'group': 'name'}}))
+        self.assertEquals(self.serv.group, 'name')
+
+    def test_parse_conf_umask(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(Conf({'brim': {'umask': '0777'}}))
+        self.assertEquals(self.serv.umask, 0777)
+        exc = None
+        try:
+            self.serv._parse_conf(Conf({'brim': {'umask': 'abc'}}))
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc), "Invalid umask value 'abc'.")
+        exc = None
+        try:
+            self.serv._parse_conf(Conf({'brim': {'umask': '99'}}))
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc), "Invalid umask value '99'.")
+
+    def test_parse_conf_log_name(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(Conf({'brim': {'log_name': 'name'}}))
+        self.assertEquals(self.serv.log_name, 'name')
+
+    def test_parse_conf_log_level(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(Conf({'brim': {'log_level': 'DEBUG'}}))
+        self.assertEquals(self.serv.log_level, 'DEBUG')
+        exc = None
+        try:
+            self.serv._parse_conf(Conf({'brim': {'log_level': 'invalid'}}))
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(err), "Invalid [brim] log_level 'INVALID'.")
+
+    def test_parse_conf_log_facility(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(
+            Conf({'brim': {'log_facility': 'LOG_LOCAL1'}}))
+        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL1')
+        self.serv._parse_conf(Conf({'brim': {'log_facility': 'LOCAL2'}}))
+        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL2')
+        exc = None
+        try:
+            self.serv._parse_conf(
+                Conf({'brim': {'log_facility': 'invalid'}}))
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(err),
+                          "Invalid [brim] log_facility 'LOG_INVALID'.")
+
     def test_start(self):
-        pass
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._parse_conf(self.conf)
+        sustain_workers_calls = []
 
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
 
-#############################################################################
+        orig_sustain_workers = server.sustain_workers
+        try:
+            server.sustain_workers = _sustain_workers
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+        # Since we're in no-daemon, Server didn't call sustain_workers, but the
+        # wsgi subserver did.
+        self.assertEquals(sustain_workers_calls,
+            [((0, subserv._wsgi_worker), {'logger': subserv.logger})])
 
-# class FakeLogger(object):
-#
-#     def __init__(self):
-#         self.debug_calls = []
-#         self.info_calls = []
-#         self.notice_calls = []
-#         self.error_calls = []
-#         self.exception_calls = []
-#
-#     def debug(self, *args):
-#         self.debug_calls.append(args)
-#
-#     def info(self, *args):
-#         self.info_calls.append(args)
-#
-#     def notice(self, *args):
-#         self.notice_calls.append(args)
-#
-#     def error(self, *args):
-#         self.error_calls.append(args)
-#
-#     def exception(self, *args):
-#         self.exception_calls.append((args, exc_info()))
-#
-#
-# class DaemonWithInvalidInit(object):
-#
-#     def __init__(self):
-#         pass
-#
-#
-# class DaemonWithInvalidCall(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self):
-#         pass
-#
-#
-# class DaemonWithNoCall(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#
-# class DaemonWithInvalidParseConf(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#     @classmethod
-#     def parse_conf(cls):
-#         pass
-#
-#
-# class DaemonWithInvalidParseConf2(object):
-#
-#     parse_conf = 'blah'
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#
-# class DaemonWithNoParseConf(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#
-# class DaemonWithParseConf(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#     @classmethod
-#     def parse_conf(cls, name, conf):
-#         return {'ok': True}
-#
-#
-# class DaemonWithInvalidStatsConf(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#     @classmethod
-#     def stats_conf(cls):
-#         pass
-#
-#
-# class DaemonWithInvalidStatsConf2(object):
-#
-#     stats_conf = 'blah'
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#
-# class DaemonWithNoStatsConf(object):
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         pass
-#
-#
-# class DaemonWithStatsConf(object):
-#
-#     call_calls = []
-#
-#     def __init__(self, name, conf):
-#         pass
-#
-#     def __call__(self, server, stats):
-#         stats.set('ok', 123)
-#         DaemonWithStatsConf.call_calls.append((server, stats))
-#
-#     @classmethod
-#     def stats_conf(cls, name, conf):
-#         return ['ok']
-#
-#
-# class AppWithInvalidInit(object):
-#
-#     def __init__(self):
-#         pass
-#
-#
-# class AppWithInvalidCall(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self):
-#         pass
-#
-#
-# class AppWithNoCall(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#
-# class AppWithInvalidParseConf(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#     @classmethod
-#     def parse_conf(cls):
-#         pass
-#
-#
-# class AppWithInvalidParseConf2(object):
-#
-#     parse_conf = 'blah'
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#
-# class AppWithNoParseConf(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#
-# class AppWithParseConf(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#     @classmethod
-#     def parse_conf(cls, name, conf):
-#         return {'ok': True}
-#
-#
-# class AppWithInvalidStatsConf1(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#     @classmethod
-#     def stats_conf(cls):
-#         pass
-#
-#
-# class AppWithInvalidStatsConf2(object):
-#
-#     stats_conf = 'blah'
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#
-# class AppWithNoStatsConf(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         pass
-#
-#
-# class AppWithStatsConf(object):
-#
-#     def __init__(self, name, conf, next_app):
-#         pass
-#
-#     def __call__(self, env, start_response):
-#         if env['PATH_INFO'] == '/exception':
-#             raise Exception('testing')
-#         start_response('200 OK', [('Content-Length', '0')])
-#         return []
-#
-#     @classmethod
-#     def stats_conf(cls, name, conf):
-#         return [('ok', 'sum')]
-#
-#
-# class TestServer(TestCase):
-#
-#     def setUp(self):
-#         self.orig_read_conf = server.read_conf
-#         self.orig_fork = server.fork
-#         self.orig_sleep = server.sleep
-#         self.orig_send_pid_sig = server._send_pid_sig
-#         self.orig_droppriv = server.droppriv
-#         self.orig_get_logger = server.get_logger
-#         self.orig_capture_exceptions_stdout_stderr = \
-#             server.capture_exceptions_stdout_stderr
-#         self.read_conf_calls = []
-#         self.conf = Conf({})
-#         self.fork_calls = []
-#         self.fork_retval = [12345]
-#         self.sleep_calls = []
-#         self.send_pid_sig_calls = []
-#         self.send_pid_sig_retval = [True, 12345]
-#         self.droppriv_calls = []
-#         self.get_logger_calls = []
-#         self.capture_calls = []
-#
-#         def _read_conf(*args):
-#             self.read_conf_calls.append(args)
-#             return self.conf
-#
-#         def _fork(*args):
-#             self.fork_calls.append(args)
-#             if len(self.fork_retval) > 1:
-#                 return self.fork_retval.pop(0)
-#             return self.fork_retval[0]
-#
-#         def _sleep(*args):
-#             self.sleep_calls.append(args)
-#
-#         def _send_pid_sig(*args, **kwargs):
-#             self.send_pid_sig_calls.append((args, kwargs))
-#             return self.send_pid_sig_retval
-#
-#         def _droppriv(*args):
-#             self.droppriv_calls.append(args)
-#
-#         def _get_logger(*args):
-#             self.get_logger_calls.append(args)
-#             return FakeLogger()
-#
-#         def _capture_exceptions_stdout_stderr(*args, **kwargs):
-#             self.capture_calls.append((args, kwargs))
-#
-#         server.read_conf = _read_conf
-#         server.fork = _fork
-#         server.sleep = _sleep
-#         server._send_pid_sig = _send_pid_sig
-#         server.droppriv = _droppriv
-#         server.get_logger = _get_logger
-#         server.capture_exceptions_stdout_stderr = \
-#             _capture_exceptions_stdout_stderr
-#         self.stdin = StringIO()
-#         self.stdout = StringIO()
-#         self.stderr = StringIO()
-#         self.serv = server.Server([], self.stdin, self.stdout, self.stderr)
-#
-#     def tearDown(self):
-#         server.read_conf = self.orig_read_conf
-#         server.fork = self.orig_fork
-#         server.sleep = self.orig_sleep
-#         server._send_pid_sig = self.orig_send_pid_sig
-#         server.droppriv = self.orig_droppriv
-#         server.get_logger = self.orig_get_logger
-#         server.capture_exceptions_stdout_stderr = \
-#             self.orig_capture_exceptions_stdout_stderr
-#
-#     def test_uses_standard_items_by_default(self):
-#         serv = server.Server()
-#         self.assertEquals(serv.args, server.sys_argv[1:])
-#         self.assertEquals(serv.stdin, server.sys_stdin)
-#         self.assertEquals(serv.stdout, server.sys_stdout)
-#         self.assertEquals(serv.stderr, server.sys_stderr)
-#
-#     def test_main(self):
-#         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         server_calls = []
-#
-#         def _server(*args, **kwargs):
-#             server_calls.append((args, kwargs))
-#
-#         orig_wsgi_server = server.wsgi.server
-#         try:
-#             server.wsgi.server = _server
-#             self.assertEquals(self.serv.main(), 0)
-#         finally:
-#             server.wsgi.server = orig_wsgi_server
-#
-#     def test_args_exception(self):
-#         self.serv.args = [123]
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(),
-#                           "'int' object is unsubscriptable\n")
-#
-#     def test_args_help1(self):
-#         self.serv.args = ['-?']
-#         try:
-#             self.assertEquals(self.serv.main(), 0)
-#         except SystemExit:
-#             pass
-#         self.assertTrue('Usage: ' in self.stdout.getvalue())
-#         self.assertTrue("Command (defaults to 'no-daemon'):" in
-#                         self.stdout.getvalue())
-#         self.assertTrue('Options:' in self.stdout.getvalue())
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_args_help2(self):
-#         self.serv.args = ['-h']
-#         try:
-#             self.assertEquals(self.serv.main(), 0)
-#         except SystemExit:
-#             pass
-#         self.assertTrue('Usage: ' in self.stdout.getvalue())
-#         self.assertTrue("Command (defaults to 'no-daemon'):" in
-#                         self.stdout.getvalue())
-#         self.assertTrue('Options:' in self.stdout.getvalue())
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_args_help3(self):
-#         self.serv.args = ['--help']
-#         try:
-#             self.assertEquals(self.serv.main(), 0)
-#         except SystemExit:
-#             pass
-#         self.assertTrue('Usage: ' in self.stdout.getvalue())
-#         self.assertTrue("Command (defaults to 'no-daemon'):" in
-#                         self.stdout.getvalue())
-#         self.assertTrue('Options:' in self.stdout.getvalue())
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_args_default_conf(self):
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.read_conf_calls, [(server.DEFAULT_CONF_FILES,)])
-#
-#     def test_args_override_conf1(self):
-#         self.serv.args = ['-c', 'one.conf']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.read_conf_calls, [(['one.conf'],)])
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_args_override_conf2(self):
-#         self.serv.args = ['-c', 'one.conf', '--conf', 'two.conf']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.read_conf_calls, [(['one.conf', 'two.conf'],)])
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_args_default_pid_file(self):
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.serv.pid_file, '/var/run/brimd.pid')
-#
-#     def test_args_override_pid_file1(self):
-#         self.serv.args = ['-p', 'pidfile']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.serv.pid_file, 'pidfile')
-#
-#     def test_args_override_pid_file2(self):
-#         self.serv.args = ['--pid-file', 'pidfile']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.serv.pid_file, 'pidfile')
-#
-#     def test_args_default_nodaemon_output(self):
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertTrue(self.serv.output)
-#
-#     def test_args_default_start_output(self):
-#         self.serv.args = ['start']
-#         self.send_pid_sig_retval[0] = False
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertFalse(self.serv.output)
-#
-#     def test_args_override_output1(self):
-#         self.serv.args = ['start', '-o']
-#         self.send_pid_sig_retval[0] = False
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertTrue(self.serv.output)
-#
-#     def test_args_override_output2(self):
-#         self.serv.args = ['start', '--output']
-#         self.send_pid_sig_retval[0] = False
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertTrue(self.serv.output)
-#
-#     def test_version(self):
-#         self.serv.args = ['--version']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(),
-#                           'Brim.Net Core Server %s\n' % version)
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_parser_error(self):
-#         self.serv.args = ['--invalid']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(),
-#                           'no such option: --invalid\n')
-#
-#     def test_too_many_commands(self):
-#         self.serv.args = ['one', 'two']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(),
-#                           'Too many commands given; only one allowed.\n')
-#
-#     def test_default_command_no_daemon1(self):
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertTrue(self.serv.no_daemon)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_default_command_no_daemon2(self):
-#         self.serv.args = ['start']
-#         self.send_pid_sig_retval[0] = False
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertFalse(self.serv.no_daemon)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_start_already_running(self):
-#         self.serv.args = ['start']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '12345 already running\n')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_start_no_conf(self):
-#         self.serv.args = ['start']
-#         self.send_pid_sig_retval[0] = False
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_start_has_conf(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['start']
-#         self.send_pid_sig_retval[0] = False
-#         self.assertEquals(self.serv._parse_args(), self.conf)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_restart_no_conf(self):
-#         self.serv.args = ['restart']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_restart_has_conf(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['restart']
-#         self.assertEquals(self.serv._parse_args(), self.conf)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.fork_calls, [()])
-#
-#     def test_restart_has_conf_fork_side(self):
-#         self.fork_retval[0] = 0
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['restart']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.fork_calls, [()])
-#         self.assertEquals(self.send_pid_sig_calls,
-#             [((self.serv.pid_file, 0), {}),
-#              ((self.serv.pid_file, server.SIGHUP),
-#               {'expect_exit': True, 'pid_override': 12345})])
-#
-#     def test_reload_no_conf(self):
-#         self.serv.args = ['reload']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_reload_has_conf(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['reload']
-#         self.assertEquals(self.serv._parse_args(), self.conf)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.fork_calls, [()])
-#
-#     def test_reload_has_conf_fork_side(self):
-#         self.fork_retval[0] = 0
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['reload']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.fork_calls, [()])
-#         self.assertEquals(self.send_pid_sig_calls,
-#             [((self.serv.pid_file, 0), {}),
-#              ((self.serv.pid_file, server.SIGHUP),
-#               {'expect_exit': True, 'pid_override': 12345})])
-#
-#     def test_force_reload_no_conf(self):
-#         self.serv.args = ['force-reload']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_force_reload_has_conf(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['force-reload']
-#         self.assertEquals(self.serv._parse_args(), self.conf)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.fork_calls, [()])
-#
-#     def test_force_reload_has_conf_fork_side(self):
-#         self.fork_retval[0] = 0
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['force-reload']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.fork_calls, [()])
-#         self.assertEquals(self.send_pid_sig_calls,
-#             [((self.serv.pid_file, 0), {}),
-#              ((self.serv.pid_file, server.SIGHUP),
-#               {'expect_exit': True, 'pid_override': 12345})])
-#
-#     def test_shutdown(self):
-#         self.serv.args = ['shutdown']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.send_pid_sig_calls,
-#             [((self.serv.pid_file, server.SIGHUP), {'expect_exit': True})])
-#
-#     def test_stop(self):
-#         self.serv.args = ['stop']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.send_pid_sig_calls,
-#             [((self.serv.pid_file, server.SIGTERM), {'expect_exit': True})])
-#
-#     def test_status_running(self):
-#         self.serv.args = ['status']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '12345 is running\n')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.send_pid_sig_calls,
-#                           [((self.serv.pid_file, 0), {})])
-#
-#     def test_status_not_running(self):
-#         self.send_pid_sig_retval[0] = False
-#         self.serv.args = ['status']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), '12345 is not running\n')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.send_pid_sig_calls,
-#                           [((self.serv.pid_file, 0), {})])
-#
-#     def test_status_not_running_no_pid(self):
-#         self.send_pid_sig_retval[0] = False
-#         self.send_pid_sig_retval[1] = 0
-#         self.serv.args = ['status']
-#         self.assertEquals(self.serv.main(), 0)
-#         self.assertEquals(self.stdout.getvalue(), 'not running\n')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#         self.assertEquals(self.send_pid_sig_calls,
-#                           [((self.serv.pid_file, 0), {})])
-#
-#     def test_no_daemon_no_conf(self):
-#         self.serv.args = ['no-daemon']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
-#
-#     def test_no_daemon_has_conf(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.assertEquals(self.serv._parse_args(), self.conf)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(), '')
-#
-#     def test_unknown_command(self):
-#         self.serv.args = ['unknown']
-#         self.assertEquals(self.serv.main(), 1)
-#         self.assertEquals(self.stdout.getvalue(), '')
-#         self.assertEquals(self.stderr.getvalue(),
-#                           "Unknown command 'unknown'.\n")
-#
-#     def test_parse_conf_default(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'wsgi': {}}))
-#         self.assertEquals(self.serv.user, None)
-#         self.assertEquals(self.serv.group, None)
-#         self.assertEquals(self.serv.umask, 0022)
-#         self.assertEquals(self.serv.log_name, 'brim')
-#         self.assertEquals(self.serv.log_level, 'INFO')
-#         self.assertEquals(self.serv.log_facility, 'LOG_LOCAL0')
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.ip, '*')
-#         self.assertEquals(subserv.port, 80)
-#         self.assertEquals(subserv.backlog, 4096)
-#         self.assertEquals(subserv.listen_retry, 30)
-#         self.assertEquals(subserv.certfile, None)
-#         self.assertEquals(subserv.keyfile, None)
-#         self.assertEquals(subserv.worker_count, 0)
-#         self.assertEquals(subserv.log_name, 'brimwsgi')
-#         self.assertEquals(subserv.log_level, 'INFO')
-#         self.assertEquals(subserv.log_facility, 'LOG_LOCAL0')
-#         self.assertEquals(subserv.client_timeout, 60)
-#         self.assertEquals(subserv.eventlet_hub, 'poll')
-#         self.assertEquals(subserv.concurrent_per_worker, 1024)
-#         self.assertEquals(subserv.wsgi_input_iter_chunk_size, 4096)
-#         self.assertEquals(subserv.log_headers, False)
-#         self.assertEquals(subserv.json_dumps, json_dumps)
-#         self.assertEquals(subserv.json_loads, json_loads)
-#         self.assertEquals(subserv.count_status_codes, [404, 408, 499, 501])
-#
-#     def test_parse_conf_ip(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'ip': '1.2.3.4'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.ip, '1.2.3.4')
-#
-#     def test_parse_conf_port(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'port': '1234'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.port, 1234)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'port': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] port of "
-#                                     "'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_backlog(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'backlog': '123'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.backlog, 123)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'backlog': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] backlog "
-#                                     "of 'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_listen_retry(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'listen_retry': '123'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.listen_retry, 123)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'listen_retry': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] "
-#             "listen_retry of 'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_certfile(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'certfile': 'file'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.certfile, 'file')
-#
-#     def test_parse_conf_keyfile(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'keyfile': 'file'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.keyfile, 'file')
-#
-#     def test_parse_conf_user(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'user': 'name'}}))
-#         self.assertEquals(self.serv.user, 'name')
-#
-#     def test_parse_conf_group(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'group': 'name'}}))
-#         self.assertEquals(self.serv.group, 'name')
-#
-#     def test_parse_conf_umask(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'umask': '0777'}}))
-#         self.assertEquals(self.serv.umask, 0777)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'umask': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid umask value 'abc'.")
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'umask': '99'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid umask value '99'.")
-#
-#     def test_parse_conf_worker_count(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['start']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'workers': '123'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.worker_count, 123)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'workers': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] "
-#             "workers of 'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_worker_count_no_daemon(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'workers': '123'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.worker_count, 0)
-#         self.serv._parse_conf(Conf({'brim': {'workers': 'abc'}}))
-#         self.assertEquals(subserv.worker_count, 0)
-#
-#     def test_parse_conf_log_name(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'log_name': 'name'}}))
-#         self.assertEquals(self.serv.log_name, 'name')
-#
-#     def test_parse_conf_log_level(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'brim': {'log_level': 'DEBUG'}}))
-#         self.assertEquals(self.serv.log_level, 'DEBUG')
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'log_level': 'invalid'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(err), "Invalid [brim] log_level 'INVALID'.")
-#
-#     def test_parse_conf_log_facility(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'log_facility': 'LOG_LOCAL1'}}))
-#         self.assertEquals(self.serv.log_facility, 'LOG_LOCAL1')
-#         self.serv._parse_conf(Conf({'brim': {'log_facility': 'LOCAL2'}}))
-#         self.assertEquals(self.serv.log_facility, 'LOG_LOCAL2')
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'brim': {'log_facility': 'invalid'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(err),
-#                           "Invalid [brim] log_facility 'LOG_INVALID'.")
-#
-#     def test_parse_conf_client_timeout(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'client_timeout': '123'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.client_timeout, 123)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'brim': {'client_timeout': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] "
-#             "client_timeout of 'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_eventlet_hub(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'eventlet_hub': 'name'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.eventlet_hub, 'name')
-#
-#     def test_parse_conf_concurrent_per_worker(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'concurrent_per_worker': '123'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.concurrent_per_worker, 123)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'brim': {'concurrent_per_worker': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] "
-#             "concurrent_per_worker of 'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_wsgi_input_iter_chunk_size(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'wsgi': {'wsgi_input_iter_chunk_size': '123'}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.wsgi_input_iter_chunk_size, 123)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'wsgi': {'wsgi_input_iter_chunk_size': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [wsgi] "
-#             "wsgi_input_iter_chunk_size of 'abc' cannot be converted to int.")
-#
-#     def test_parse_conf_log_headers(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(Conf({'wsgi': {'log_headers': 'yes'}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.log_headers, True)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'brim': {'log_headers': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Configuration value [brim] "
-#             "log_headers of 'abc' cannot be converted to boolean.")
-#
-#     def test_parse_conf_json_dumps(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'json_dumps': 'pickle.dumps'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.json_dumps, pickle_dumps)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'wsgi': {'json_dumps': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid [wsgi] json_dumps value 'abc'.")
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'wsgi': {'json_dumps': 'pickle.blah'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc),
-#             "Could not load function 'pickle.blah' for [wsgi] json_dumps.")
-#
-#     def test_parse_conf_json_loads(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'brim': {'json_loads': 'pickle.loads'}, 'wsgi': {}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.json_loads, pickle_loads)
-#         exc = None
-#         try:
-#             self.serv._parse_conf(Conf({'wsgi': {'json_loads': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid [wsgi] json_loads value 'abc'.")
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'wsgi': {'json_loads': 'pickle.blah'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc),
-#             "Could not load function 'pickle.blah' for [wsgi] json_loads.")
-#
-#     def test_parse_conf_count_status_codes(self):
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(
-#             Conf({'wsgi': {'count_status_codes': '1'}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.count_status_codes, [1])
-#         self.serv._parse_conf(
-#             Conf({'wsgi': {'count_status_codes': '1 2 345'}}))
-#         subserv = self.serv.subservers[0]
-#         self.assertEquals(subserv.count_status_codes, [1, 2, 345])
-#         exc = None
-#         try:
-#             self.serv._parse_conf(
-#                 Conf({'wsgi': {'count_status_codes': 'abc'}}))
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid [wsgi] count_status_codes 'abc'.")
-#
-#     def test_configure_daemons_none(self):
-#         subserv = server.DaemonsSubserver(self.serv)
-#         subserv._parse_conf(Conf({}))
-#         self.assertEquals(subserv.daemons, [])
-#
-#     def test_configure_daemons(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one two'},
-#             'one': {'call': 'brim.daemon_sample.DaemonSample'},
-#             'two': {'call': 'brim.daemon_sample.DaemonSample'}})
-#         subserv = server.DaemonsSubserver(self.serv)
-#         subserv._parse_conf(conf)
-#         self.assertEquals(len(subserv.daemons), 2)
-#         self.assertEquals(subserv.daemons[0][0], 'one')
-#         self.assertEquals(subserv.daemons[1][0], 'two')
-#         self.assertEquals(subserv.daemons[0][1].__name__, 'DaemonSample')
-#         self.assertEquals(subserv.daemons[1][1].__name__, 'DaemonSample')
-#         self.assertEquals(subserv.daemons[0][2],
-#                           subserv.daemons[0][1].parse_conf('one', conf))
-#         self.assertEquals(subserv.daemons[1][2],
-#                           subserv.daemons[1][1].parse_conf('two', conf))
-#
-#     def test_configure_daemons_conf_no_call(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'cll': 'brim.daemon_sample.DaemonSample'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc),
-#                           "Daemon [one] not configured with 'call' option.")
-#
-#     def test_configure_daemons_conf_invalid_call(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call': 'brim_daemon_sample_DaemonSample'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid call value "
-#             "'brim_daemon_sample_DaemonSample' for daemon [one].")
-#
-#     def test_configure_daemons_no_load(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call': 'brim.daemon_sample.aemonSample'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Could not load class "
-#             "'brim.daemon_sample.aemonSample' for daemon [one].")
-#
-#     def test_configure_daemons_not_a_class(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call': 'brim.server._send_pid_sig'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to instantiate "
-#             "'brim.server._send_pid_sig' for daemon [one]. Probably not a "
-#             "class.")
-#
-#     def test_configure_daemons_invalid_init(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {
-#               'call': 'brim.test.unit.test_server.DaemonWithInvalidInit'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to instantiate "
-#             "'brim.test.unit.test_server.DaemonWithInvalidInit' for "
-#             "daemon [one]. Incorrect number of args, 1, should be 3 (self, "
-#             "name, conf).")
-#
-#     def test_configure_daemons_invalid_call(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {
-#               'call': 'brim.test.unit.test_server.DaemonWithInvalidCall'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to use "
-#             "'brim.test.unit.test_server.DaemonWithInvalidCall' for "
-#             "daemon [one]. Incorrect number of __call__ args, 1, should be 3 "
-#             "(self, subserver, stats).")
-#
-#     def test_configure_daemons_no_call(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {
-#               'call': 'brim.test.unit.test_server.DaemonWithNoCall'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to use "
-#             "'brim.test.unit.test_server.DaemonWithNoCall' for daemon "
-#             "[one]. Probably no __call__ method.")
-#
-#     def test_configure_daemons_invalid_parse_conf1(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithInvalidParseConf'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.DaemonWithInvalidParseConf' for "
-#             "daemon [one]. Incorrect number of parse_conf args, 1, should be "
-#             "3 (cls, name, conf).")
-#
-#     def test_configure_daemons_invalid_parse_conf2(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithInvalidParseConf2'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.DaemonWithInvalidParseConf2' for "
-#             "daemon [one]. parse_conf probably not a method.")
-#
-#     def test_configure_daemons_no_parse_conf(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithNoParseConf'}})
-#         subserv = server.DaemonsSubserver(self.serv)
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.daemons[0][2], conf)
-#
-#     def test_configure_daemons_with_parse_conf(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithParseConf'}})
-#         subserv = server.DaemonsSubserver(self.serv)
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.daemons[0][2], {'ok': True})
-#
-#     def test_configure_daemons_invalid_stats_conf1(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithInvalidStatsConf'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf' for "
-#             "app [one]. Incorrect number of stats_conf args, 1, should be 3 "
-#             "(cls, name, conf).")
-#
-#     def test_configure_daemons_invalid_stats_conf2(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithInvalidStatsConf2'}})
-#         exc = None
-#         try:
-#             server.DaemonsSubserver(self.serv)._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf2' for "
-#             "app [one]. stats_conf probably not a method.")
-#
-#     def test_configure_daemons_no_stats_conf(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithNoStatsConf'}})
-#         subserv = server.DaemonsSubserver(self.serv)
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.stats_conf, {'start_time': 'worker'})
-#
-#     def test_configure_daemons_with_stats_conf(self):
-#         conf = Conf({
-#             'daemons': {'daemons': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.DaemonWithStatsConf'}})
-#         subserv = server.DaemonsSubserver(self.serv)
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.stats_conf,
-#                           {'start_time': 'worker', 'ok': 'worker'})
-#
-#     def test_configure_wsgi_apps_none(self):
-#         self.serv.no_daemon = False
-#         subserv = server.WSGISubserver(self.serv, 'wsgi')
-#         subserv._parse_conf(Conf({}))
-#         self.assertEquals(subserv.apps, [])
-#
-#     def test_configure_wsgi_apps(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one two'},
-#             'one': {'call': 'brim.wsgi_echo.WSGIEcho'},
-#             'two': {'call': 'brim.wsgi_echo.WSGIEcho'}})
-#         subserv = server.WSGISubserver(self.serv, 'wsgi')
-#         subserv._parse_conf(conf)
-#         self.assertEquals(len(subserv.apps), 2)
-#         self.assertEquals(subserv.apps[0][0], 'one')
-#         self.assertEquals(subserv.apps[1][0], 'two')
-#         self.assertEquals(subserv.apps[0][1].__name__, 'WSGIEcho')
-#         self.assertEquals(subserv.apps[1][1].__name__, 'WSGIEcho')
-#         self.assertEquals(subserv.apps[0][2],
-#                           subserv.apps[0][1].parse_conf('one', conf))
-#         self.assertEquals(subserv.apps[1][2],
-#                           subserv.apps[1][1].parse_conf('two', conf))
-#
-#     def test_configure_wsgi_apps_conf_no_call(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'cll': 'brim.wsgi_echo.WSGIEcho'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc),
-#                           "App [one] not configured with 'call' option.")
-#
-#     def test_configure_wsgi_apps_conf_invalid_call(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call': 'brim_wsgi_echo_WSGIEcho'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Invalid call value "
-#             "'brim_wsgi_echo_WSGIEcho' for app [one].")
-#
-#     def test_configure_wsgi_apps_no_load(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call': 'brim.wsgi_echo.sgi_cho'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Could not load class "
-#             "'brim.wsgi_echo.sgi_cho' for app [one].")
-#
-#     def test_configure_wsgi_apps_not_a_class(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call': 'brim.server._send_pid_sig'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to instantiate "
-#             "'brim.server._send_pid_sig' for app [one]. Probably not a "
-#             "class.")
-#
-#     def test_configure_wsgi_apps_invalid_init(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {
-#               'call': 'brim.test.unit.test_server.AppWithInvalidInit'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to instantiate "
-#             "'brim.test.unit.test_server.AppWithInvalidInit' for app "
-#             "[one]. Incorrect number of args, 1, should be 4 (self, name, "
-#             "conf, next_app).")
-#
-#     def test_configure_wsgi_apps_invalid_call(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {
-#               'call': 'brim.test.unit.test_server.AppWithInvalidCall'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to use "
-#             "'brim.test.unit.test_server.AppWithInvalidCall' for app "
-#             "[one]. Incorrect number of __call__ args, 1, should be 3 (self, "
-#             "env, start_response).")
-#
-#     def test_configure_wsgi_apps_no_call(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {
-#               'call': 'brim.test.unit.test_server.AppWithNoCall'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Would not be able to use "
-#             "'brim.test.unit.test_server.AppWithNoCall' for app "
-#             "[one]. Probably no __call__ method.")
-#
-#     def test_configure_wsgi_apps_invalid_parse_conf1(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithInvalidParseConf'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.AppWithInvalidParseConf' for "
-#             "app [one]. Incorrect number of parse_conf args, 1, should be "
-#             "3 (cls, name, conf).")
-#
-#     def test_configure_wsgi_apps_invalid_parse_conf2(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithInvalidParseConf2'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.AppWithInvalidParseConf2' for "
-#             "app [one]. parse_conf probably not a method.")
-#
-#     def test_configure_wsgi_apps_no_parse_conf(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithNoParseConf'}})
-#         subserv = server.WSGISubserver(self.serv, 'wsgi')
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.apps[0][2], conf)
-#
-#     def test_configure_wsgi_apps_with_parse_conf(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithParseConf'}})
-#         subserv = server.WSGISubserver(self.serv, 'wsgi')
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.apps[0][2], {'ok': True})
-#
-#     def test_configure_wsgi_apps_invalid_stats_conf1(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithInvalidStatsConf1'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.AppWithInvalidStatsConf1' for "
-#             "app [one]. Incorrect number of stats_conf args, 1, should be 3 "
-#             "(cls, name, conf).")
-#
-#     def test_configure_wsgi_apps_invalid_stats_conf2(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithInvalidStatsConf2'}})
-#         exc = None
-#         try:
-#             server.WSGISubserver(self.serv, 'wsgi')._parse_conf(conf)
-#         except Exception, err:
-#             exc = err
-#         self.assertEquals(str(exc), "Cannot use "
-#             "'brim.test.unit.test_server.AppWithInvalidStatsConf2' for "
-#             "app [one]. stats_conf probably not a method.")
-#
-#     def test_configure_wsgi_apps_no_stats_conf(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithNoStatsConf'}})
-#         subserv = server.WSGISubserver(self.serv, 'wsgi')
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.stats_conf,
-#             {'start_time': 'worker', 'status_5xx_count': 'sum',
-#              'status_3xx_count': 'sum', 'request_count': 'sum',
-#              'status_4xx_count': 'sum', 'status_2xx_count': 'sum'})
-#
-#     def test_configure_wsgi_apps_with_stats_conf(self):
-#         self.serv.no_daemon = False
-#         conf = Conf({
-#             'wsgi': {'apps': 'one'},
-#             'one': {'call':
-#                 'brim.test.unit.test_server.AppWithStatsConf'}})
-#         subserv = server.WSGISubserver(self.serv, 'wsgi')
-#         subserv._parse_conf(conf)
-#         self.assertEquals(subserv.stats_conf,
-#             {'ok': 'sum', 'start_time': 'worker', 'status_5xx_count': 'sum',
-#              'status_3xx_count': 'sum', 'request_count': 'sum',
-#              'status_4xx_count': 'sum', 'status_2xx_count': 'sum'})
-#
-#     def test_start(self):
-#         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(self.conf)
-#         subserv = self.serv.subservers[0]
-#         subserv._parse_conf(self.conf)
-#         sustain_workers_calls = []
-#
-#         def _sustain_workers(*args, **kwargs):
-#             sustain_workers_calls.append((args, kwargs))
-#
-#         orig_sustain_workers = server.sustain_workers
-#         try:
-#             server.sustain_workers = _sustain_workers
-#             self.serv._start()
-#         finally:
-#             server.sustain_workers = orig_sustain_workers
-#         self.assertEquals(sustain_workers_calls,
-#             [((0, subserv._wsgi_worker), {'logger': subserv.logger})])
-#
-#     def test_start_no_bind(self):
-#         sock = get_listening_tcp_socket('*', 0)
-#         self.conf = Conf({'brim': {'port': sock.getsockname()[1],
-#                                        'listen_retry': '0'}, 'wsgi': {}})
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['no-daemon']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(self.conf)
-#         subserv = self.serv.subservers[0]
-#         subserv._parse_conf(self.conf)
-#         sustain_workers_calls = []
-#
-#         def _sustain_workers(*args, **kwargs):
-#             sustain_workers_calls.append((args, kwargs))
-#
-#         orig_sustain_workers = server.sustain_workers
-#         exc = None
-#         try:
-#             server.sustain_workers = _sustain_workers
-#             self.serv._start()
-#         except Exception, err:
-#             exc = err
-#         finally:
-#             server.sustain_workers = orig_sustain_workers
-#         self.assertEquals(str(exc), 'Could not bind to *:%s: Could not bind '
-#             'to 0.0.0.0:%s after trying for 0 seconds.' %
-#             (sock.getsockname()[1], sock.getsockname()[1]))
-#         self.assertEquals(sustain_workers_calls, [])
-#
-#     def test_start_daemoned_parent_side(self):
-#         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['start']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(self.conf)
-#         subserv = self.serv.subservers[0]
-#         subserv._parse_conf(self.conf)
-#         sustain_workers_calls = []
-#         open_retval = [StringIO()]
-#         open_calls = []
-#
-#         def _sustain_workers(*args, **kwargs):
-#             sustain_workers_calls.append((args, kwargs))
-#
-#         @contextmanager
-#         def _open(*args):
-#             open_calls.append(args)
-#             yield open_retval[0]
-#
-#         orig_sustain_workers = server.sustain_workers
-#         try:
-#             server.sustain_workers = _sustain_workers
-#             server.open = _open
-#             self.serv._start()
-#         finally:
-#             server.sustain_workers = orig_sustain_workers
-#             del server.open
-#         self.assertEquals(sustain_workers_calls, [])
-#         self.assertEquals(open_calls, [('/var/run/brimd.pid', 'w')])
-#         self.assertEquals(open_retval[0].getvalue(), '12345\n')
-#
-#     def test_start_daemoned_child_side(self):
-#         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['start']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(self.conf)
-#         subserv = self.serv.subservers[0]
-#         subserv._parse_conf(self.conf)
-#         sustain_workers_calls = []
-#         self.fork_retval[0] = 0
-#
-#         def _sustain_workers(*args, **kwargs):
-#             sustain_workers_calls.append((args, kwargs))
-#
-#         orig_sustain_workers = server.sustain_workers
-#         try:
-#             server.sustain_workers = _sustain_workers
-#             self.serv._start()
-#         finally:
-#             server.sustain_workers = orig_sustain_workers
-#         self.assertEquals(sustain_workers_calls,
-#             [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
-#         self.assertEquals(self.capture_calls, [
-#             ((), {'exceptions': self.serv._capture_exception,
-#                   'stdout_func': self.serv._capture_stdout,
-#                   'stderr_func': self.serv._capture_stderr})])
-#
-#     def test_start_daemoned_child_side_console_mode(self):
-#         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
-#         self.conf.files = ['ok.conf']
-#         self.serv.args = ['-o', 'start']
-#         self.serv._parse_args()
-#         self.serv._parse_conf(self.conf)
-#         subserv = self.serv.subservers[0]
-#         subserv._parse_conf(self.conf)
-#         sustain_workers_calls = []
-#         self.fork_retval[0] = 0
-#
-#         def _sustain_workers(*args, **kwargs):
-#             sustain_workers_calls.append((args, kwargs))
-#
-#         orig_sustain_workers = server.sustain_workers
-#         try:
-#             server.sustain_workers = _sustain_workers
-#             self.serv._start()
-#         finally:
-#             server.sustain_workers = orig_sustain_workers
-#         self.assertEquals(sustain_workers_calls,
-#             [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
-#         self.assertEquals(self.capture_calls, [])
-#
-#     def test_capture_exception(self):
-#         self.serv.logger = FakeLogger()
-#         self.serv._capture_exception()
-#         self.assertEquals(self.serv.logger.error_calls,
-#                           [("UNCAUGHT EXCEPTION: main None ['None']",)])
-#
-#         self.serv.logger = FakeLogger()
-#         try:
-#             raise Exception('testing')
-#         except Exception:
-#             self.serv._capture_exception(*exc_info())
-#         self.assertEquals(len(self.serv.logger.error_calls), 1)
-#         self.assertEquals(len(self.serv.logger.error_calls[0]), 1)
-#         self.assertTrue(self.serv.logger.error_calls[0][0].startswith(
-#             'UNCAUGHT EXCEPTION: main Exception: testing [\'Traceback '
-#             '(most recent call last):\''))
-#         self.assertTrue(self.serv.logger.error_calls[0][0].endswith(
-#             '    raise Exception(\'testing\')", \'Exception: testing\']'))
-#
-#     def test_capture_stdout(self):
-#         self.serv.logger = FakeLogger()
-#         self.serv._capture_stdout('one\ntwo\nthree\n')
-#         self.assertEquals(self.serv.logger.info_calls,
-#             [('STDOUT: main one',), ('STDOUT: main two',),
-#              ('STDOUT: main three',)])
-#
-#         self.serv.logger = FakeLogger()
-#         self.serv._capture_stdout('one\ntwo\nthree\n')
-#         self.assertEquals(self.serv.logger.info_calls,
-#             [('STDOUT: main one',), ('STDOUT: main two',),
-#              ('STDOUT: main three',)])
-#
-#     def test_capture_stderr(self):
-#         self.serv.logger = FakeLogger()
-#         self.serv._capture_stderr('one\ntwo\nthree\n')
-#         self.assertEquals(self.serv.logger.error_calls,
-#             [('STDERR: main one',), ('STDERR: main two',),
-#              ('STDERR: main three',)])
-#
-#         self.serv.logger = FakeLogger()
-#         self.serv._capture_stderr('one\ntwo\nthree\n')
-#         self.assertEquals(self.serv.logger.error_calls,
-#             [('STDERR: main one',), ('STDERR: main two',),
-#              ('STDERR: main three',)])
+    def test_start_no_subservers(self):
+        self.conf = Conf({'brim': {'port': '0'}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['no-daemon']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        sustain_workers_calls = []
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        orig_sustain_workers = server.sustain_workers
+        exc = None
+        try:
+            server.sustain_workers = _sustain_workers
+            self.serv._start()
+        except Exception, err:
+            exc = err
+        finally:
+            server.sustain_workers = orig_sustain_workers
+        self.assertEquals(str(exc), 'No subservers configured.')
+        self.assertEquals(sustain_workers_calls, [])
+
+    def test_start_daemoned_parent_side(self):
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._parse_conf(self.conf)
+        sustain_workers_calls = []
+        open_retval = [StringIO()]
+        open_calls = []
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        @contextmanager
+        def _open(*args):
+            open_calls.append(args)
+            yield open_retval[0]
+
+        orig_sustain_workers = server.sustain_workers
+        try:
+            server.sustain_workers = _sustain_workers
+            server.open = _open
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+            del server.open
+        self.assertEquals(sustain_workers_calls, [])
+        self.assertEquals(open_calls, [('/var/run/brimd.pid', 'w')])
+        self.assertEquals(open_retval[0].getvalue(), '12345\n')
+
+    def test_start_daemoned_child_side(self):
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._parse_conf(self.conf)
+        sustain_workers_calls = []
+        self.fork_retval[0] = 0
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        orig_sustain_workers = server.sustain_workers
+        try:
+            server.sustain_workers = _sustain_workers
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+        self.assertEquals(sustain_workers_calls,
+            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr})])
+
+    def test_start_daemoned_child_side_console_mode(self):
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-o', 'start']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._parse_conf(self.conf)
+        sustain_workers_calls = []
+        self.fork_retval[0] = 0
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        orig_sustain_workers = server.sustain_workers
+        try:
+            server.sustain_workers = _sustain_workers
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+        self.assertEquals(sustain_workers_calls,
+            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
+        self.assertEquals(self.capture_calls, [])
+
+    def test_start_subserver(self, no_setproctitle=False):
+        self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['start']
+        self.serv._parse_args()
+        self.serv._parse_conf(self.conf)
+        subserv = self.serv.subservers[0]
+        subserv._parse_conf(self.conf)
+        sustain_workers_calls = []
+        self.fork_retval[0] = 0
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        orig_sustain_workers = server.sustain_workers
+        try:
+            server.sustain_workers = _sustain_workers
+            self.serv._start()
+        finally:
+            server.sustain_workers = orig_sustain_workers
+        self.assertEquals(sustain_workers_calls,
+            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
+        self.assertEquals(self.capture_calls, [
+            ((), {'exceptions': self.serv._capture_exception,
+                  'stdout_func': self.serv._capture_stdout,
+                  'stderr_func': self.serv._capture_stderr})])
+
+        setproctitle_calls = []
+        start_calls = []
+
+        def _setproctitle(*args):
+            setproctitle_calls.append(args)
+
+        def _start(*args):
+            start_calls.append(args)
+
+        setproctitle_orig = server.setproctitle
+        try:
+            server.setproctitle = None if no_setproctitle else _setproctitle
+            subserv._start = _start
+            self.serv._start_subserver(0)
+        finally:
+            server.setproctitle = setproctitle_orig
+        if no_setproctitle:
+            self.assertEquals(setproctitle_calls, [])
+        else:
+            self.assertEquals(setproctitle_calls, [('wsgi:brimd',)])
+        self.assertEquals(start_calls, [(self.serv.bucket_stats[0],)])
+
+    def test_start_subserver_no_setproctitle(self):
+        self.test_start_subserver(no_setproctitle=True)
+
+    def test_capture_exception(self):
+        self.serv.logger = FakeLogger()
+        self.serv._capture_exception()
+        self.assertEquals(self.serv.logger.error_calls,
+                          [("UNCAUGHT EXCEPTION: main None ['None']",)])
+
+        self.serv.logger = FakeLogger()
+        try:
+            raise Exception('testing')
+        except Exception:
+            self.serv._capture_exception(*exc_info())
+        self.assertEquals(len(self.serv.logger.error_calls), 1)
+        self.assertEquals(len(self.serv.logger.error_calls[0]), 1)
+        self.assertTrue(self.serv.logger.error_calls[0][0].startswith(
+            'UNCAUGHT EXCEPTION: main Exception: testing [\'Traceback '
+            '(most recent call last):\''))
+        self.assertTrue(self.serv.logger.error_calls[0][0].endswith(
+            '    raise Exception(\'testing\')", \'Exception: testing\']'))
+
+    def test_capture_stdout(self):
+        self.serv.logger = FakeLogger()
+        self.serv._capture_stdout('one\ntwo\nthree\n')
+        self.assertEquals(self.serv.logger.info_calls,
+            [('STDOUT: main one',), ('STDOUT: main two',),
+             ('STDOUT: main three',)])
+
+        self.serv.logger = FakeLogger()
+        self.serv._capture_stdout('one\ntwo\nthree\n')
+        self.assertEquals(self.serv.logger.info_calls,
+            [('STDOUT: main one',), ('STDOUT: main two',),
+             ('STDOUT: main three',)])
+
+    def test_capture_stderr(self):
+        self.serv.logger = FakeLogger()
+        self.serv._capture_stderr('one\ntwo\nthree\n')
+        self.assertEquals(self.serv.logger.error_calls,
+            [('STDERR: main one',), ('STDERR: main two',),
+             ('STDERR: main three',)])
+
+        self.serv.logger = FakeLogger()
+        self.serv._capture_stderr('one\ntwo\nthree\n')
+        self.assertEquals(self.serv.logger.error_calls,
+            [('STDERR: main one',), ('STDERR: main two',),
+             ('STDERR: main three',)])
 
 
 if __name__ == '__main__':
