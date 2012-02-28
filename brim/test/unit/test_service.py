@@ -762,6 +762,180 @@ class Test_get_listening_tcp_socket(TestCase):
         self.assertEquals(str(exc), 'badbind')
 
 
+class Test_get_listening_udp_socket(TestCase):
+
+    def setUp(self):
+        self.orig_getaddrinfo = socket.getaddrinfo
+        self.orig_socket = socket.socket
+        self.orig_time = service.time
+        self.orig_sleep = time.sleep
+        self.getaddrinfo_calls = []
+        self.getaddrinfo_return = ((socket.AF_INET,),)
+        self.time_calls = []
+        self.time_value = 0
+        self.sleep_calls = []
+
+        def _getaddrinfo(*args):
+            self.getaddrinfo_calls.append(args)
+            return self.getaddrinfo_return
+
+        def _time(*args):
+            self.time_calls.append(args)
+            self.time_value += 1
+            return self.time_value
+
+        socket.getaddrinfo = _getaddrinfo
+        socket.socket = FakeSocket
+        service.time = _time
+        time.sleep = lambda *a: self.sleep_calls.append(a)
+
+    def tearDown(self):
+        socket.getaddrinfo = self.orig_getaddrinfo
+        socket.socket = self.orig_socket
+        service.time = self.orig_time
+        time.sleep = self.orig_sleep
+
+    def test_happy_path_inet(self):
+        ip = '1.2.3.4'
+        port = 5678
+        sock = service.get_listening_udp_socket(ip, port)
+        self.assertEquals(self.getaddrinfo_calls,
+                          [(ip, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)])
+        self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
+        self.assertEquals(set(sock.setsockopt_calls), set([
+            (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)]))
+        self.assertEquals(sock.bind_calls, [((ip, port),)])
+
+    def test_happy_path_inet6(self):
+        self.getaddrinfo_return = ((socket.AF_INET6,),)
+        sock = service.get_listening_udp_socket('1.2.3.4', 5678)
+        self.assertEquals(sock.init, (socket.AF_INET6, socket.SOCK_DGRAM))
+
+    def test_retries(self):
+        socket.socket = NonBindingSocket
+        exc = None
+        try:
+            sock = service.get_listening_udp_socket('1.2.3.4', 5678)
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc),
+            'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
+        # Calls time once before loop to calculate when to stop and once per
+        # loop to see if it's time to stop.
+        self.assertEquals(self.time_value, 31)
+        self.assertEquals(len(self.time_calls), 31)
+        # Sleeps 29 times and then sees it's been 30s (the default retry time).
+        self.assertEquals(len(self.sleep_calls), 29)
+
+    def test_uses_passed_retry(self):
+        socket.socket = NonBindingSocket
+        exc = None
+        try:
+            sock = service.get_listening_udp_socket('1.2.3.4', 5678, retry=10)
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc),
+            'Could not bind to 1.2.3.4:5678 after trying for 10 seconds.')
+        # Calls time once before loop to calculate when to stop and once per
+        # loop to see if it's time to stop.
+        self.assertEquals(self.time_value, 11)
+        self.assertEquals(len(self.time_calls), 11)
+        # Sleeps 9 times and then sees it's been 10s.
+        self.assertEquals(len(self.sleep_calls), 9)
+
+    def test_uses_eventlet_socket(self):
+        try:
+            import eventlet.green.socket
+        except ImportError:
+            raise SkipTest()
+        orig_esocket = eventlet.green.socket.socket
+        orig_egetaddrinfo = eventlet.green.socket.getaddrinfo
+        egetaddrinfo_calls = []
+
+        def _getaddrinfo(*args):
+            egetaddrinfo_calls.append(args)
+            return self.getaddrinfo_return
+
+        try:
+            # Won't bind unless it uses eventlet's socket.
+            socket.socket = NonBindingSocket
+            eventlet.green.socket.socket = FakeSocket
+            eventlet.green.socket.getaddrinfo = _getaddrinfo
+            ip = '1.2.3.4'
+            port = 5678
+            sock = service.get_listening_udp_socket(ip, port, style='eventlet')
+            self.assertEquals(egetaddrinfo_calls,
+                [(ip, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)])
+            self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
+            self.assertEquals(set(sock.setsockopt_calls), set([
+                (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)]))
+            self.assertEquals(sock.bind_calls, [((ip, port),)])
+        finally:
+            eventlet.green.socket.socket = orig_esocket
+            eventlet.green.socket.getaddrinfo = orig_egetaddrinfo
+
+    def test_uses_eventlet_sleep(self):
+        try:
+            import eventlet
+            import eventlet.green.socket
+        except ImportError:
+            raise SkipTest()
+        orig_sleep = eventlet.sleep
+        orig_esocket = eventlet.green.socket.socket
+        esleep_calls = []
+        try:
+            eventlet.sleep = lambda *a: esleep_calls.append(a)
+            eventlet.green.socket.socket = NonBindingSocket
+            exc = None
+            try:
+                sock = service.get_listening_udp_socket('1.2.3.4', 5678,
+                                                        style='eventlet')
+            except Exception, err:
+                exc = err
+            self.assertEquals(str(exc),
+                'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
+            self.assertEquals(len(esleep_calls), 29)
+            self.assertEquals(len(self.sleep_calls), 0)
+        finally:
+            eventlet.sleep = orig_sleep
+            eventlet.green.socket.socket = orig_esocket
+
+    def test_invalid_style(self):
+        exc = None
+        try:
+            service.get_listening_udp_socket('1.2.3.4', 5678, style='invalid')
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc), "Socket style 'invalid' not understood.")
+
+    def test_ip_as_none_is_all(self):
+        sock = service.get_listening_udp_socket(None, 5678)
+        self.assertEquals(sock.bind_calls[0][0][0], '0.0.0.0')
+
+    def test_ip_as_star_is_all(self):
+        sock = service.get_listening_udp_socket('*', 5678)
+        self.assertEquals(sock.bind_calls[0][0][0], '0.0.0.0')
+
+    def test_no_family_raises_exception(self):
+        self.getaddrinfo_return = ((socket.AF_APPLETALK,),)
+        exc = None
+        try:
+            service.get_listening_udp_socket('1.2.3.4', 5678)
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc),
+            'Could not determine address family of 1.2.3.4:5678 for binding.')
+
+    def test_odd_exception_reraised(self):
+        socket.socket = BadBindSocket
+        exc = None
+        try:
+            service.get_listening_udp_socket('1.2.3.4', 5678)
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc), 'badbind')
+
+
 class Test_signum2str(TestCase):
 
     def test_signum2str(self):
