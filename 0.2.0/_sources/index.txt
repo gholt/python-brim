@@ -48,7 +48,7 @@ Build and Test Dependencies
 * `Coverage <http://nedbatchelder.com/code/coverage/>`_ to report on test coverage.
 * `Git <http://git-scm.com/>`_ since the code is hosted on `GitHub <http://github.com/gholt/brim>`_.
 * `Nose <http://readthedocs.org/docs/nose/en/latest/>`_ for the test suite.
-* `PIP` <http://pypi.python.org/pypi/pip>`_ to install additional Python packages.
+* `PIP <http://pypi.python.org/pypi/pip>`_ to install additional Python packages.
 * `Sphinx <http://sphinx.pocoo.org/>`_ to build documentation.
 
 Example Install on Ubuntu 10.04
