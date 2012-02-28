@@ -3,13 +3,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim &mdash; Brim.Net Core Package v0.2.0 documentation</title>
+    <title>brim &mdash; Brim.Net Core Package 0.2.0 documentation</title>
+    
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -22,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="index.html" />
+    <link rel="top" title="Brim.Net Core Package 0.2.0 documentation" href="index.html" />
     <link rel="prev" title="LICENSE" href="license.html" /> 
   </head>
   <body>
@@ -38,7 +41,7 @@
         <li class="right" >
           <a href="license.html" title="LICENSE"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -55,13 +58,13 @@ offering ease of deployment of WSGI applications (currently just
 using the Eventlet WSGI server) and maintaining background daemons.</p>
 <dl class="data">
 <dt id="brim.version_info">
-<tt class="descclassname">brim.</tt><tt class="descname">version_info</tt><a class="headerlink" href="#brim.version_info" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.</tt><tt class="descname">version_info</tt><em class="property"> = (0, 2, 0)</em><a class="headerlink" href="#brim.version_info" title="Permalink to this definition">¶</a></dt>
 <dd><p>Version information <tt class="docutils literal"><span class="pre">(major,</span> <span class="pre">minor,</span> <span class="pre">revision)</span></tt>.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="brim.version">
-<tt class="descclassname">brim.</tt><tt class="descname">version</tt><a class="headerlink" href="#brim.version" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.</tt><tt class="descname">version</tt><em class="property"> = '0.2.0'</em><a class="headerlink" href="#brim.version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Version string <tt class="docutils literal"><span class="pre">'major.minor.revision'</span></tt>.</p>
 </dd></dl>
 
@@ -151,7 +154,7 @@ directly as well:</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>store</strong> &#8211; A dict representing the configuration, as described
 above.</li>
 <li><strong>files</strong> &#8211; Optional list of file names the configuration was
@@ -183,7 +186,7 @@ setting Conf.error to another method.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>section</strong> &#8211; The section name within the conf that was
 read.</li>
 <li><strong>option</strong> &#8211; The option name within the section that was
@@ -203,7 +206,7 @@ conversion.</li>
 
 <dl class="attribute">
 <dt id="brim.conf.Conf.files">
-<tt class="descname">files</tt><a class="headerlink" href="#brim.conf.Conf.files" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">files</tt><em class="property"> = None</em><a class="headerlink" href="#brim.conf.Conf.files" title="Permalink to this definition">¶</a></dt>
 <dd><p>A list of source conf file names the conf was read from.</p>
 </dd></dl>
 
@@ -217,7 +220,7 @@ not exist.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>section</strong> &#8211; The section name within the conf to read.</li>
 <li><strong>option</strong> &#8211; The option name within the section to read.</li>
 <li><strong>default</strong> &#8211; The default value to return if the section or
@@ -241,7 +244,7 @@ converted to a boolean.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>section</strong> &#8211; The section name within the conf to read.</li>
 <li><strong>option</strong> &#8211; The option name within the section to read.</li>
 <li><strong>default</strong> &#8211; The default value to return if the section or
@@ -265,7 +268,7 @@ converted to a float.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>section</strong> &#8211; The section name within the conf to read.</li>
 <li><strong>option</strong> &#8211; The option name within the section to read.</li>
 <li><strong>default</strong> &#8211; The default value to return if the section or
@@ -289,7 +292,7 @@ converted to an int.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>section</strong> &#8211; The section name within the conf to read.</li>
 <li><strong>option</strong> &#8211; The option name within the section to read.</li>
 <li><strong>default</strong> &#8211; The default value to return if the section or
@@ -303,7 +306,7 @@ option does not exist or is set to None.</li>
 
 <dl class="attribute">
 <dt id="brim.conf.Conf.store">
-<tt class="descname">store</tt><a class="headerlink" href="#brim.conf.Conf.store" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">store</tt><em class="property"> = None</em><a class="headerlink" href="#brim.conf.Conf.store" title="Permalink to this definition">¶</a></dt>
 <dd><p>A dict of conf sections, each value a dict of conf
 options, each value the actual value of the section/option
 within the conf.</p>
@@ -329,7 +332,7 @@ the ConfigParser.Error will be raised instead.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conf_files</strong> &#8211; A list of conf files to read and translate, in
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conf_files</strong> &#8211; A list of conf files to read and translate, in
 order. Therefore, values in files further into
 the list will override any values from prior
 files. File names may use the ~/filename or
@@ -342,13 +345,13 @@ with os.path.expanduser.</td>
 
 <dl class="data">
 <dt id="brim.conf.TRUE_VALUES">
-<tt class="descclassname">brim.conf.</tt><tt class="descname">TRUE_VALUES</tt><a class="headerlink" href="#brim.conf.TRUE_VALUES" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.conf.</tt><tt class="descname">TRUE_VALUES</tt><em class="property"> = ['1', 'on', 't', 'true', 'y', 'yes']</em><a class="headerlink" href="#brim.conf.TRUE_VALUES" title="Permalink to this definition">¶</a></dt>
 <dd><p>The list of str values that equate to True, all lowercase.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="brim.conf.FALSE_VALUES">
-<tt class="descclassname">brim.conf.</tt><tt class="descname">FALSE_VALUES</tt><a class="headerlink" href="#brim.conf.FALSE_VALUES" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.conf.</tt><tt class="descname">FALSE_VALUES</tt><em class="property"> = ['0', 'f', 'false', 'n', 'no', 'off']</em><a class="headerlink" href="#brim.conf.FALSE_VALUES" title="Permalink to this definition">¶</a></dt>
 <dd><p>The list of str values that equate to False, all lowercase.</p>
 </dd></dl>
 
@@ -374,7 +377,7 @@ classes and functions, like <a class="reference internal" href="#brim.http.Query
 <a class="reference internal" href="#brim.http.quote" title="brim.http.quote"><tt class="xref py py-func docutils literal"><span class="pre">quote()</span></tt></a> (it&#8217;s Unicode-safe by using UTF8).</p>
 <dl class="data">
 <dt id="brim.http.CODE2NAME">
-<tt class="descclassname">brim.http.</tt><tt class="descname">CODE2NAME</tt><a class="headerlink" href="#brim.http.CODE2NAME" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.http.</tt><tt class="descname">CODE2NAME</tt><em class="property"> = {300: 'Multiple Choices', 301: 'Moved Permanently', 302: 'Found', 303: 'See Other', 304: 'Not Modified', 305: 'Use Proxy', 307: 'Temporary Redirect', 100: 'Continue', 101: 'Switching Protocols', 102: 'Processing', 400: 'Bad Request', 401: 'Unauthorized', 402: 'Payment Required', 403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed', 406: 'Not Acceptable', 407: 'Proxy Authentication Required', 408: 'Request Timeout', 409: 'Conflict', 410: 'Gone', 411: 'Length Required', 412: 'Precondition Failed', 413: 'Request Entity Too Large', 414: 'Request-URI Too Long', 415: 'Unsupported Media Type', 416: 'Requested Range Not Satisfiable', 417: 'Expectation Failed', 422: 'Unprocessable Entity', 423: 'Locked', 424: 'Failed Dependency', 426: 'Upgrade Required', 200: 'OK', 201: 'Created', 202: 'Accepted', 203: 'Non-Authoritative Information', 204: 'No Content', 205: 'Reset Content', 206: 'Partial Content', 207: 'Multi-Status', 208: 'Already Reported', 226: 'IM Used', 500: 'Internal Server Error', 501: 'Not Implemented', 502: 'Bad Gateway', 503: 'Service Unavailable', 504: 'Gateway Timeout', 505: 'HTTP Version Not Supported', 506: 'Variant Also Negotiates', 507: 'Insufficient Storage', 508: 'Loop Detected', 510: 'Not Extended'}</em><a class="headerlink" href="#brim.http.CODE2NAME" title="Permalink to this definition">¶</a></dt>
 <dd><p>Translates an HTTP status code to an English status reason string,
 such as CODE2NAME[201] = &#8216;Created&#8217;.</p>
 </dd></dl>
@@ -442,7 +445,7 @@ such as CODE2NAME[201] = &#8216;Created&#8217;.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>body</strong> &#8211; The body of the response. If the body has a length
 (as determined by len(body)) and the headers don&#8217;t
 have a content-length or transfer-encoding, the
@@ -772,7 +775,7 @@ methods for parameter values.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query_string</strong> &#8211; The HTTP query string, such as in a WSGI
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query_string</strong> &#8211; The HTTP query string, such as in a WSGI
 env[&#8216;QUERY_STRING&#8217;]. If using something
 other than WSGI&#8217;s QUERY_STRING, be sure you
 do <strong>not</strong> include the question mark that
@@ -791,7 +794,7 @@ value if the parameter does not exist.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
 <li><strong>default</strong> &#8211; The default value if the parameter does not
 exist.</li>
@@ -823,7 +826,7 @@ translated.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
 <li><strong>default</strong> &#8211; The default value if the parameter does not
 exist.</li>
@@ -843,7 +846,7 @@ default value if the parameter does not exist.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
 <li><strong>default</strong> &#8211; The default value if the parameter does not
 exist or has no value.</li>
@@ -863,7 +866,7 @@ value if the parameter does not exist.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
 <li><strong>default</strong> &#8211; The default value if the parameter does not
 exist or has no value.</li>
@@ -884,7 +887,7 @@ exist or has no value.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>env</strong> &#8211; Standard WSGI env to read from.</li>
 <li><strong>name</strong> &#8211; The name of the header to retrieve.</li>
 <li><strong>default</strong> &#8211; If specified, the default value will be used if
@@ -895,7 +898,7 @@ missing.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The int value of the header, or raises HTTPBadRequest
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The int value of the header, or raises HTTPBadRequest
 if the header can&#8217;t be translated to an integer or if
 the header is missing and required.</p>
 </td>
@@ -925,7 +928,7 @@ the WSGI <tt class="docutils literal"><span class="pre">env['brim.logger']</span
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>route</strong> &#8211; The str log route, which is often the same as the
 name but does not have to be. Think of this as the
 key for the logger in source code.</li>
@@ -946,7 +949,7 @@ so the log records are sent to syslog.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A configured logging.Logger.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A configured logging.Logger.</p>
 </td>
 </tr>
 </tbody>
@@ -955,7 +958,7 @@ so the log records are sent to syslog.</li>
 
 <dl class="data">
 <dt id="brim.log.NOTICE">
-<tt class="descclassname">brim.log.</tt><tt class="descname">NOTICE</tt><a class="headerlink" href="#brim.log.NOTICE" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.log.</tt><tt class="descname">NOTICE</tt><em class="property"> = 25</em><a class="headerlink" href="#brim.log.NOTICE" title="Permalink to this definition">¶</a></dt>
 <dd><p>An additional log level patched into the standard logging levels;
 this level is to be used for logging HTTP requests only so that it
 can be easily filtered on to form access logs.</p>
@@ -971,10 +974,10 @@ the line is truncated, etc.).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>excinfo</strong> &#8211; The exception info (exctype, value, traceback)
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>excinfo</strong> &#8211; The exception info (exctype, value, traceback)
 such as returned with sys.exc_info.</td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body">A str represention suitable for syslog.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A str represention suitable for syslog.</td>
 </tr>
 </tbody>
 </table>
@@ -998,7 +1001,7 @@ for what&#8217;s implemented and why.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the daemon, indicates the daemon&#8217;s
 section in the overall configuration for the WSGI
 server.</li>
@@ -1026,7 +1029,7 @@ daemon-specific configuration dict suitable for passing as
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the daemon, indicates the daemon&#8217;s
 section in the overall configuration for the
 server.</li>
@@ -1035,7 +1038,7 @@ overall configuration of the server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
 the DaemonSample constructor.</p>
 </td>
 </tr>
@@ -1054,7 +1057,7 @@ brim.stats.Stats.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the WSGI
 server.</li>
@@ -1078,13 +1081,13 @@ brimd.</p>
 <p>See etc/brimd.conf-sample for configuration options.</p>
 <dl class="data">
 <dt id="brim.server.DEFAULT_CONF_FILES">
-<tt class="descclassname">brim.server.</tt><tt class="descname">DEFAULT_CONF_FILES</tt><a class="headerlink" href="#brim.server.DEFAULT_CONF_FILES" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.server.</tt><tt class="descname">DEFAULT_CONF_FILES</tt><em class="property"> = ['/etc/brim/brimd.conf', '~/.brimd.conf']</em><a class="headerlink" href="#brim.server.DEFAULT_CONF_FILES" title="Permalink to this definition">¶</a></dt>
 <dd><p>The list of default conf files to use when none are specified.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="brim.server.DaemonsSubserver">
-<em class="property">class </em><tt class="descclassname">brim.server.</tt><tt class="descname">DaemonsSubserver</tt><big>(</big><em>server</em><big>)</big><a class="reference internal" href="_modules/brim/server.html#DaemonsSubserver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.server.DaemonsSubserver" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">brim.server.</tt><tt class="descname">DaemonsSubserver</tt><big>(</big><em>server</em>, <em>name='daemons'</em><big>)</big><a class="reference internal" href="_modules/brim/server.html#DaemonsSubserver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.server.DaemonsSubserver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a></p>
 <p>Created for a [daemons] config section to hold the attributes
 specific to that subconfig.</p>
@@ -1092,7 +1095,7 @@ specific to that subconfig.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>server</strong> &#8211; The parent brim.server.Server.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>server</strong> &#8211; The parent brim.server.Server.</td>
 </tr>
 </tbody>
 </table>
@@ -1100,7 +1103,7 @@ specific to that subconfig.</p>
 
 <dl class="data">
 <dt id="brim.server.HTTP_CLIENT_DISCONNECT">
-<tt class="descclassname">brim.server.</tt><tt class="descname">HTTP_CLIENT_DISCONNECT</tt><a class="headerlink" href="#brim.server.HTTP_CLIENT_DISCONNECT" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.server.</tt><tt class="descname">HTTP_CLIENT_DISCONNECT</tt><em class="property"> = 499</em><a class="headerlink" href="#brim.server.HTTP_CLIENT_DISCONNECT" title="Permalink to this definition">¶</a></dt>
 <dd><p>The status code logged for requests terminated early by the client
 (499).</p>
 </dd></dl>
@@ -1116,7 +1119,7 @@ specific to that subconfig.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>server</strong> &#8211; The parent brim.server.Server.</li>
 <li><strong>name</strong> &#8211; The name of the subserver (&#8216;wsgi&#8217;, &#8216;tcp&#8217;, &#8216;udp&#8217;,
 etc.)</li>
@@ -1129,7 +1132,7 @@ etc.)</li>
 
 <dl class="data">
 <dt id="brim.server.PID_WAIT_TIME">
-<tt class="descclassname">brim.server.</tt><tt class="descname">PID_WAIT_TIME</tt><a class="headerlink" href="#brim.server.PID_WAIT_TIME" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">brim.server.</tt><tt class="descname">PID_WAIT_TIME</tt><em class="property"> = 15</em><a class="headerlink" href="#brim.server.PID_WAIT_TIME" title="Permalink to this definition">¶</a></dt>
 <dd><p>The number of seconds to wait for a PID to disappear after sending
 an appropriate signal.</p>
 </dd></dl>
@@ -1144,7 +1147,7 @@ script. Few daemons or apps need to access this directly.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>args</strong> &#8211; Command line arguments for the server, without the
 process name. Defaults to sys.argv[1:]</li>
 <li><strong>stdin</strong> &#8211; The file-like object to treat as standard input.
@@ -1168,7 +1171,7 @@ constructor. Usage can be read from <tt class="docutils literal"><span class="pr
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body">An integer exit code suitable for returning with
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An integer exit code suitable for returning with
 sys.exit.</td>
 </tr>
 </tbody>
@@ -1188,7 +1191,7 @@ attributes specific to that subconfig.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>server</strong> &#8211; The parent brim.server.Server.</li>
 <li><strong>name</strong> &#8211; The name of the subserver (&#8216;wsgi&#8217;, &#8216;tcp&#8217;, &#8216;udp&#8217;,
 &#8216;daemons&#8217;, etc.)</li>
@@ -1199,28 +1202,28 @@ attributes specific to that subconfig.</p>
 </table>
 <dl class="attribute">
 <dt id="brim.server.Subserver.json_dumps">
-<tt class="descname">json_dumps</tt><a class="headerlink" href="#brim.server.Subserver.json_dumps" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">json_dumps</tt><em class="property"> = None</em><a class="headerlink" href="#brim.server.Subserver.json_dumps" title="Permalink to this definition">¶</a></dt>
 <dd><p>The json.dumps compatible function configured. WSGI apps can also
 access this via <tt class="docutils literal"><span class="pre">env['brim.json_dumps']</span></tt>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="brim.server.Subserver.json_loads">
-<tt class="descname">json_loads</tt><a class="headerlink" href="#brim.server.Subserver.json_loads" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">json_loads</tt><em class="property"> = None</em><a class="headerlink" href="#brim.server.Subserver.json_loads" title="Permalink to this definition">¶</a></dt>
 <dd><p>The json.loads compatible function configured. WSGI apps can also
 access this via <tt class="docutils literal"><span class="pre">env['brim.json_loads']</span></tt>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="brim.server.Subserver.logger">
-<tt class="descname">logger</tt><a class="headerlink" href="#brim.server.Subserver.logger" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">logger</tt><em class="property"> = None</em><a class="headerlink" href="#brim.server.Subserver.logger" title="Permalink to this definition">¶</a></dt>
 <dd><p>The logger in use by this subserver. WSGI apps can also access this
 via <tt class="docutils literal"><span class="pre">env['brim.logger']</span></tt>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="brim.server.Subserver.server">
-<tt class="descname">server</tt><a class="headerlink" href="#brim.server.Subserver.server" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">server</tt><em class="property"> = None</em><a class="headerlink" href="#brim.server.Subserver.server" title="Permalink to this definition">¶</a></dt>
 <dd><p>The parent brim.server.Server of this subserver.</p>
 </dd></dl>
 
@@ -1236,7 +1239,7 @@ attributes specific to that subconfig.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>server</strong> &#8211; The parent brim.server.Server.</li>
 <li><strong>name</strong> &#8211; The name of the subserver (&#8216;tcp&#8217;, &#8216;tcp2&#8217;, &#8216;tcp3&#8217;,
 etc.)</li>
@@ -1257,7 +1260,7 @@ attributes specific to that subconfig.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>server</strong> &#8211; The parent brim.server.Server.</li>
 <li><strong>name</strong> &#8211; The name of the subserver (&#8216;udp&#8217;, &#8216;udp2&#8217;, &#8216;udp3&#8217;,
 etc.)</li>
@@ -1279,7 +1282,7 @@ access this directly, but some like brim.stats.Stats do.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>server</strong> &#8211; The parent brim.server.Server.</li>
 <li><strong>name</strong> &#8211; The name of the subserver (&#8216;wsgi&#8217;, &#8216;wsgi2&#8217;, &#8216;wsgi3&#8217;,
 etc.)</li>
@@ -1324,7 +1327,7 @@ attempting the switch.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>user</strong> &#8211; The user to switch to.</li>
 <li><strong>group</strong> &#8211; The group to switch to; defaults to the default
 group of the user.</li>
@@ -1345,7 +1348,7 @@ other optional parameters.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>ip</strong> &#8211; The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
 translated to <tt class="docutils literal"><span class="pre">'0.0.0.0'</span></tt> which will listen on all
 configured addresses.</li>
@@ -1381,7 +1384,7 @@ other optional parameters.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>ip</strong> &#8211; The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
 translated to <tt class="docutils literal"><span class="pre">'0.0.0.0'</span></tt> which will listen on all
 configured addresses.</li>
@@ -1415,9 +1418,9 @@ in the future.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signum</strong> &#8211; The signal number to convert.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signum</strong> &#8211; The signal number to convert.</td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body">A str representing the signal.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A str representing the signal.</td>
 </tr>
 </tbody>
 </table>
@@ -1447,7 +1450,7 @@ activated where just the <em>worker_func</em> will be called and then
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>workers_desired</strong> &#8211; The number of subprocesses desired to be
 maintained. If 0, no subprocesses will be
 made and <em>worker_func</em> will simply be
@@ -1486,7 +1489,7 @@ start time and request counts.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
 the overall configuration for the WSGI server.</li>
 <li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.stats.Stats.parse_conf" title="brim.stats.Stats.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
@@ -1517,7 +1520,7 @@ app-specific configuration dict suitable for passing as
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the WSGI
 server.</li>
@@ -1526,7 +1529,7 @@ overall configuration of the WSGI server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
 the Stats constructor.</p>
 </td>
 </tr>
@@ -1554,7 +1557,7 @@ applications. See the source for what&#8217;s implemented and why.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
 the overall configuration for the server.</li>
 <li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.tcp_echo.TCPEcho.parse_conf" title="brim.tcp_echo.TCPEcho.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
@@ -1578,7 +1581,7 @@ app-specific configuration dict suitable for passing as
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the server.</li>
 <li><strong>conf</strong> &#8211; The brim.conf.Conf instance representing the
@@ -1586,7 +1589,7 @@ overall configuration of the server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
 the TCPEcho constructor.</p>
 </td>
 </tr>
@@ -1636,7 +1639,7 @@ brim.stats.Stats.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the server.</li>
 <li><strong>parsed_conf</strong> &#8211; The conf result from
@@ -1644,7 +1647,7 @@ in the overall configuration for the server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list of (stat_name, stat_type) pairs.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list of (stat_name, stat_type) pairs.</p>
 </td>
 </tr>
 </tbody>
@@ -1671,7 +1674,7 @@ applications. See the source for what&#8217;s implemented and why.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
 the overall configuration for the server.</li>
 <li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.udp_echo.UDPEcho.parse_conf" title="brim.udp_echo.UDPEcho.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
@@ -1695,7 +1698,7 @@ app-specific configuration dict suitable for passing as
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the server.</li>
 <li><strong>conf</strong> &#8211; The brim.conf.Conf instance representing the
@@ -1703,7 +1706,7 @@ overall configuration of the server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
 the UDPEcho constructor.</p>
 </td>
 </tr>
@@ -1722,7 +1725,7 @@ brim.stats.Stats.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the WSGI
 server.</li>
@@ -1766,7 +1769,7 @@ True is yielded and the lock relinquished with the context ends.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>path</strong> &#8211; The path to gain an advisory lock on.</li>
 <li><strong>timeout</strong> &#8211; The number of seconds to wait to gain the lock
 before raising LockPathTimeout.</li>
@@ -1786,7 +1789,7 @@ existing.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>path</strong> &#8211; The path to create a directory and all parent
 directories for.</li>
 <li><strong>mode</strong> &#8211; The permissions mode (masked with the current umask)
@@ -1807,7 +1810,7 @@ not existing.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> &#8211; The path to unlink.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> &#8211; The path to unlink.</td>
 </tr>
 </tbody>
 </table>
@@ -1831,7 +1834,7 @@ applications. See the source for what&#8217;s implemented and why.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
 the overall configuration for the server.</li>
 <li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.wsgi_echo.WSGIEcho.parse_conf" title="brim.wsgi_echo.WSGIEcho.parse_conf"><tt class="xref py py-func docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
@@ -1863,7 +1866,7 @@ app-specific configuration dict suitable for passing as
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the server.</li>
 <li><strong>conf</strong> &#8211; The brim.conf.Conf instance representing the
@@ -1871,7 +1874,7 @@ overall configuration of the server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict suitable for passing as <tt class="docutils literal"><span class="pre">parsed_conf</span></tt> in
 the WSGIEcho constructor.</p>
 </td>
 </tr>
@@ -1921,7 +1924,7 @@ brim.stats.Stats.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section
 in the overall configuration for the server.</li>
 <li><strong>parsed_conf</strong> &#8211; The conf result from
@@ -1929,7 +1932,7 @@ in the overall configuration for the server.</li>
 </ul>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list of (stat_name, stat_type) pairs.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list of (stat_name, stat_type) pairs.</p>
 </td>
 </tr>
 </tbody>
@@ -1973,7 +1976,7 @@ in the overall configuration for the server.</li>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -1999,12 +2002,12 @@ in the overall configuration for the server.</li>
         <li class="right" >
           <a href="license.html" title="LICENSE"
              >previous</a> |</li>
-        <li><a href="index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2012, Gregory Holt.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>
 </html>

@@ -3,13 +3,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim.server &mdash; Brim.Net Core Package v0.2.0 documentation</title>
+    <title>brim.server &mdash; Brim.Net Core Package 0.2.0 documentation</title>
+    
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
@@ -22,7 +25,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="../../index.html" />
+    <link rel="top" title="Brim.Net Core Package 0.2.0 documentation" href="../../index.html" />
     <link rel="up" title="brim" href="../brim.html" /> 
   </head>
   <body>
@@ -35,7 +38,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
       </ul>
@@ -74,7 +77,7 @@
 <span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">getargspec</span>
 <span class="kn">from</span> <span class="nn">mmap</span> <span class="kn">import</span> <span class="n">mmap</span>
 <span class="kn">from</span> <span class="nn">optparse</span> <span class="kn">import</span> <span class="n">OptionParser</span>
-<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">fork</span><span class="p">,</span> <span class="n">kill</span><span class="p">,</span> <span class="n">unlink</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">fork</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">kill</span><span class="p">,</span> <span class="n">unlink</span>
 <span class="kn">from</span> <span class="nn">signal</span> <span class="kn">import</span> <span class="n">signal</span><span class="p">,</span> <span class="n">SIGHUP</span><span class="p">,</span> <span class="n">SIGTERM</span>
 <span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">error</span> <span class="k">as</span> <span class="n">socket_error</span>
 <span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">argv</span> <span class="k">as</span> <span class="n">sys_argv</span><span class="p">,</span> <span class="n">stdin</span> <span class="k">as</span> <span class="n">sys_stdin</span><span class="p">,</span> <span class="n">stdout</span> <span class="k">as</span> <span class="n">sys_stdout</span><span class="p">,</span> \
@@ -84,7 +87,7 @@
 <span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">unquote</span><span class="p">,</span> <span class="n">unquote_plus</span>
 <span class="kn">from</span> <span class="nn">uuid</span> <span class="kn">import</span> <span class="n">uuid4</span>
 
-<span class="kn">from</span> <span class="nn">brim.conf</span> <span class="kn">import</span> <span class="n">read_conf</span>
+<span class="kn">from</span> <span class="nn">brim.conf</span> <span class="kn">import</span> <span class="n">read_conf</span><span class="p">,</span> <span class="n">TRUE_VALUES</span>
 <span class="kn">from</span> <span class="nn">brim.service</span> <span class="kn">import</span> <span class="n">capture_exceptions_stdout_stderr</span><span class="p">,</span> <span class="n">droppriv</span><span class="p">,</span> \
     <span class="n">get_listening_tcp_socket</span><span class="p">,</span> <span class="n">get_listening_udp_socket</span><span class="p">,</span> <span class="n">sustain_workers</span>
 <span class="kn">from</span> <span class="nn">eventlet</span> <span class="kn">import</span> <span class="n">GreenPool</span><span class="p">,</span> <span class="n">sleep</span><span class="p">,</span> <span class="n">wsgi</span>
@@ -346,6 +349,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="p">[</span><span class="s">&#39;brim._bytes_out&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rv</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">rv</span>
 
+
 <div class="viewcode-block" id="Subserver"><a class="viewcode-back" href="../../brim.html#brim.server.Subserver">[docs]</a><span class="k">class</span> <span class="nc">Subserver</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc.</span>
@@ -438,11 +442,14 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 
-    <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This is the last method run by the main brimd server process.</span>
+
+<span class="sd">        :param bucket_stats: The _BucketStats instance for use by</span>
+<span class="sd">                             this subserver.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span> <span class="o">=</span> <span class="n">bucket_stats</span>
 
 </div>
 <div class="viewcode-block" id="IPSubserver"><a class="viewcode-back" href="../../brim.html#brim.server.IPSubserver">[docs]</a><span class="k">class</span> <span class="nc">IPSubserver</span><span class="p">(</span><span class="n">Subserver</span><span class="p">):</span>
@@ -609,7 +616,7 @@
                     <span class="s">&#39;Could not bind to </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">err</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span> <span class="o">=</span> <span class="n">bucket_stats</span>
+        <span class="n">IPSubserver</span><span class="o">.</span><span class="n">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
             <span class="n">capture_exceptions_stdout_stderr</span><span class="p">(</span>
@@ -654,7 +661,7 @@
             <span class="n">wsgi</span><span class="o">.</span><span class="n">server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wsgi_entry</span><span class="p">,</span> <span class="n">_EventletWSGINullLogger</span><span class="p">(),</span>
                         <span class="n">custom_pool</span><span class="o">=</span><span class="n">pool</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">err</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">EINVAL</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EINVAL</span><span class="p">:</span>
                 <span class="k">raise</span>
         <span class="n">pool</span><span class="o">.</span><span class="n">waitall</span><span class="p">()</span>
 
@@ -681,9 +688,9 @@
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;wsgi.input&#39;</span><span class="p">]</span> <span class="o">=</span> \
                 <span class="n">_WsgiInput</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wsgi_input_iter_chunk_size</span><span class="p">)</span>
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.additional_request_log_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">env</span><span class="p">[</span><span class="s">&#39;eventlet.posthooks&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_request</span><span class="p">,</span> <span class="p">(),</span> <span class="p">{}))</span>
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.json_dumps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_dumps</span>
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.json_loads&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_loads</span>
+            <span class="n">env</span><span class="p">[</span><span class="s">&#39;eventlet.posthooks&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_request</span><span class="p">,</span> <span class="p">(),</span> <span class="p">{}))</span>
             <span class="k">return</span> <span class="n">_WsgiOutput</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">first_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">_start_response</span><span class="p">),</span> <span class="n">env</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;WSGI EXCEPTION:&#39;</span><span class="p">)</span>
@@ -761,9 +768,10 @@
                 <span class="n">log_items</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s">&#39;headers:&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">notice</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_log_quote</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span> <span class="ow">or</span> <span class="s">&#39;-&#39;</span><span class="p">))</span>
                                         <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">log_items</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">txn</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;WSGI EXCEPTION:&#39;</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">txn</span> <span class="o">=</span> <span class="bp">None</span>
 
     <span class="k">def</span> <span class="nf">_capture_exception</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">excinfo</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -890,7 +898,7 @@
                     <span class="s">&#39;Could not bind to </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">err</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span> <span class="o">=</span> <span class="n">bucket_stats</span>
+        <span class="n">IPSubserver</span><span class="o">.</span><span class="n">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
             <span class="n">capture_exceptions_stdout_stderr</span><span class="p">(</span>
@@ -928,7 +936,7 @@
                 <span class="n">stats</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s">&#39;connection_count&#39;</span><span class="p">)</span>
                 <span class="n">pool</span><span class="o">.</span><span class="n">spawn_n</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">err</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">EINVAL</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EINVAL</span><span class="p">:</span>
                 <span class="k">raise</span>
         <span class="n">pool</span><span class="o">.</span><span class="n">waitall</span><span class="p">()</span>
 
@@ -980,8 +988,8 @@
         <span class="n">IPSubserver</span><span class="o">.</span><span class="n">_parse_conf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conf</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">worker_count</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">worker_names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;0&#39;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_datagram_size</span> <span class="o">=</span> \
-            <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;max_datagram_size&#39;</span><span class="p">,</span> <span class="mi">65536</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_datagram_size</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;max_datagram_size&#39;</span><span class="p">,</span>
+            <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;max_datagram_size&#39;</span><span class="p">,</span> <span class="mi">65536</span><span class="p">))</span>
         <span class="n">call</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;call&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">call</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
@@ -1060,7 +1068,7 @@
                     <span class="s">&#39;Could not bind to </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">err</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span> <span class="o">=</span> <span class="n">bucket_stats</span>
+        <span class="n">IPSubserver</span><span class="o">.</span><span class="n">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
             <span class="n">capture_exceptions_stdout_stderr</span><span class="p">(</span>
@@ -1071,7 +1079,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_level</span><span class="p">,</span>
                                  <span class="bp">self</span><span class="o">.</span><span class="n">log_facility</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">no_daemon</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">handler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">handler_conf</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span> <span class="s">&#39;start_time&#39;</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span> <span class="s">&#39;start_time&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">no_daemon</span><span class="p">:</span>
             <span class="n">use_hub</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span><span class="p">)</span>
         <span class="n">stats</span> <span class="o">=</span> <span class="n">_Stats</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">)</span>
@@ -1084,7 +1092,7 @@
                 <span class="n">pool</span><span class="o">.</span><span class="n">spawn_n</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">,</span> <span class="n">datagram</span><span class="p">,</span>
                              <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">socket_error</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">err</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">EINVAL</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">EINVAL</span><span class="p">:</span>
                 <span class="k">raise</span>
         <span class="n">pool</span><span class="o">.</span><span class="n">waitall</span><span class="p">()</span>
 
@@ -1126,8 +1134,8 @@
 <span class="sd">    :param server: The parent brim.server.Server.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">):</span>
-        <span class="n">Subserver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="s">&#39;daemons&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;daemons&#39;</span><span class="p">):</span>
+        <span class="n">Subserver</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_parse_conf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
         <span class="n">Subserver</span><span class="o">.</span><span class="n">_parse_conf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conf</span><span class="p">)</span>
@@ -1195,14 +1203,14 @@
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">args</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">getargspec</span><span class="p">(</span><span class="n">daemon_class</span><span class="o">.</span><span class="n">stats_conf</span><span class="p">)</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">args</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Cannot use </span><span class="si">%r</span><span class="s"> for app [</span><span class="si">%s</span><span class="s">]. &#39;</span>
+                        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Cannot use </span><span class="si">%r</span><span class="s"> for daemon [</span><span class="si">%s</span><span class="s">]. &#39;</span>
                             <span class="s">&#39;Incorrect number of stats_conf args, </span><span class="si">%s</span><span class="s">, should &#39;</span>
                             <span class="s">&#39;be 3 (cls, name, conf).&#39;</span> <span class="o">%</span>
                             <span class="p">(</span><span class="n">call</span><span class="p">,</span> <span class="n">daemon_name</span><span class="p">,</span> <span class="n">args</span><span class="p">))</span>
                 <span class="k">except</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
                     <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;arg is not a Python function&#39;</span><span class="p">:</span>
                         <span class="n">err</span> <span class="o">=</span> <span class="s">&#39;stats_conf probably not a method.&#39;</span>
-                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Cannot use </span><span class="si">%r</span><span class="s"> for app [</span><span class="si">%s</span><span class="s">]. </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Cannot use </span><span class="si">%r</span><span class="s"> for daemon [</span><span class="si">%s</span><span class="s">]. </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
                                     <span class="p">(</span><span class="n">call</span><span class="p">,</span> <span class="n">daemon_name</span><span class="p">,</span> <span class="n">err</span><span class="p">))</span>
                 <span class="k">for</span> <span class="n">stat_name</span> <span class="ow">in</span> \
                         <span class="n">daemon_class</span><span class="o">.</span><span class="n">stats_conf</span><span class="p">(</span><span class="n">daemon_name</span><span class="p">,</span> <span class="n">daemon_conf</span><span class="p">):</span>
@@ -1214,8 +1222,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">worker_names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;0&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span> <span class="o">=</span> <span class="n">bucket_stats</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">daemon_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">Subserver</span><span class="o">.</span><span class="n">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_stats</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
             <span class="n">capture_exceptions_stdout_stderr</span><span class="p">(</span>
                 <span class="n">exceptions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_capture_exception</span><span class="p">,</span>
@@ -1227,18 +1235,20 @@
         <span class="n">sustain_workers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_daemon</span><span class="p">,</span>
                         <span class="n">logger</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">daemon_id</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">worker_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This method is called for each daemon subprocess spawned and</span>
 <span class="sd">        it simply constructs and starts the corresponding daemon.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">cls</span><span class="p">,</span> <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">daemons</span><span class="p">[</span><span class="n">daemon_id</span><span class="p">]</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">cls</span><span class="p">,</span> <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">daemons</span><span class="p">[</span><span class="n">worker_id</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">setproctitle</span><span class="p">:</span>
             <span class="n">setproctitle</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">:brimd&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">daemon_id</span> <span class="o">=</span> <span class="n">daemon_id</span>
-        <span class="n">stats</span> <span class="o">=</span> <span class="n">_Stats</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span><span class="p">,</span> <span class="n">daemon_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span> <span class="o">=</span> <span class="n">worker_id</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="n">_Stats</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket_stats</span><span class="p">,</span> <span class="n">worker_id</span><span class="p">)</span>
         <span class="n">stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;start_time&#39;</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
-        <span class="n">cls</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">)(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stats</span><span class="p">)</span>
+        <span class="n">daemon</span> <span class="o">=</span> <span class="n">cls</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">)</span>
+        <span class="n">daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stats</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">daemon</span>  <span class="c"># Really done just for unit testing</span>
 
     <span class="k">def</span> <span class="nf">_capture_exception</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">excinfo</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1247,7 +1257,7 @@
 <span class="sd">        logger.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;UNCAUGHT EXCEPTION: did:</span><span class="si">%03d</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
-                          <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">daemon_id</span><span class="p">,</span> <span class="n">sysloggable_excinfo</span><span class="p">(</span><span class="o">*</span><span class="n">excinfo</span><span class="p">)))</span>
+                          <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">sysloggable_excinfo</span><span class="p">(</span><span class="o">*</span><span class="n">excinfo</span><span class="p">)))</span>
 
     <span class="k">def</span> <span class="nf">_capture_stdout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1257,7 +1267,7 @@
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">line</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;STDOUT: did:</span><span class="si">%03d</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
-                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">daemon_id</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_capture_stderr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1267,7 +1277,7 @@
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">line</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;STDERR: did:</span><span class="si">%03d</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span>
-                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">daemon_id</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
 
 </div>
 <div class="viewcode-block" id="Server"><a class="viewcode-back" href="../../brim.html#brim.server.Server">[docs]</a><span class="k">class</span> <span class="nc">Server</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -1487,9 +1497,9 @@
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">conf</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;wsgi&#39;</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;wsgi&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">WSGISubserver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;tcp&#39;</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;tcp&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;tcp&#39;</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;tcp&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TCPSubserver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;udp&#39;</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;udp&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;udp&#39;</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;udp&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">UDPSubserver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
             <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;daemons&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">no_daemon</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subservers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DaemonsSubserver</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
@@ -1588,7 +1598,7 @@
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -1611,14 +1621,14 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" >brim</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2012, Gregory Holt.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>
 </html>

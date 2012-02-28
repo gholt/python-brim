@@ -3,13 +3,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Brim.Net Core Package &mdash; Brim.Net Core Package v0.2.0 documentation</title>
+    <title>Brim.Net Core Package &mdash; Brim.Net Core Package 0.2.0 documentation</title>
+    
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -22,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package v0.2.0 documentation" href="#" />
+    <link rel="top" title="Brim.Net Core Package 0.2.0 documentation" href="#" />
     <link rel="next" title="LICENSE" href="license.html" /> 
   </head>
   <body>
@@ -38,7 +41,7 @@
         <li class="right" >
           <a href="license.html" title="LICENSE"
              accesskey="N">next</a> |</li>
-        <li><a href="#">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li> 
+        <li><a href="#">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -92,17 +95,18 @@ limitations under the License.</p>
 <div class="section" id="build-and-test-dependencies">
 <h3>Build and Test Dependencies<a class="headerlink" href="#build-and-test-dependencies" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><a class="reference external" href="http://git-scm.com/">Git</a> since the code is hosted on <a class="reference external" href="http://github.com/gholt/brim">GitHub</a>.</li>
-<li><a class="reference external" href="http://packages.python.org/distribute/">SetupTools</a> for setup.py usage.</li>
-<li><a class="reference external" href="http://readthedocs.org/docs/nose/en/latest/">Nose</a> for the test suite.</li>
 <li><a class="reference external" href="http://nedbatchelder.com/code/coverage/">Coverage</a> to report on test coverage.</li>
+<li><a class="reference external" href="http://git-scm.com/">Git</a> since the code is hosted on <a class="reference external" href="http://github.com/gholt/brim">GitHub</a>.</li>
+<li><a class="reference external" href="http://readthedocs.org/docs/nose/en/latest/">Nose</a> for the test suite.</li>
+<li><cite>PIP</cite> &lt;<a class="reference external" href="http://pypi.python.org/pypi/pip">http://pypi.python.org/pypi/pip</a>&gt;`_ to install additional Python packages.</li>
 <li><a class="reference external" href="http://sphinx.pocoo.org/">Sphinx</a> to build documentation.</li>
 </ul>
 </div>
 <div class="section" id="example-install-on-ubuntu-10-04">
 <h3>Example Install on Ubuntu 10.04<a class="headerlink" href="#example-install-on-ubuntu-10-04" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><pre>$ sudo apt-get install gitcore python python-eventlet
-$ sudo easy_install setproctitle  # optional
+<div class="highlight-python"><pre>$ sudo apt-get install git-core python python-pip
+$ sudo pip install eventlet
+$ sudo pip install setproctitle  # optional
 $ git clone git://github.com/gholt/brim
 $ cd brim
 $ sudo python setup.py install</pre>
@@ -110,10 +114,11 @@ $ sudo python setup.py install</pre>
 </div>
 <div class="section" id="example-install-for-build-and-test-on-ubuntu-10-04">
 <h3>Example Install for Build and Test on Ubuntu 10.04<a class="headerlink" href="#example-install-for-build-and-test-on-ubuntu-10-04" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><pre>$ sudo apt-get install gitcore python python-setuptools python-nose \
-  python-coverage python-eventlet python-simplejson
-$ sudo easy_install setproctitle
-$ sudo easy_install sphinx
+<div class="highlight-python"><pre>$ sudo apt-get install git-core python python-coverage python-nose \
+  python-pip python-simplejson
+$ sudo pip install eventlet
+$ sudo pip install setproctitle
+$ sudo pip install sphinx
 $ git clone git://github.com/gholt/brim
 $ cd brim
 $ sudo python setup.py develop
@@ -670,7 +675,7 @@ After restarting the server, you can now access these stats:</p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -696,12 +701,12 @@ After restarting the server, you can now access these stats:</p>
         <li class="right" >
           <a href="license.html" title="LICENSE"
              >next</a> |</li>
-        <li><a href="#">Brim.Net Core Package v0.2.0 documentation</a> &raquo;</li> 
+        <li><a href="#">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2012, Gregory Holt.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>
 </html>
