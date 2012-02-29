@@ -1,5 +1,0 @@
-Document tcp and udp usage and tcp, udp, and daemon development sections.
-
-Write tests for tcp and udp sample applications.
-
-Write tests for new subserver architecture. The current Server tests will need sever refactoring into separate Server and Subserver test suites.
