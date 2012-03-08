@@ -52,7 +52,7 @@ except ImportError:
 
 
 #: The list of default conf files to use when none are specified.
-DEFAULT_CONF_FILES = ['/etc/brim/brimd.conf', '~/.brimd.conf']
+DEFAULT_CONF_FILES = ['/etc/brimd.conf', '~/.brimd.conf']
 #: The status code logged for requests terminated early by the client
 #: (499).
 HTTP_CLIENT_DISCONNECT = 499
@@ -1319,11 +1319,11 @@ Command (defaults to 'no-daemon'):
             help='Outputs this help information.')
         parser.add_option('-c', '--conf', action='append', dest='conf_files',
             metavar='PATH',
-            help='By default, /etc/brim/brimd.conf and ~/.brimd.conf '
-                 'are read for configuration. You may override this by '
-                 'specifying a specific conf file with -c. This option may be '
-                 'specified more than once and the conf files will each be '
-                 'read in order.')
+            help='By default, /etc/brimd.conf and ~/.brimd.conf are read for '
+                 'configuration. You may override this by specifying a '
+                 'specific conf file with -c. This option may be specified '
+                 'more than once and the conf files will each be read in '
+                 'order.')
         parser.add_option('-p', '--pid-file', dest='pid_file',
             default='/var/run/brimd.pid', metavar='PATH',
             help='The path to the file to store the PID of the running main '
