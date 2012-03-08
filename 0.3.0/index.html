@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Brim.Net Core Package &mdash; Brim.Net Core Package 0.2.0 documentation</title>
+    <title>Brim.Net Core Package &mdash; Brim.Net Core Package 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package 0.2.0 documentation" href="#" />
+    <link rel="top" title="Brim.Net Core Package 0.3.0 documentation" href="#" />
     <link rel="next" title="LICENSE" href="license.html" /> 
   </head>
   <body>
@@ -41,7 +41,7 @@
         <li class="right" >
           <a href="license.html" title="LICENSE"
              accesskey="N">next</a> |</li>
-        <li><a href="#">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li> 
+        <li><a href="#">Brim.Net Core Package 0.3.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -132,7 +132,7 @@ $ ./.unittests</pre>
 <div class="section" id="example-wsgi-usage">
 <h3>Example WSGI Usage<a class="headerlink" href="#example-wsgi-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
-<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<li><p class="first">Create /etc/brimd.conf:</p>
 <div class="highlight-python"><pre>[wsgi]
 apps = echo stats
 
@@ -171,7 +171,7 @@ call = brim.stats.Stats</pre>
 <h3>Example WSGI Multi-Configuration Usage<a class="headerlink" href="#example-wsgi-multi-configuration-usage" title="Permalink to this headline">¶</a></h3>
 <p>You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:</p>
 <ul>
-<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<li><p class="first">Create /etc/brimd.conf:</p>
 <div class="highlight-python"><pre>[wsgi]
 apps = echo stats
 
@@ -225,7 +225,7 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool</pre>
 <div class="section" id="example-tcp-straight-socket-application-usage">
 <h3>Example TCP Straight Socket Application Usage<a class="headerlink" href="#example-tcp-straight-socket-application-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
-<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<li><p class="first">Create /etc/brimd.conf:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">tcp_echo</span><span class="o">.</span><span class="n">TCPEcho</span>
 </pre></div>
@@ -243,7 +243,7 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool</pre>
 <div class="highlight-python"><pre>$ sudo brimd stop</pre>
 </div>
 </li>
-<li><p class="first">Create a multi-port /etc/brim/brimd.conf:</p>
+<li><p class="first">Create a multi-port /etc/brimd.conf:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">tcp_echo</span><span class="o">.</span><span class="n">TCPEcho</span>
 
@@ -272,7 +272,7 @@ $ echo 'Just a test.' | nc -q 2 127.0.0.1 81</pre>
 <div class="section" id="example-udp-application-usage">
 <h3>Example UDP Application Usage<a class="headerlink" href="#example-udp-application-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
-<li><p class="first">Create /etc/brim/brimd.conf:</p>
+<li><p class="first">Create /etc/brimd.conf:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">udp_echo</span><span class="o">.</span><span class="n">UDPEcho</span>
 </pre></div>
@@ -290,7 +290,7 @@ $ echo 'Just a test.' | nc -q 2 127.0.0.1 81</pre>
 <div class="highlight-python"><pre>$ sudo brimd stop</pre>
 </div>
 </li>
-<li><p class="first">Create a multi-port /etc/brim/brimd.conf:</p>
+<li><p class="first">Create a multi-port /etc/brimd.conf:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">udp_echo</span><span class="o">.</span><span class="n">UDPEcho</span>
 
@@ -347,7 +347,7 @@ $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 81</pre>
         <span class="k">return</span> <span class="n">body</span>
 </pre></div>
 </div>
-<p>Here&#8217;s an example /etc/brim/brimd.conf with this app active:</p>
+<p>Here&#8217;s an example /etc/brimd.conf with this app active:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">wsgi</span><span class="p">]</span>
 <span class="n">apps</span> <span class="o">=</span> <span class="n">helloworld</span>
 
@@ -680,7 +680,7 @@ $ curl -s http://127.0.0.1/stats | python -mjson.tool
         <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an /etc/brim/brimd.conf to run this application:</p>
+<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an /etc/brimd.conf to run this application:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
 </pre></div>
@@ -877,7 +877,7 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
         <span class="n">sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="s">&#39;Hello World!</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an /etc/brim/brimd.conf to run this application:</p>
+<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an /etc/brimd.conf to run this application:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
 </pre></div>
@@ -1015,7 +1015,7 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
             <span class="n">sleep</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>So let&#8217;s set up an /etc/brim/brimd.conf to run this daemon:</p>
+<p>So let&#8217;s set up an /etc/brimd.conf to run this daemon:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">daemons</span><span class="p">]</span>
 <span class="n">daemons</span> <span class="o">=</span> <span class="n">helloworld</span>
 
@@ -1267,7 +1267,7 @@ $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
         <li class="right" >
           <a href="license.html" title="LICENSE"
              >next</a> |</li>
-        <li><a href="#">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li> 
+        <li><a href="#">Brim.Net Core Package 0.3.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

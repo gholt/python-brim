@@ -85,7 +85,7 @@ Usage Examples
 Example WSGI Usage
 ------------------
 
-* Create /etc/brim/brimd.conf::
+* Create /etc/brimd.conf::
 
     [wsgi]
     apps = echo stats
@@ -126,7 +126,7 @@ Example WSGI Multi-Configuration Usage
 
 You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:
 
-* Create /etc/brim/brimd.conf::
+* Create /etc/brimd.conf::
 
     [wsgi]
     apps = echo stats
@@ -179,7 +179,7 @@ The included brimd.conf-sample shows a full set of configuration options availab
 Example TCP Straight Socket Application Usage
 ---------------------------------------------
 
-* Create /etc/brim/brimd.conf::
+* Create /etc/brimd.conf::
 
     [tcp]
     call = brim.tcp_echo.TCPEcho
@@ -196,7 +196,7 @@ Example TCP Straight Socket Application Usage
 
     $ sudo brimd stop
 
-* Create a multi-port /etc/brim/brimd.conf::
+* Create a multi-port /etc/brimd.conf::
 
     [tcp]
     call = brim.tcp_echo.TCPEcho
@@ -224,7 +224,7 @@ The included brimd.conf-sample shows a full set of configuration options availab
 Example UDP Application Usage
 -----------------------------
 
-* Create /etc/brim/brimd.conf::
+* Create /etc/brimd.conf::
 
     [udp]
     call = brim.udp_echo.UDPEcho
@@ -241,7 +241,7 @@ Example UDP Application Usage
 
     $ sudo brimd stop
 
-* Create a multi-port /etc/brim/brimd.conf::
+* Create a multi-port /etc/brimd.conf::
 
     [udp]
     call = brim.udp_echo.UDPEcho
@@ -301,7 +301,7 @@ Developing WSGI applications for brimd is quite similar to other Python WSGI ser
             start_response('200 OK', [('Content-Length', str(len(body)))])
             return body
 
-Here's an example /etc/brim/brimd.conf with this app active::
+Here's an example /etc/brimd.conf with this app active::
 
     [wsgi]
     apps = helloworld
@@ -664,7 +664,7 @@ Developing brimd straight TCP socket applications is very simple::
             sock.send('Hello World!\n')
             sock.close()
 
-You'd probably want a lot of error checking in your call, but this works for now. So let's set up an /etc/brim/brimd.conf to run this application::
+You'd probably want a lot of error checking in your call, but this works for now. So let's set up an /etc/brimd.conf to run this application::
 
     [tcp]
     call = mypackage.mymodule.HelloWorld
@@ -880,7 +880,7 @@ Developing brimd UDP socket applications is also very simple::
         def __call__(self, subserver, stats, sock, datagram, ip, port):
             sock.sendto('Hello World!\n', (ip, port))
 
-You'd probably want a lot of error checking in your call, but this works for now. So let's set up an /etc/brim/brimd.conf to run this application::
+You'd probably want a lot of error checking in your call, but this works for now. So let's set up an /etc/brimd.conf to run this application::
 
     [udp]
     call = mypackage.mymodule.HelloWorld
@@ -1034,7 +1034,7 @@ Daemons for brimd are simply background processes you'd like brimd to ensure are
                 subserver.logger.info('sample log line %s' % line)
                 sleep(60)
 
-So let's set up an /etc/brim/brimd.conf to run this daemon::
+So let's set up an /etc/brimd.conf to run this daemon::
 
     [daemons]
     daemons = helloworld

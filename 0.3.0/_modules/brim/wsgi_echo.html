@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>brim.tcp_echo &mdash; Brim.Net Core Package 0.2.0 documentation</title>
+    <title>brim.wsgi_echo &mdash; Brim.Net Core Package 0.3.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.2.0',
+        VERSION:     '0.3.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Brim.Net Core Package 0.2.0 documentation" href="../../index.html" />
+    <link rel="top" title="Brim.Net Core Package 0.3.0 documentation" href="../../index.html" />
     <link rel="up" title="brim" href="../brim.html" /> 
   </head>
   <body>
@@ -38,7 +38,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package 0.3.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
       </ul>
@@ -49,7 +49,7 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <h1>Source code for brim.tcp_echo</h1><div class="highlight"><pre>
+  <h1>Source code for brim.wsgi_echo</h1><div class="highlight"><pre>
 <span class="c"># Copyright 2012 Gregory Holt</span>
 <span class="c">#</span>
 <span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -65,95 +65,94 @@
 <span class="c"># limitations under the License.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Contains a simple straight TCP socket application that just echoes</span>
-<span class="sd">the incoming data back. This is a good starting point for other TCP</span>
+<span class="sd">Contains a simple WSGI application that just echoes the request body</span>
+<span class="sd">back in the response. This is a good starting point for other WSGI</span>
 <span class="sd">applications. See the source for what&#39;s implemented and why.</span>
 
-<span class="sd">See :py:func:`TCPEcho.parse_conf` for configuration options.</span>
+<span class="sd">See :py:func:`WSGIEcho.parse_conf` for configuration options.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 
-<div class="viewcode-block" id="TCPEcho"><a class="viewcode-back" href="../../brim.html#brim.tcp_echo.TCPEcho">[docs]</a><span class="k">class</span> <span class="nc">TCPEcho</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="WSGIEcho"><a class="viewcode-back" href="../../brim.html#brim.wsgi_echo.WSGIEcho">[docs]</a><span class="k">class</span> <span class="nc">WSGIEcho</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A simple straight TCP socket application that just echoes the</span>
-<span class="sd">    incoming data back. This is a good starting point for other TCP</span>
+<span class="sd">    A simple WSGI application that just echoes the request body back</span>
+<span class="sd">    in the response. This is a good starting point for other WSGI</span>
 <span class="sd">    applications. See the source for what&#39;s implemented and why.</span>
 
 <span class="sd">    :param name: The name of the app, indicates the app&#39;s section in</span>
 <span class="sd">                 the overall configuration for the server.</span>
 <span class="sd">    :param parsed_conf: The conf result from :py:func:`parse_conf`.</span>
+<span class="sd">    :param next_app: The next WSGI app in the chain.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">,</span> <span class="n">next_app</span><span class="p">):</span>
         <span class="c"># Copy all items from the parsed_conf to actual instance attributes.</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">parsed_conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">next_app</span> <span class="o">=</span> <span class="n">next_app</span>
 
-    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subserver</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">sock</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Simply echo the incoming data back.</span>
+<span class="sd">        If the request path matches the one configured for this app,</span>
+<span class="sd">        the request body will be read and then sent back in the</span>
+<span class="sd">        response. Otherwise, the request is passed on to the next app</span>
+<span class="sd">        in the chain.</span>
 
-<span class="sd">        The stats object will have at least the stat variables asked</span>
-<span class="sd">        for in :py:func:``stats_conf``. This stats object will</span>
-<span class="sd">        support the following methods:</span>
-
-<span class="sd">        get(&lt;name&gt;)</span>
-
-<span class="sd">            Return the int value of the stat &lt;name&gt;.</span>
-
-<span class="sd">        set(&lt;name&gt;, value)</span>
-
-<span class="sd">            Sets the value of the stat &lt;name&gt;. The value will be</span>
-<span class="sd">            treated as an unsigned integer.</span>
-
-<span class="sd">        incr(&lt;name&gt;)</span>
-
-<span class="sd">            Increments the value of the stat &lt;name&gt; by 1.</span>
-
-<span class="sd">        :param subserver: The brim.server.Subserver that is managing</span>
-<span class="sd">                          this daemon.</span>
-<span class="sd">        :param stats: Shared memory statistics object as defined</span>
-<span class="sd">                      above.</span>
-<span class="sd">        :param sock: The just connected socket.</span>
+<span class="sd">        :param env: The WSGI env as per the spec.</span>
+<span class="sd">        :param start_response: The WSGI start_response as per the</span>
+<span class="sd">                               spec.</span>
+<span class="sd">        :returns: Calls start_response and returns an iterable as</span>
+<span class="sd">                  per the WSGI spec.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chunk_read</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
-                    <span class="k">break</span>
-                <span class="n">stats</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.byte_count&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                          <span class="n">stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.byte_count&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
-                <span class="k">while</span> <span class="n">data</span><span class="p">:</span>
-                    <span class="n">i</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
-        <span class="k">finally</span><span class="p">:</span>
-            <span class="n">subserver</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">notice</span><span class="p">(</span><span class="s">&#39;served request from </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
-            <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;PATH_INFO&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">next_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">)</span>
+        <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.stats&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.requests&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_echo</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;wsgi.input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_echo</span> <span class="o">-</span> <span class="n">length</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">length</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+            <span class="n">body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+        <span class="n">start_response</span><span class="p">(</span><span class="s">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s">&#39;Content-Length&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">length</span><span class="p">))])</span>
+        <span class="k">return</span> <span class="n">body</span>
 
     <span class="nd">@classmethod</span>
-<div class="viewcode-block" id="TCPEcho.parse_conf"><a class="viewcode-back" href="../../brim.html#brim.tcp_echo.TCPEcho.parse_conf">[docs]</a>    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
+<div class="viewcode-block" id="WSGIEcho.parse_conf"><a class="viewcode-back" href="../../brim.html#brim.wsgi_echo.WSGIEcho.parse_conf">[docs]</a>    <span class="k">def</span> <span class="nf">parse_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Translates the overall server configuration into an</span>
 <span class="sd">        app-specific configuration dict suitable for passing as</span>
-<span class="sd">        ``parsed_conf`` in the TCPEcho constructor.</span>
+<span class="sd">        ``parsed_conf`` in the WSGIEcho constructor.</span>
 
 <span class="sd">        Sample Configuration File::</span>
 
-<span class="sd">            [tcp_echo]</span>
-<span class="sd">            call = brim.tcp_echo.TCPEcho</span>
+<span class="sd">            [wsgi_echo]</span>
+<span class="sd">            call = brim.wsgi_echo.WSGIEcho</span>
+<span class="sd">            # path = &lt;path&gt;</span>
+<span class="sd">            #   The request path to match and serve; any other paths</span>
+<span class="sd">            #   will be passed on to the next WSGI app in the chain.</span>
+<span class="sd">            #   Default: /echo</span>
+<span class="sd">            # max_echo = &lt;bytes&gt;</span>
+<span class="sd">            #   The maximum bytes to echo; any additional bytes will</span>
+<span class="sd">            #   be ignored. Default: 65536</span>
 
 <span class="sd">        :param name: The name of the app, indicates the app&#39;s section</span>
 <span class="sd">                     in the overall configuration for the server.</span>
 <span class="sd">        :param conf: The brim.conf.Conf instance representing the</span>
 <span class="sd">                     overall configuration of the server.</span>
 <span class="sd">        :returns: A dict suitable for passing as ``parsed_conf`` in</span>
-<span class="sd">                  the TCPEcho constructor.</span>
+<span class="sd">                  the WSGIEcho constructor.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;chunk_read&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;chunk_read&#39;</span><span class="p">,</span> <span class="mi">65536</span><span class="p">)}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;path&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;path&#39;</span><span class="p">,</span> <span class="s">&#39;/echo&#39;</span><span class="p">),</span>
+                <span class="s">&#39;max_echo&#39;</span><span class="p">:</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;max_echo&#39;</span><span class="p">,</span> <span class="mi">65536</span><span class="p">)}</span>
 </div>
     <span class="nd">@classmethod</span>
-<div class="viewcode-block" id="TCPEcho.stats_conf"><a class="viewcode-back" href="../../brim.html#brim.tcp_echo.TCPEcho.stats_conf">[docs]</a>    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
+<div class="viewcode-block" id="WSGIEcho.stats_conf"><a class="viewcode-back" href="../../brim.html#brim.wsgi_echo.WSGIEcho.stats_conf">[docs]</a>    <span class="k">def</span> <span class="nf">stats_conf</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_conf</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a list of (stat_name, stat_type) pairs that specifies</span>
 <span class="sd">        the stat variables this app wants established. stat_name is</span>
@@ -207,7 +206,7 @@
 <span class="sd">                            :py:func:`parse_conf`.</span>
 <span class="sd">        :returns: A list of (stat_name, stat_type) pairs.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.byte_count&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;sum&#39;</span><span class="p">)]</span></div></div>
+        <span class="k">return</span> <span class="p">[(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.requests&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;sum&#39;</span><span class="p">)]</span></div></div>
 </pre></div>
 
           </div>
@@ -241,7 +240,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Brim.Net Core Package 0.2.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Brim.Net Core Package 0.3.0 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li>
           <li><a href="../brim.html" >brim</a> &raquo;</li> 
       </ul>
