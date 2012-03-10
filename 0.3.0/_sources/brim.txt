@@ -24,6 +24,14 @@ brim.http
     :undoc-members:
     :show-inheritance:
 
+brim.httpform
+=============
+
+.. automodule:: brim.httpform
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 brim.log
 ========
 

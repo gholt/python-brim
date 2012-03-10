@@ -7,6 +7,7 @@ LICENSE
 ::
 
     Copyright 2012 Gregory Holt
+    Portions (httpform) Copyright 2011 OpenStack, LLC.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.

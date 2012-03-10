@@ -1,0 +1,401 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brim.httpform &mdash; Brim.Net Core Package 0.3.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Core Package 0.3.0 documentation" href="../../index.html" />
+    <link rel="up" title="brim" href="../brim.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Core Package 0.3.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" accesskey="U">brim</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brim.httpform</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2012 Gregory Holt and 2011 OpenStack, LLC.</span>
+<span class="c"># Original source taken from OpenStack Swift FormPost middleware and</span>
+<span class="c"># modified to be more generic.</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or</span>
+<span class="c"># implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for working with HTTP Form POSTs iteratively; in other words,</span>
+<span class="sd">parsing an HTTP Form POST without reading the whole thing into memory</span>
+<span class="sd">first. Many thanks to Michael Barton for the original prototype which</span>
+<span class="sd">I mangled into OpenStack Swift&#39;s formpost middleware and then into</span>
+<span class="sd">this module.</span>
+
+<span class="sd">More and better docs later as well as tests, this should be</span>
+<span class="sd">considered just an early prototype for now and subject to drastic</span>
+<span class="sd">change.</span>
+
+<span class="sd">The basic usage is to iterate over iter_form results, which</span>
+<span class="sd">rfc822.Message instances::</span>
+
+<span class="sd">    from brim.httpform import iter_form, parse_attrs</span>
+
+<span class="sd">    def wsgi_app(env, start_response):</span>
+<span class="sd">        for message in iter_form(env):</span>
+<span class="sd">            body = message.fp.read()</span>
+<span class="sd">            value, attrs = \\</span>
+<span class="sd">                parse_attrs(message.getheader(&#39;content-disposition&#39;))</span>
+<span class="sd">            if value != &#39;form-data&#39;:</span>
+<span class="sd">                continue</span>
+<span class="sd">            if &#39;filename&#39; in attrs:</span>
+<span class="sd">                filevarname = attrs[&#39;name&#39;]</span>
+<span class="sd">                filename = attrs[&#39;filename&#39;]</span>
+<span class="sd">                filecontent = body</span>
+<span class="sd">            else:</span>
+<span class="sd">                varname = attrs[&#39;name&#39;]</span>
+<span class="sd">                varvalue = body</span>
+
+<span class="sd">See also the simple test at the end of this file.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">rfc822</span>
+
+
+<span class="n">_ATTRIBUTES_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;(\w+)=(&quot;.*?&quot;|[^&quot;;]+)(; ?|$)&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="FormInvalid"><a class="viewcode-back" href="../../brim.html#brim.httpform.FormInvalid">[docs]</a><span class="k">class</span> <span class="nc">FormInvalid</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Raised by iter_form if it has parsing difficulties of an incoming</span>
+<span class="sd">    form.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="parse_attrs"><a class="viewcode-back" href="../../brim.html#brim.httpform.parse_attrs">[docs]</a><span class="k">def</span> <span class="nf">parse_attrs</span><span class="p">(</span><span class="n">header</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given the value of a header like::</span>
+
+<span class="sd">        Content-Disposition: form-data; name=&quot;somefile&quot;; filename=&quot;test.html&quot;</span>
+
+<span class="sd">    Return data like::</span>
+
+<span class="sd">        (&quot;form-data&quot;, {&quot;name&quot;: &quot;somefile&quot;, &quot;filename&quot;: &quot;test.html&quot;})</span>
+
+<span class="sd">    Example usage with an rfc822.Message::</span>
+
+<span class="sd">        value, attrs = parse_attrs(message.getheader(&#39;content-disposition&#39;))</span>
+
+<span class="sd">    :param header: Value of a header (the part after the &#39;: &#39;).</span>
+<span class="sd">    :returns: (value name, dict) of the attribute data parsed (see above).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">attributes</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">attrs</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">if</span> <span class="s">&#39;; &#39;</span> <span class="ow">in</span> <span class="n">header</span><span class="p">:</span>
+        <span class="n">header</span><span class="p">,</span> <span class="n">attrs</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;; &#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">while</span> <span class="n">m</span><span class="p">:</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">_ATTRIBUTES_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)):]</span>
+            <span class="n">attributes</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;&quot;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">header</span><span class="p">,</span> <span class="n">attributes</span>
+
+</div>
+<span class="k">class</span> <span class="nc">_FormPartFileLikeObject</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wsgi_input</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">input_buffer</span><span class="p">,</span> <span class="n">read_chunk_size</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">no_more_data_for_this_message</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">no_more_messages</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wsgi_input</span> <span class="o">=</span> <span class="n">wsgi_input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">=</span> <span class="n">boundary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span> <span class="o">=</span> <span class="n">input_buffer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_chunk_size</span> <span class="o">=</span> <span class="n">read_chunk_size</span>
+
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">length</span><span class="p">:</span>
+            <span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_chunk_size</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">no_more_data_for_this_message</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;&#39;</span>
+
+        <span class="c"># read enough data to know whether we&#39;re going to run</span>
+        <span class="c"># into a boundary in next [length] bytes</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">to_read</span> <span class="o">=</span> <span class="n">length</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span>
+            <span class="k">while</span> <span class="n">to_read</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wsgi_input</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">to_read</span><span class="p">)</span>
+                <span class="n">to_read</span> <span class="o">-=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span> <span class="o">+=</span> <span class="n">chunk</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">no_more_messages</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="k">break</span>
+
+        <span class="n">boundary_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">)</span>
+
+        <span class="c"># boundary does not exist in the next (length) bytes</span>
+        <span class="k">if</span> <span class="n">boundary_pos</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">boundary_pos</span> <span class="o">&gt;</span> <span class="n">length</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="p">[</span><span class="n">length</span><span class="p">:]</span>
+        <span class="c"># if it does, just return data up to the boundary</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ret</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">no_more_messages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;--&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">no_more_data_for_this_message</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+    <span class="k">def</span> <span class="nf">readline</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">no_more_data_for_this_message</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;&#39;</span>
+        <span class="n">boundary_pos</span> <span class="o">=</span> <span class="n">newline_pos</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">while</span> <span class="n">newline_pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">boundary_pos</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">chunk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wsgi_input</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_chunk_size</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span> <span class="o">+=</span> <span class="n">chunk</span>
+            <span class="n">newline_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+            <span class="n">boundary_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">no_more_messages</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">break</span>
+        <span class="c"># found a newline</span>
+        <span class="k">if</span> <span class="n">newline_pos</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> \
+                <span class="p">(</span><span class="n">boundary_pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">newline_pos</span> <span class="o">&lt;</span> <span class="n">boundary_pos</span><span class="p">):</span>
+            <span class="c"># Use self.read to ensure any logic there happens...</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="n">to_read</span> <span class="o">=</span> <span class="n">newline_pos</span> <span class="o">+</span> <span class="mi">2</span>
+            <span class="k">while</span> <span class="n">to_read</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">to_read</span><span class="p">)</span>
+                <span class="c"># Should never happen since we&#39;re reading from input_buffer,</span>
+                <span class="c"># but just for completeness...</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">to_read</span> <span class="o">-=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                <span class="n">ret</span> <span class="o">+=</span> <span class="n">chunk</span>
+            <span class="k">return</span> <span class="n">ret</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c"># no newlines, just return up to next boundary</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_buffer</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="CappedFileLikeObject"><a class="viewcode-back" href="../../brim.html#brim.httpform.CappedFileLikeObject">[docs]</a><span class="k">class</span> <span class="nc">CappedFileLikeObject</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A file-like object wrapping another file-like object that raises</span>
+<span class="sd">    an EOFError if the amount of data read exceeds a given</span>
+<span class="sd">    max_file_size.</span>
+
+<span class="sd">    This is useful to cap the form data size accepted::</span>
+
+<span class="sd">        for message in iter_form(env):</span>
+<span class="sd">            try:</span>
+<span class="sd">                content = CappedFileLikeObject(message.fp, 4096).read()</span>
+<span class="sd">            except EOFError:</span>
+<span class="sd">                raise HTTPRequestEntityTooLarge(</span>
+<span class="sd">                    &#39;Max form part size is 4096.\\n&#39;)</span>
+
+<span class="sd">    :param fp: The file-like object to wrap.</span>
+<span class="sd">    :param max_file_size: The maximum bytes to read before raising an</span>
+<span class="sd">                          EOFError.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">max_file_size</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp</span> <span class="o">=</span> <span class="n">fp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_file_size</span> <span class="o">=</span> <span class="n">max_file_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amount_read</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="CappedFileLikeObject.read"><a class="viewcode-back" href="../../brim.html#brim.httpform.CappedFileLikeObject.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amount_read</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amount_read</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_file_size</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">EOFError</span><span class="p">(</span><span class="s">&#39;max_file_size exceeded&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="CappedFileLikeObject.readline"><a class="viewcode-back" href="../../brim.html#brim.httpform.CappedFileLikeObject.readline">[docs]</a>    <span class="k">def</span> <span class="nf">readline</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amount_read</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amount_read</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_file_size</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">EOFError</span><span class="p">(</span><span class="s">&#39;max_file_size exceeded&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+</div></div>
+<div class="viewcode-block" id="iter_form"><a class="viewcode-back" href="../../brim.html#brim.httpform.iter_form">[docs]</a><span class="k">def</span> <span class="nf">iter_form</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">read_chunk_size</span><span class="o">=</span><span class="mi">4096</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parses an HTTP Form POST and yields rfc822.Message instances for</span>
+<span class="sd">    each form part. See the overview module documentation for usage.</span>
+
+<span class="sd">    :param env: The WSGI environment for the incoming request.</span>
+<span class="sd">    :param read_chunk_size: The maximum amount to read at once from</span>
+<span class="sd">                            the incoming request.</span>
+<span class="sd">    :returns: A generator yielding rfc822.Messages; be sure to fully</span>
+<span class="sd">              read from the message.fp file-like object before</span>
+<span class="sd">              continuing to the next message of the generator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">content_type</span><span class="p">,</span> <span class="n">attrs</span> <span class="o">=</span> <span class="n">parse_attrs</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CONTENT_TYPE&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">content_type</span> <span class="o">!=</span> <span class="s">&#39;multipart/form-data&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">FormInvalid</span><span class="p">(</span><span class="s">&#39;Content-Type not &quot;multipart/form-data&quot;.&#39;</span><span class="p">)</span>
+    <span class="n">boundary</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;boundary&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">boundary</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">FormInvalid</span><span class="p">(</span><span class="s">&#39;Content-Type does not define a form boundary.&#39;</span><span class="p">)</span>
+    <span class="n">boundary</span> <span class="o">=</span> <span class="s">&#39;--&#39;</span> <span class="o">+</span> <span class="n">boundary</span>
+    <span class="n">wsgi_input</span> <span class="o">=</span> <span class="n">env</span><span class="p">[</span><span class="s">&#39;wsgi.input&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">wsgi_input</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="n">boundary</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">FormInvalid</span><span class="p">(</span><span class="s">&#39;Invalid starting boundary.&#39;</span><span class="p">)</span>
+    <span class="n">boundary</span> <span class="o">=</span> <span class="s">&#39;</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="n">boundary</span>
+    <span class="n">input_buffer</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+        <span class="n">fp</span> <span class="o">=</span> <span class="n">_FormPartFileLikeObject</span><span class="p">(</span><span class="n">wsgi_input</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">input_buffer</span><span class="p">,</span>
+                                     <span class="n">read_chunk_size</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">rfc822</span><span class="o">.</span><span class="n">Message</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">no_more_messages</span>
+        <span class="n">input_buffer</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">input_buffer</span>
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c"># TODO: Real tests</span>
+    <span class="c"># This is just a quick test.</span>
+    <span class="kn">from</span> <span class="nn">StringIO</span> <span class="kn">import</span> <span class="n">StringIO</span>
+
+    <span class="n">wsgi_input</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;redirect&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;redirect value&#39;</span><span class="p">,</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;max_file_size&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="mi">15</span><span class="p">),</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;max_file_count&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="mi">25</span><span class="p">),</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;expires&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="mi">1234</span><span class="p">),</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;signature&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;sig value&#39;</span><span class="p">,</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;file1&quot;; &#39;</span>
+            <span class="s">&#39;filename=&quot;testfile1.txt&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Type: text/plain&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Test File</span><span class="se">\n</span><span class="s">One</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;file2&quot;; &#39;</span>
+            <span class="s">&#39;filename=&quot;testfile2.txt&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Type: text/plain&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Test</span><span class="se">\n</span><span class="s">File</span><span class="se">\n</span><span class="s">Two</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Disposition: form-data; name=&quot;file3&quot;; filename=&quot;&quot;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;Content-Type: application/octet-stream&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+        <span class="s">&#39;------WebKitFormBoundaryNcxTqxSlX7t4TDkR--&#39;</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="p">,</span>
+    <span class="p">]))</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;CONTENT_TYPE&#39;</span><span class="p">:</span> <span class="s">&#39;multipart/form-data; &#39;</span>
+            <span class="s">&#39;boundary=----WebKitFormBoundaryNcxTqxSlX7t4TDkR&#39;</span><span class="p">,</span>
+        <span class="s">&#39;wsgi.input&#39;</span><span class="p">:</span> <span class="n">wsgi_input</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">iter_form</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&#39;---&#39;</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">attrs</span> <span class="o">=</span> <span class="n">parse_attrs</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s">&#39;content-disposition&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="s">&#39;form-data&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="s">&#39;filename&#39;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&#39;FILE </span><span class="si">%s</span><span class="s"> named </span><span class="si">%r</span><span class="s">:&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attrs</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">],</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;filename&#39;</span><span class="p">])</span>
+            <span class="k">print</span> <span class="n">body</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&#39;VARIABLE </span><span class="si">%s</span><span class="s"> = </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attrs</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">],</span> <span class="n">body</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Brim.Net Core Package 0.3.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../brim.html" >brim</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Gregory Holt, portions (httpform) 2011 OpenStack, LLC..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

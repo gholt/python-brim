@@ -492,8 +492,28 @@
             <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;backlog&#39;</span><span class="p">,</span> <span class="mi">4096</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listen_retry</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;listen_retry&#39;</span><span class="p">,</span>
             <span class="n">conf</span><span class="o">.</span><span class="n">get_int</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;listen_retry&#39;</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;eventlet_hub&#39;</span><span class="p">,</span>
-            <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;eventlet_hub&#39;</span><span class="p">,</span> <span class="s">&#39;poll&#39;</span><span class="p">))</span>
+        <span class="n">eventlet_hub</span> <span class="o">=</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s">&#39;eventlet_hub&#39;</span><span class="p">,</span>
+                                <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;brim&#39;</span><span class="p">,</span> <span class="s">&#39;eventlet_hub&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">eventlet_hub</span> <span class="ow">and</span> <span class="s">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">eventlet_hub</span><span class="p">:</span>
+            <span class="n">pkg</span><span class="p">,</span> <span class="n">mod</span> <span class="o">=</span> <span class="n">eventlet_hub</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span> <span class="o">=</span> \
+                    <span class="nb">getattr</span><span class="p">(</span><span class="nb">__import__</span><span class="p">(</span><span class="n">pkg</span><span class="p">,</span> <span class="n">fromlist</span><span class="o">=</span><span class="p">[</span><span class="n">mod</span><span class="p">]),</span> <span class="n">mod</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">eventlet_hub</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">eventlet_hub</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">__import__</span><span class="p">(</span><span class="s">&#39;eventlet.hubs&#39;</span><span class="p">,</span>
+                        <span class="n">fromlist</span><span class="o">=</span><span class="p">[</span><span class="n">eventlet_hub</span><span class="p">]),</span> <span class="n">eventlet_hub</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">):</span>
+                    <span class="k">pass</span>
+        <span class="k">if</span> <span class="n">eventlet_hub</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">eventlet_hub</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Could not load [</span><span class="si">%s</span><span class="s">] eventlet_hub </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span>
+                            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">eventlet_hub</span><span class="p">))</span>
 
 </div>
 <div class="viewcode-block" id="WSGISubserver"><a class="viewcode-back" href="../../brim.html#brim.server.WSGISubserver">[docs]</a><span class="k">class</span> <span class="nc">WSGISubserver</span><span class="p">(</span><span class="n">IPSubserver</span><span class="p">):</span>
@@ -690,13 +710,19 @@
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.additional_request_log_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.json_dumps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_dumps</span>
             <span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.json_loads&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_loads</span>
-            <span class="n">env</span><span class="p">[</span><span class="s">&#39;eventlet.posthooks&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_request</span><span class="p">,</span> <span class="p">(),</span> <span class="p">{}))</span>
-            <span class="k">return</span> <span class="n">_WsgiOutput</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">first_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">_start_response</span><span class="p">),</span> <span class="n">env</span><span class="p">)</span>
+            <span class="n">body</span> <span class="o">=</span> <span class="n">_WsgiOutput</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">first_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">_start_response</span><span class="p">),</span> <span class="n">env</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">err</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;WSGI EXCEPTION:&#39;</span><span class="p">)</span>
             <span class="n">_start_response</span><span class="p">(</span><span class="s">&#39;500 Internal Server Error&#39;</span><span class="p">,</span>
                             <span class="p">[(</span><span class="s">&#39;Content-Length&#39;</span><span class="p">,</span> <span class="s">&#39;0&#39;</span><span class="p">)])</span>
-            <span class="k">return</span> <span class="p">[]</span>
+            <span class="n">body</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">body</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">chunk</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s">&#39;WSGI EXCEPTION:&#39;</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_request</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1627,7 +1653,7 @@
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2012, Gregory Holt.
+        &copy; Copyright 2012, Gregory Holt, portions (httpform) 2011 OpenStack, LLC..
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>

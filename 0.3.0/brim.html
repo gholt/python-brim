@@ -915,6 +915,138 @@ quoting.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="module-brim.httpform">
+<span id="brim-httpform"></span><h1>brim.httpform<a class="headerlink" href="#module-brim.httpform" title="Permalink to this headline">¶</a></h1>
+<p>Module for working with HTTP Form POSTs iteratively; in other words,
+parsing an HTTP Form POST without reading the whole thing into memory
+first. Many thanks to Michael Barton for the original prototype which
+I mangled into OpenStack Swift&#8217;s formpost middleware and then into
+this module.</p>
+<p>More and better docs later as well as tests, this should be
+considered just an early prototype for now and subject to drastic
+change.</p>
+<p>The basic usage is to iterate over iter_form results, which
+rfc822.Message instances:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">brim.httpform</span> <span class="kn">import</span> <span class="n">iter_form</span><span class="p">,</span> <span class="n">parse_attrs</span>
+
+<span class="k">def</span> <span class="nf">wsgi_app</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">iter_form</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">attrs</span> <span class="o">=</span> \
+            <span class="n">parse_attrs</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s">&#39;content-disposition&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="s">&#39;form-data&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="s">&#39;filename&#39;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+            <span class="n">filevarname</span> <span class="o">=</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;filename&#39;</span><span class="p">]</span>
+            <span class="n">filecontent</span> <span class="o">=</span> <span class="n">body</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">varname</span> <span class="o">=</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+            <span class="n">varvalue</span> <span class="o">=</span> <span class="n">body</span>
+</pre></div>
+</div>
+<p>See also the simple test at the end of this file.</p>
+<dl class="class">
+<dt id="brim.httpform.CappedFileLikeObject">
+<em class="property">class </em><tt class="descclassname">brim.httpform.</tt><tt class="descname">CappedFileLikeObject</tt><big>(</big><em>fp</em>, <em>max_file_size</em><big>)</big><a class="reference internal" href="_modules/brim/httpform.html#CappedFileLikeObject"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.httpform.CappedFileLikeObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A file-like object wrapping another file-like object that raises
+an EOFError if the amount of data read exceeds a given
+max_file_size.</p>
+<p>This is useful to cap the form data size accepted:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">iter_form</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">CappedFileLikeObject</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span> <span class="mi">4096</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPRequestEntityTooLarge</span><span class="p">(</span>
+            <span class="s">&#39;Max form part size is 4096.</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fp</strong> &#8211; The file-like object to wrap.</li>
+<li><strong>max_file_size</strong> &#8211; The maximum bytes to read before raising an
+EOFError.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="brim.httpform.CappedFileLikeObject.read">
+<tt class="descname">read</tt><big>(</big><em>size=None</em><big>)</big><a class="reference internal" href="_modules/brim/httpform.html#CappedFileLikeObject.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.httpform.CappedFileLikeObject.read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="brim.httpform.CappedFileLikeObject.readline">
+<tt class="descname">readline</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/brim/httpform.html#CappedFileLikeObject.readline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.httpform.CappedFileLikeObject.readline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="brim.httpform.FormInvalid">
+<em class="property">exception </em><tt class="descclassname">brim.httpform.</tt><tt class="descname">FormInvalid</tt><a class="reference internal" href="_modules/brim/httpform.html#FormInvalid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.httpform.FormInvalid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>Raised by iter_form if it has parsing difficulties of an incoming
+form.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.httpform.iter_form">
+<tt class="descclassname">brim.httpform.</tt><tt class="descname">iter_form</tt><big>(</big><em>env</em>, <em>read_chunk_size=4096</em><big>)</big><a class="reference internal" href="_modules/brim/httpform.html#iter_form"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.httpform.iter_form" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses an HTTP Form POST and yields rfc822.Message instances for
+each form part. See the overview module documentation for usage.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>env</strong> &#8211; The WSGI environment for the incoming request.</li>
+<li><strong>read_chunk_size</strong> &#8211; The maximum amount to read at once from
+the incoming request.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A generator yielding rfc822.Messages; be sure to fully
+read from the message.fp file-like object before
+continuing to the next message of the generator.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="brim.httpform.parse_attrs">
+<tt class="descclassname">brim.httpform.</tt><tt class="descname">parse_attrs</tt><big>(</big><em>header</em><big>)</big><a class="reference internal" href="_modules/brim/httpform.html#parse_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brim.httpform.parse_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the value of a header like:</p>
+<div class="highlight-python"><pre>Content-Disposition: form-data; name="somefile"; filename="test.html"</pre>
+</div>
+<p>Return data like:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">(</span><span class="s">&quot;form-data&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;somefile&quot;</span><span class="p">,</span> <span class="s">&quot;filename&quot;</span><span class="p">:</span> <span class="s">&quot;test.html&quot;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Example usage with an rfc822.Message:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">value</span><span class="p">,</span> <span class="n">attrs</span> <span class="o">=</span> <span class="n">parse_attrs</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s">&#39;content-disposition&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>header</strong> &#8211; Value of a header (the part after the &#8216;: &#8216;).</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">(value name, dict) of the attribute data parsed (see above).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 <div class="section" id="module-brim.log">
 <span id="brim-log"></span><h1>brim.log<a class="headerlink" href="#module-brim.log" title="Permalink to this headline">¶</a></h1>
 <p>Provides logging utilities for brimd; normally you don&#8217;t need to
@@ -1954,6 +2086,7 @@ in the overall configuration for the server.</li>
 <li><a class="reference internal" href="#">brim</a></li>
 <li><a class="reference internal" href="#module-brim.conf">brim.conf</a></li>
 <li><a class="reference internal" href="#module-brim.http">brim.http</a></li>
+<li><a class="reference internal" href="#module-brim.httpform">brim.httpform</a></li>
 <li><a class="reference internal" href="#module-brim.log">brim.log</a></li>
 <li><a class="reference internal" href="#module-brim.daemon_sample">brim.daemon_sample</a></li>
 <li><a class="reference internal" href="#module-brim.server">brim.server</a></li>
@@ -2006,7 +2139,7 @@ in the overall configuration for the server.</li>
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2012, Gregory Holt.
+        &copy; Copyright 2012, Gregory Holt, portions (httpform) 2011 OpenStack, LLC..
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>
