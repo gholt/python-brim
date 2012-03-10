@@ -1782,6 +1782,7 @@ class TestWSGISubserver(TestIPSubserver):
             server.wsgi = wsgi_orig
 
         start_response_calls = []
+        log_request_calls = []
         uuid4_instance = uuid4()
 
         def _start_response(*args, **kwargs):
@@ -1793,21 +1794,27 @@ class TestWSGISubserver(TestIPSubserver):
         def _time():
             return 1
 
-        def _app_exception_call(*args, **kwargs):
-            raise Exception('test app exception')
+        def _log_request(*args, **kwargs):
+            log_request_calls.append((args, kwargs))
+
+        def _app_with_body_exception(env, start_response):
+            start_response('200 OK', [('Content-Length', '10')])
+            yield 'partial'
+            raise Exception('body exception')
 
         uuid4_orig = server.uuid4
         time_orig = server.time
         env = {'PATH_INFO': '/echo', 'wsgi.input': StringIO('test value')}
-        if raises != 'other':
-            env['eventlet.posthooks'] = []
         try:
             server.uuid4 = _uuid4
             server.time = _time
-            if raises == 'app':
+            ss._log_request = _log_request
+            if raises == 'start':
                 ss.first_app = 'i will raise an exception'
+            elif raises == 'body':
+                ss.first_app = _app_with_body_exception
             ss.logger = FakeLogger()
-            out = ss._wsgi_entry(env, _start_response)
+            content = ''.join(ss._wsgi_entry(env, _start_response))
         finally:
             server.uuid4 = uuid4_orig
             server.time = time_orig
@@ -1820,9 +1827,13 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(env.get('brim.txn'), uuid4_instance.hex)
         if with_app:
             self.assertEquals(env.get('brim._bytes_in'), 10)
+            self.assertEquals(env.get('brim._bytes_out'), 10)
         else:
             self.assertEquals(env.get('brim._bytes_in'), 0)
-        self.assertEquals(env.get('brim._bytes_out'), 0)
+            if raises == 'body':
+                self.assertEquals(env.get('brim._bytes_out'), 7)
+            else:
+                self.assertEquals(env.get('brim._bytes_out'), 0)
         wi = env.get('wsgi.input')
         self.assertEquals(wi.__class__.__name__, '_WsgiInput')
         self.assertEquals(wi.env, env)
@@ -1830,13 +1841,16 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(env.get('brim.additional_request_log_info'), [])
         self.assertEquals(env.get('brim.json_dumps'), ss.json_dumps)
         self.assertEquals(env.get('brim.json_loads'), ss.json_loads)
-        if not raises:
-            self.assertEquals(env.get('eventlet.posthooks'),
-                              [(ss._log_request, (), {})])
         if raises:
-            self.assertEquals(env.get('brim._start_response'),
-                ('500 Internal Server Error', [('Content-Length', '0')], None))
-            self.assertEquals(out, [])
+            if raises == 'start':
+                self.assertEquals(env.get('brim._start_response'),
+                    ('500 Internal Server Error', [('Content-Length', '0')],
+                     None))
+                self.assertEquals(content, '')
+            else:
+                self.assertEquals(env.get('brim._start_response'),
+                    ('200 OK', [('Content-Length', '10')], None))
+                self.assertEquals(content, 'partial')
             self.assertEquals(ss.logger.debug_calls, [])
             self.assertEquals(ss.logger.info_calls, [])
             self.assertEquals(ss.logger.notice_calls, [])
@@ -1846,17 +1860,16 @@ class TestWSGISubserver(TestIPSubserver):
             self.assertEquals(ss.logger.exception_calls[0][0],
                               ('WSGI EXCEPTION:',))
             self.assertEquals(len(ss.logger.exception_calls[0][1]), 3)
-            if raises == 'app':
+            if raises == 'start':
                 self.assertEquals(str(ss.logger.exception_calls[0][1][1]),
                                   "'str' object is not callable")
             else:
                 self.assertEquals(str(ss.logger.exception_calls[0][1][1]),
-                                  "'eventlet.posthooks'")
+                                  'body exception')
         elif with_app:
             self.assertEquals(env.get('brim._start_response'),
                 ('200 OK', [('Content-Length', '10')], None))
-            self.assertEquals(out.__class__.__name__, '_WsgiOutput')
-            self.assertEquals(''.join(out), 'test value')
+            self.assertEquals(content, 'test value')
             self.assertEquals(ss.logger.debug_calls, [])
             self.assertEquals(ss.logger.info_calls, [])
             self.assertEquals(ss.logger.notice_calls, [])
@@ -1865,22 +1878,22 @@ class TestWSGISubserver(TestIPSubserver):
         else:
             self.assertEquals(env.get('brim._start_response'),
                 ('404 Not Found', [('Content-Length', '0')], None))
-            self.assertEquals(out.__class__.__name__, '_WsgiOutput')
-            self.assertEquals(''.join(out), '')
+            self.assertEquals(content, '')
             self.assertEquals(ss.logger.debug_calls, [])
             self.assertEquals(ss.logger.info_calls, [])
             self.assertEquals(ss.logger.notice_calls, [])
             self.assertEquals(ss.logger.error_calls, [])
             self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEquals(log_request_calls, [((env,), {})])
 
     def test_wsgi_entry_with_apps(self):
         self.test_wsgi_entry(with_app=True)
 
-    def test_wsgi_entry_raises_app_exception(self):
-        self.test_wsgi_entry(raises='app')
+    def test_wsgi_entry_raises_start_exception(self):
+        self.test_wsgi_entry(raises='start')
 
-    def test_wsgi_entry_raises_other_exception(self):
-        self.test_wsgi_entry(raises='other')
+    def test_wsgi_entry_raises_body_exception(self):
+        self.test_wsgi_entry(raises='body')
 
     def _log_request_build(self, start=1330037777.77):
         return {'REQUEST_METHOD': 'GET',

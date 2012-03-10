@@ -658,13 +658,19 @@ class WSGISubserver(IPSubserver):
             env['brim.additional_request_log_info'] = []
             env['brim.json_dumps'] = self.json_dumps
             env['brim.json_loads'] = self.json_loads
-            env['eventlet.posthooks'].append((self._log_request, (), {}))
-            return _WsgiOutput(self.first_app(env, _start_response), env)
+            body = _WsgiOutput(self.first_app(env, _start_response), env)
         except Exception, err:
             self.logger.exception('WSGI EXCEPTION:')
             _start_response('500 Internal Server Error',
                             [('Content-Length', '0')])
-            return []
+            body = []
+        try:
+            for chunk in body:
+                yield chunk
+        except Exception:
+            self.logger.exception('WSGI EXCEPTION:')
+        finally:
+            self._log_request(env)
 
     def __call__(self, env, start_response):
         """
