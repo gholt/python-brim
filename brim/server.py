@@ -440,8 +440,28 @@ class IPSubserver(Subserver):
             conf.get_int('brim', 'backlog', 4096))
         self.listen_retry = conf.get_int(self.name, 'listen_retry',
             conf.get_int('brim', 'listen_retry', 30))
-        self.eventlet_hub = conf.get(self.name, 'eventlet_hub',
-            conf.get('brim', 'eventlet_hub', 'poll'))
+        eventlet_hub = conf.get(self.name, 'eventlet_hub',
+                                conf.get('brim', 'eventlet_hub'))
+        self.eventlet_hub = None
+        if eventlet_hub and '.' in eventlet_hub:
+            pkg, mod = eventlet_hub.rsplit('.', 1)
+            try:
+                self.eventlet_hub = \
+                    getattr(__import__(pkg, fromlist=[mod]), mod)
+            except (AttributeError, ImportError):
+                pass
+        elif eventlet_hub:
+            try:
+                self.eventlet_hub = __import__(eventlet_hub)
+            except ImportError:
+                try:
+                    self.eventlet_hub = getattr(__import__('eventlet.hubs',
+                        fromlist=[eventlet_hub]), eventlet_hub)
+                except (AttributeError, ImportError):
+                    pass
+        if eventlet_hub and self.eventlet_hub is None:
+            raise Exception('Could not load [%s] eventlet_hub %r.' %
+                            (self.name, eventlet_hub))
 
 
 class WSGISubserver(IPSubserver):

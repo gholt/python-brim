@@ -661,7 +661,7 @@ class TestIPSubserver(TestSubserver):
         self.assertEquals(ss.concurrent_per_worker, 1024)
         self.assertEquals(ss.backlog, 4096)
         self.assertEquals(ss.listen_retry, 30)
-        self.assertEquals(ss.eventlet_hub, 'poll')
+        self.assertEquals(ss.eventlet_hub, None)
 
         ss.server.no_daemon = True
         ss = self._class(ss.server, 'test')
@@ -892,15 +892,43 @@ class TestIPSubserver(TestSubserver):
     def test_parse_conf_eventlet_hub(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
-        confd.setdefault('brim', {})['eventlet_hub'] = 'name'
+        confd.setdefault('brim', {})['eventlet_hub'] = 'epolls'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.eventlet_hub, 'name')
+        self.assertEquals(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
-        confd.setdefault('test', {})['eventlet_hub'] = 'name'
+        confd.setdefault('test', {})['eventlet_hub'] = 'epolls'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.eventlet_hub, 'name')
+        self.assertEquals(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
+
+        ss = self._class(FakeServer(), 'test')
+        confd = self._get_default_confd()
+        confd.setdefault('test', {})['eventlet_hub'] = 'eventlet.hubs.epolls'
+        ss._parse_conf(Conf(confd))
+        self.assertEquals(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
+
+        ss = self._class(FakeServer(), 'test')
+        confd = self._get_default_confd()
+        confd.setdefault('test', {})['eventlet_hub'] = 'invalid'
+        exc = None
+        try:
+            ss._parse_conf(Conf(confd))
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc),
+            "Could not load [test] eventlet_hub 'invalid'.")
+
+        ss = self._class(FakeServer(), 'test')
+        confd = self._get_default_confd()
+        confd.setdefault('test', {})['eventlet_hub'] = 'invalid.module'
+        exc = None
+        try:
+            ss._parse_conf(Conf(confd))
+        except Exception, err:
+            exc = err
+        self.assertEquals(str(exc),
+            "Could not load [test] eventlet_hub 'invalid.module'.")
 
     def test_parse_conf_workers(self):
         ss = self._class(FakeServer(), 'test')
@@ -1674,7 +1702,7 @@ class TestWSGISubserver(TestIPSubserver):
         if no_daemon:
             self.assertEquals(use_hub_calls, [])
         else:
-            self.assertEquals(use_hub_calls, [('poll',)])
+            self.assertEquals(use_hub_calls, [(None,)])
         if with_apps:
             self.assertEquals(ss.first_app.__class__.__name__, 'WSGIEcho')
             self.assertEquals(ss.first_app.name, 'one')
@@ -2941,7 +2969,7 @@ class TestTCPSubserver(TestIPSubserver):
         if no_daemon:
             self.assertEquals(use_hub_calls, [])
         else:
-            self.assertEquals(use_hub_calls, [('poll',)])
+            self.assertEquals(use_hub_calls, [(None,)])
         self.assertEquals(ss.handler.__class__.__name__, 'TCPEcho')
         self.assertEquals(GreenPool_calls,
             [((), {'size': ss.concurrent_per_worker})])
@@ -3546,7 +3574,7 @@ class TestUDPSubserver(TestIPSubserver):
         if no_daemon:
             self.assertEquals(use_hub_calls, [])
         else:
-            self.assertEquals(use_hub_calls, [('poll',)])
+            self.assertEquals(use_hub_calls, [(None,)])
         self.assertEquals(GreenPool_calls,
             [((), {'size': ss.concurrent_per_worker})])
         self.assertEquals(len(spawn_n_calls), 1)

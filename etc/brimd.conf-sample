@@ -55,8 +55,8 @@
 # listen_retry = <seconds>
 #   The number of seconds to keep trying to bind to the configured ip and port
 #   before giving up. Default: 30
-# eventlet_hub = <name>
-#   The Eventlet coroutine hub to use. Default: poll
+# eventlet_hub = <name or module>
+#   The Eventlet coroutine hub to use. Default: Eventlet's default
 
 [wsgi]
 # apps = <name> [<name>] ...
