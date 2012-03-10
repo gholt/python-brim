@@ -1,3 +1,10 @@
 Maintainer
 ----------
 Gregory Holt
+
+Indirect Contributors
+---------------------
+OpenStack, LLC. (httpform)
+Michael Barton (httpform, post-request logging, ideas)
+Clay Gerrard (ideas)
+Jay Payne (testing, ideas)
