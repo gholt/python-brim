@@ -1936,6 +1936,26 @@ class TestWSGISubserver(TestIPSubserver):
 
         return ss
 
+    def test_log_request_no_start_response(self):
+        env = self._log_request_build()
+        del env['brim._start_response']
+        env['brim._bytes_out'] = 0
+        ss = self._log_request_execute(env)
+        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [])
+        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
+            'GET /path HTTP/1.1 499 - - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.error_calls, [])
+        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEquals(ss.logger.txn, None)
+
     def test_log_request_minimal(self):
         env = self._log_request_build()
         ss = self._log_request_execute(env)

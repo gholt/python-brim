@@ -689,7 +689,14 @@ class WSGISubserver(IPSubserver):
         try:
             stats = _Stats(self.bucket_stats, self.worker_id)
             stats.incr('request_count')
-            status, headers, exc_info = env['brim._start_response']
+            _start_response_value = env.get('brim._start_response')
+            if not _start_response_value:
+                status = '%s Disconnect before first read' % \
+                         HTTP_CLIENT_DISCONNECT
+                headers = {}
+                exc_info = None
+            else:
+                status, headers, exc_info = _start_response_value
             req = unquote(env['PATH_INFO'])
             if 'QUERY_STRING' in env:
                 req = req + '?' + unquote_plus(env['QUERY_STRING'])
