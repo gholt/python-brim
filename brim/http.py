@@ -586,6 +586,30 @@ class QueryParser(object):
                 'Query parameter %r value %r not float.\n' % (name, v))
 
 
+def get_header(env, name, default=None):
+    """
+    Returns the value of an HTTP header.
+
+    :param env: Standard WSGI env to read from.
+    :param name: The name of the header to retrieve.
+    :param default: If specified, the default value will be used if
+                    the header cannot be found. If not specified, the
+                    header value will be considered required, and
+                    HTTPBadRequest will be raised if the header is
+                    missing.
+    :returns: The value of the header, or raises HTTPBadRequest
+              if the header is missing and required.
+    """
+    env_name = 'HTTP_' + name.upper().replace('-', '_')
+    if env_name not in env:
+        if default is not None:
+            return default
+        else:
+            raise HTTPBadRequest(
+                'Requires %s header.\n' % name.title())
+    return env[env_name]
+
+
 def get_header_int(env, name, default=None):
     """
     Returns the int value of an HTTP header.
