@@ -69,10 +69,9 @@ Example Install for Build and Test on Ubuntu 10.04
 ::
 
     $ sudo apt-get install git-core python python-coverage python-nose \
-      python-pip python-simplejson
+      python-pip python-simplejson python-sphinx
     $ sudo pip install eventlet
     $ sudo pip install setproctitle
-    $ sudo pip install sphinx
     $ git clone git://github.com/gholt/brim
     $ cd brim
     $ sudo python setup.py develop
