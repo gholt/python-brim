@@ -16,7 +16,7 @@
 Reports the brimd server stats as a JSON reponse. The stats
 contain basic things like the server start time and request counts.
 
-See :py:func:`Stats.parse_conf` for configuration options.
+See Stats.parse_conf for configuration options.
 """
 
 from sys import maxint
@@ -30,7 +30,7 @@ class Stats(object):
 
     :param name: The name of the app, indicates the app's section in
                  the overall configuration for the WSGI server.
-    :param parsed_conf: The conf result from :py:func:`parse_conf`.
+    :param parsed_conf: The conf result from parse_conf.
     :param next_app: The next WSGI app in the chain.
     """
 

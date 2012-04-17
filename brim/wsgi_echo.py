@@ -17,7 +17,7 @@ Contains a simple WSGI application that just echoes the request body
 back in the response. This is a good starting point for other WSGI
 applications. See the source for what's implemented and why.
 
-See :py:func:`WSGIEcho.parse_conf` for configuration options.
+See WSGIEcho.parse_conf for configuration options.
 """
 
 
@@ -29,7 +29,7 @@ class WSGIEcho(object):
 
     :param name: The name of the app, indicates the app's section in
                  the overall configuration for the server.
-    :param parsed_conf: The conf result from :py:func:`parse_conf`.
+    :param parsed_conf: The conf result from parse_conf.
     :param next_app: The next WSGI app in the chain.
     """
 
@@ -150,8 +150,7 @@ class WSGIEcho(object):
 
         :param name: The name of the app, indicates the app's section
                      in the overall configuration for the server.
-        :param parsed_conf: The conf result from
-                            :py:func:`parse_conf`.
+        :param parsed_conf: The conf result from parse_conf.
         :returns: A list of (stat_name, stat_type) pairs.
         """
         return [('%s.requests' % name, 'sum')]

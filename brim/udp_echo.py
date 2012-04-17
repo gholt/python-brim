@@ -17,7 +17,7 @@ Contains a simple straight UDP datagram application that just echoes
 the incoming data back. This is a good starting point for other UDP
 applications. See the source for what's implemented and why.
 
-See :py:func:`UDPEcho.parse_conf` for configuration options.
+See UDPEcho.parse_conf for configuration options.
 """
 
 
@@ -29,7 +29,7 @@ class UDPEcho(object):
 
     :param name: The name of the app, indicates the app's section in
                  the overall configuration for the server.
-    :param parsed_conf: The conf result from :py:func:`parse_conf`.
+    :param parsed_conf: The conf result from parse_conf.
     """
 
     def __init__(self, name, parsed_conf):
@@ -43,8 +43,8 @@ class UDPEcho(object):
         Simply echo the incoming data back.
 
         The stats object will have at least the stat variables asked
-        for in :py:func:``stats_conf``. This stats object will
-        support the following methods:
+        for in stats_conf. This stats object will support the
+        following methods:
 
         get(<name>)
 
@@ -107,7 +107,6 @@ class UDPEcho(object):
         :param name: The name of the app, indicates the app's section
                      in the overall configuration for the WSGI
                      server.
-        :param parsed_conf: The conf result from
-                            :py:func:`parse_conf`.
+        :param parsed_conf: The conf result from parse_conf.
         """
         return ['byte_count']

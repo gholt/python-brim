@@ -27,8 +27,8 @@ from time import sleep, time
 
 class LockPathTimeout(Exception):
     """
-    Raised by :py:func:`lock_path` when its timeout is reached
-    without gaining its lock.
+    Raised by lock_path when its timeout is reached without gaining
+    its lock.
     """
     pass
 

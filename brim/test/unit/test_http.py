@@ -131,10 +131,10 @@ class TestQueryParser(TestCase):
 
     def test_init_empty_works(self):
         q = http.QueryParser()
-        q.get('nothing')
+        q.get('nothing', '')
 
     def test_get(self):
-        self.assertEquals(self.q.get('invalid'), None)
+        self.assertRaises(http.HTTPBadRequest, self.q.get, 'invalid')
         self.assertEquals(self.q.get('invalid', 1), 1)
         self.assertEquals(self.q.get('invalid', 1, False), 1)
         self.assertEquals(self.q.get('empty1'), '')
@@ -150,30 +150,30 @@ class TestQueryParser(TestCase):
         self.assertEquals(self.q.get('tp2', 1), 'val2b')
         self.assertEquals(self.q.get('tp2', 1, False), ['val2a', 'val2b'])
 
-    def test_get_boolean(self):
-        self.assertEquals(self.q.get_boolean('invalid'), None)
-        self.assertEquals(self.q.get_boolean('invalid', True), True)
-        self.assertEquals(self.q.get_boolean('empty1'), True)
-        self.assertEquals(self.q.get_boolean('empty1', True), False)
-        self.assertEquals(self.q.get_boolean('empty2'), True)
-        self.assertEquals(self.q.get_boolean('empty2', True), False)
-        self.assertRaises(http.HTTPBadRequest, self.q.get_boolean, 'tp1')
-        self.assertRaises(http.HTTPBadRequest, self.q.get_boolean, 'tp1', True)
-        self.assertRaises(http.HTTPBadRequest, self.q.get_boolean, 'tp2')
-        self.assertRaises(http.HTTPBadRequest, self.q.get_boolean, 'tp2', True)
+    def test_get_bool(self):
+        self.assertRaises(http.HTTPBadRequest, self.q.get_bool, 'invalid')
+        self.assertEquals(self.q.get_bool('invalid', True), True)
+        self.assertEquals(self.q.get_bool('empty1'), True)
+        self.assertEquals(self.q.get_bool('empty1', True), False)
+        self.assertEquals(self.q.get_bool('empty2'), True)
+        self.assertEquals(self.q.get_bool('empty2', True), False)
+        self.assertRaises(http.HTTPBadRequest, self.q.get_bool, 'tp1')
+        self.assertRaises(http.HTTPBadRequest, self.q.get_bool, 'tp1', True)
+        self.assertRaises(http.HTTPBadRequest, self.q.get_bool, 'tp2')
+        self.assertRaises(http.HTTPBadRequest, self.q.get_bool, 'tp2', True)
         for v in http.TRUE_VALUES:
             q = http.QueryParser('test=' + v)
-            self.assertEquals(q.get_boolean('test'), True, v)
+            self.assertEquals(q.get_bool('test'), True, v)
             q = http.QueryParser('test=' + v.upper())
-            self.assertEquals(q.get_boolean('test'), True, v)
+            self.assertEquals(q.get_bool('test'), True, v)
         for v in http.FALSE_VALUES:
             q = http.QueryParser('test=' + v)
-            self.assertEquals(q.get_boolean('test'), False, v)
+            self.assertEquals(q.get_bool('test'), False, v)
             q = http.QueryParser('test=' + v.upper())
-            self.assertEquals(q.get_boolean('test'), False, v)
+            self.assertEquals(q.get_bool('test'), False, v)
 
     def test_get_int(self):
-        self.assertEquals(self.q.get_int('invalid'), None)
+        self.assertRaises(http.HTTPBadRequest, self.q.get_int, 'invalid')
         self.assertEquals(self.q.get_int('invalid', 1234), 1234)
         self.assertRaises(http.HTTPBadRequest, self.q.get_int, 'empty1')
         self.assertRaises(http.HTTPBadRequest, self.q.get_int, 'empty1', 1234)
@@ -189,7 +189,7 @@ class TestQueryParser(TestCase):
         self.assertEquals(q.get_int('test'), -123)
 
     def test_get_float(self):
-        self.assertEquals(self.q.get_float('invalid'), None)
+        self.assertRaises(http.HTTPBadRequest, self.q.get_float, 'invalid')
         self.assertEquals(self.q.get_float('invalid', 1.2), 1.2)
         self.assertRaises(http.HTTPBadRequest, self.q.get_float, 'empty1')
         self.assertRaises(http.HTTPBadRequest, self.q.get_float, 'empty1', 1.2)
@@ -206,7 +206,7 @@ class TestQueryParser(TestCase):
 
     def test_leading_question_mark_is_part_of_parameter_name(self):
         q = http.QueryParser('?one=two')
-        self.assertEquals(q.get('one'), None)
+        self.assertEquals(q.get('one', 'notset'), 'notset')
         self.assertEquals(q.get('?one'), 'two')
 
 

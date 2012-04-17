@@ -17,7 +17,7 @@ Contains a simple daemon that just logs a status line every so often.
 This can be a good starting point for other daemons. See the source
 for what's implemented and why.
 
-See :py:func:`DaemonSample.parse_conf` for configuration options.
+See DaemonSample.parse_conf for configuration options.
 """
 
 from time import time
@@ -34,7 +34,7 @@ class DaemonSample(object):
     :param name: The name of the daemon, indicates the daemon's
                  section in the overall configuration for the WSGI
                  server.
-    :param parsed_conf: The conf result from :py:func:`parse_conf`.
+    :param parsed_conf: The conf result from parse_conf.
     """
 
     def __init__(self, name, parsed_conf):
@@ -55,8 +55,8 @@ class DaemonSample(object):
         daemon is always running.
 
         The stats object will have at least the stat variables asked
-        for in :py:func:``stats_conf``. This stats object will
-        support the following methods:
+        for in stats_conf. This stats object will support the
+        following methods:
 
         get(<name>)
 
@@ -122,7 +122,6 @@ class DaemonSample(object):
         :param name: The name of the app, indicates the app's section
                      in the overall configuration for the WSGI
                      server.
-        :param parsed_conf: The conf result from
-                            :py:func:`parse_conf`.
+        :param parsed_conf: The conf result from parse_conf.
         """
         return ['iterations', 'last_run']

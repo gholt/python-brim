@@ -53,6 +53,8 @@ More Complex Example With Overrides::
         exit('No configuration found.')
 
     def custom_error(section, option, value, conversion_type, err):
+        if not isinstance(section, basestring):
+            section = '|'.join(section)  # Handle iter of sections
         raise Exception('Configuration value [%s] %s of %r cannot be '
                         'converted to %s.' %
                         (section, option, value, conversion_type))
@@ -102,8 +104,7 @@ class Conf(object):
     list is also supported.
 
     Normally Conf instances are created with the global func
-    :py:func:`read_conf` but you can construct Conf instances
-    directly as well::
+    read_conf but you can construct Conf instances directly as well::
 
         # Normally...
         conf = read_conf(['/etc/myco/myapp.conf', '~/.myapp.conf'])
@@ -133,23 +134,40 @@ class Conf(object):
         the default value given (or None) if the section/option does
         not exist.
 
-        :param section: The section name within the conf to read.
+        The section parameter may also be given as an iterator of
+        sections to try before falling back on the default.
+
+        :param section: The section name (or an iterator of section
+                        names) within the conf to read.
         :param option: The option name within the section to read.
         :param default: The default value to return if the section or
                         option does not exist or is set to None.
         """
-        return (self.store.get(section) or {}).get(option) or default
+        if isinstance(section, basestring):
+            return (self.store.get(section) or {}).get(option) or default
+        else:
+            for section in section:
+                value = self.store.get(section)
+                if value:
+                    value = value.get(option)
+                    if value:
+                        return value
+            return default
 
-    def get_boolean(self, section, option, default):
+    def get_bool(self, section, option, default):
         """
         Returns the boolean value of the section/option in the conf
         store or the default value given if the section/option does
         not exist.
 
-        This will call :py:func:`error` if the value cannot be
-        converted to a boolean.
+        This will call error if the value cannot be converted to a
+        boolean.
 
-        :param section: The section name within the conf to read.
+        The section parameter may also be given as an iterator of
+        sections to try before falling back on the default.
+
+        :param section: The section name (or an iterator of section
+                        names) within the conf to read.
         :param option: The option name within the section to read.
         :param default: The default value to return if the section or
                         option does not exist or is set to None.
@@ -169,10 +187,14 @@ class Conf(object):
         or the default value given if the section/option does not
         exist.
 
-        This will call :py:func:`error` if the value cannot be
-        converted to an int.
+        This will call error if the value cannot be converted to an
+        int.
 
-        :param section: The section name within the conf to read.
+        The section parameter may also be given as an iterator of
+        sections to try before falling back on the default.
+
+        :param section: The section name (or an iterator of section
+                        names) within the conf to read.
         :param option: The option name within the section to read.
         :param default: The default value to return if the section or
                         option does not exist or is set to None.
@@ -189,10 +211,14 @@ class Conf(object):
         store or the default value given if the section/option does
         not exist.
 
-        This will call :py:func:`error` if the value cannot be
-        converted to a float.
+        This will call error if the value cannot be converted to a
+        float.
 
-        :param section: The section name within the conf to read.
+        The section parameter may also be given as an iterator of
+        sections to try before falling back on the default.
+
+        :param section: The section name (or an iterator of section
+                        names) within the conf to read.
         :param option: The option name within the section to read.
         :param default: The default value to return if the section or
                         option does not exist or is set to None.
@@ -221,8 +247,11 @@ class Conf(object):
             conf = read_conf(['some.conf'])
             conf.error = _error
 
-        :param section: The section name within the conf that was
-                        read.
+        Note that the section parameter may have been given as an
+        iterator of sections rather than just one section name.
+
+        :param section: The section name (or an iterator of section
+                        names) within the conf that was read.
         :param option: The option name within the section that was
                        read.
         :param value: The str value read and failed conversion.
@@ -232,6 +261,8 @@ class Conf(object):
         :param err: The Exception that was raised, if any, during the
                     conversion.
         """
+        if not isinstance(section, basestring):
+            section = '|'.join(section)  # Handle iter of sections
         exit('Configuration value [%s] %s of %r cannot be converted to %s.' %
              (section, option, value, conversion_type))
 
@@ -289,13 +320,16 @@ def read_conf(conf_files, exit_on_read_exception=True):
     message by default. If you set exit_on_read_exception to False,
     the ConfigParser.Error will be raised instead.
 
-    :param conf_files: A list of conf files to read and translate, in
-                       order. Therefore, values in files further into
-                       the list will override any values from prior
+    :param conf_files: An iterable of conf files or a single conf
+                       file to read and translate, in order.
+                       Therefore, values in files further into the
+                       list will override any values from prior
                        files. File names may use the ~/filename or
                        ~user/filename format and will be expanded
                        with os.path.expanduser.
     """
+    if isinstance(conf_files, basestring):
+        conf_files = [conf_files]
     parser = SafeConfigParser()
     conf_files_read = []
     for conf_file in conf_files:

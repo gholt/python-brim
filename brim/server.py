@@ -23,6 +23,7 @@ See etc/brimd.conf-sample for configuration options.
 from ctypes import c_uint, c_ulong, sizeof as ctypes_sizeof
 from errno import EBADF, EINVAL, ENOENT, ESRCH
 from inspect import getargspec
+from itertools import chain
 from mmap import mmap
 from optparse import OptionParser
 from os import fork, environ, kill, unlink
@@ -483,8 +484,8 @@ class WSGISubserver(IPSubserver):
 
     def _parse_conf(self, conf):
         IPSubserver._parse_conf(self, conf)
-        self.log_headers = conf.get_boolean(self.name, 'log_headers',
-            conf.get_boolean('brim', 'log_headers', False))
+        self.log_headers = conf.get_bool(self.name, 'log_headers',
+            conf.get_bool('brim', 'log_headers', False))
         self.count_status_codes = conf.get(self.name, 'count_status_codes',
             conf.get('brim', 'count_status_codes', '404 408 499 501'))
         try:
@@ -648,16 +649,18 @@ class WSGISubserver(IPSubserver):
         try:
             env['brim'] = self
             env['brim.start'] = time()
-            env['brim.stats'] = _Stats(self.bucket_stats, self.worker_id)
-            env['brim.logger'] = self.logger
-            env['brim.txn'] = self.logger.txn = uuid4().hex
+            env.setdefault('brim.stats',
+                           _Stats(self.bucket_stats, self.worker_id))
+            env.setdefault('brim.logger', self.logger)
+            env.setdefault('brim.txn', uuid4().hex)
+            self.logger.txn = env['brim.txn']
             env['brim._bytes_in'] = 0
             env['brim._bytes_out'] = 0
             env['wsgi.input'] = \
                 _WsgiInput(env, self.wsgi_input_iter_chunk_size)
-            env['brim.additional_request_log_info'] = []
-            env['brim.json_dumps'] = self.json_dumps
-            env['brim.json_loads'] = self.json_loads
+            env.setdefault('brim.additional_request_log_info', [])
+            env.setdefault('brim.json_dumps', self.json_dumps)
+            env.setdefault('brim.json_loads', self.json_loads)
             body = _WsgiOutput(self.first_app(env, _start_response), env)
         except Exception, err:
             self.logger.exception('WSGI EXCEPTION:')
@@ -782,6 +785,70 @@ class WSGISubserver(IPSubserver):
             if line:
                 self.logger.error('STDERR: wid:%03d %s' %
                                   (self.worker_id, line))
+
+    def clone_env(self, env):
+        """
+        Returns a new WSGI environment dictionary with values copied
+        from the given WSGI environment. This can be useful when
+        wanting to issue an additional request through get_response.
+        For example::
+
+            ...
+            def __call__(self, env, start_response):
+                newenv = env['brim'].clone_env(env)
+                newenv['REQUEST_METHOD'] = 'HEAD'
+                newenv['PATH_INFO'] = '/new/path'
+                newenv['wsgi.input'] = StringIO()
+                status_line, headers_iteritems, excinfo, content_iter = \\
+                    env['brim'].get_response(newenv)
+                ...
+        """
+        newenv = {}
+        for key in ('brim.txn', 'HTTP_REFERER', 'HTTP_USER_AGENT',
+                    'HTTP_X_AUTH_TOKEN', 'HTTP_X_CLUSTER_CLIENT_IP',
+                    'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR', 'REMOTE_USER',
+                    'REQUEST_METHOD', 'SERVER_NAME', 'SERVER_PORT',
+                    'SERVER_PROTOCOL'):
+            if key in env:
+                newenv[key] = env[key]
+        return newenv
+
+    def get_response(self, env):
+        """
+        Performs a WSGI request using the WSGI environment given and
+        returns the resulting status line, headers, and content. This
+        is useful for WSGI apps that wish to perform subrequests that
+        go through the full WSGI pipeline. For example::
+
+            ...
+            def __call__(self, env, start_response):
+                newenv = env['brim'].clone_env(env)
+                newenv['REQUEST_METHOD'] = 'HEAD'
+                newenv['PATH_INFO'] = '/new/path'
+                newenv['wsgi.input'] = StringIO()
+                status_line, headers_iteritems, excinfo, content_iter = \\
+                    env['brim'].get_response(newenv)
+                ...
+
+        :param env: The WSGI environment of the request.
+        :returns: The response as (status_line, headers_iteritems, excinfo,
+                  content_iter).
+        """
+        start_response_result = [(None, None, None)]
+
+        def _start_response(status_line, headers_iteritems, *excinfo):
+            start_response_result[0] = \
+                (status_line, headers_iteritems, excinfo)
+
+        content_iter = iter(self._wsgi_entry(env, _start_response))
+        first_chunk = None
+        try:
+            first_chunk = content_iter.next()
+            content_iter = chain([first_chunk], content_iter)
+        except StopIteration:
+            content_iter = iter([])
+        status_line, headers_iteritems, excinfo = start_response_result[0]
+        return status_line, headers_iteritems, excinfo, content_iter
 
 
 class TCPSubserver(IPSubserver):
@@ -1290,6 +1357,7 @@ class Server(object):
         if self.stderr is None:
             self.stderr = sys_stderr
         self.subservers = []
+        self.error_stack_trace = False
 
     def main(self):
         """
@@ -1308,6 +1376,8 @@ class Server(object):
             self._start()
             return 0
         except Exception, err:
+            if self.error_stack_trace:
+                raise
             self.stderr.write('%s\n' % err)
             self.stderr.flush()
             return 1
@@ -1365,10 +1435,15 @@ Command (defaults to 'no-daemon'):
             action='store_true', default=False,
             help='When running as a daemon brimd will normally close '
                  'standard input, output, and error; this option will leave '
-                 'them open, which can be useful for debugging.')
+                 'them open, which can be useful for debugging. Also, if '
+                 'brimd exits immediately with an error, the full stack trace '
+                 'will be output.')
         parser.add_option('-v', '--version', dest='version',
             action='store_true', default=False,
             help='Displays the version of brimd.')
+        parser.add_option('-x', '--error-stack-trace',
+            dest='error_stack_trace', action='store_true', default=False,
+            help='Displays a full stack trace on a start up error.')
 
         def _parser_error(msg):
             raise Exception(msg)
@@ -1389,6 +1464,7 @@ Command (defaults to 'no-daemon'):
         command = args[0] if args else 'no-daemon'
         self.no_daemon = command == 'no-daemon'
         self.output = options.output or self.no_daemon
+        self.error_stack_trace = options.error_stack_trace
         if command == 'start':
             success, pid = _send_pid_sig(self.pid_file, 0)
             if success:

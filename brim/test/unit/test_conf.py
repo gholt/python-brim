@@ -62,17 +62,17 @@ class TestConf(TestCase):
         self.assertEquals('s',
             conf.Conf({'s1': {'o1': 's'}}).get('s1', 'o1', 'd'))
 
-    def test_get_boolean(self):
+    def test_get_bool(self):
         self.assertTrue(
-            conf.Conf({'s1': {'o1': 'True'}}).get_boolean('s1', 'o1', False))
+            conf.Conf({'s1': {'o1': 'True'}}).get_bool('s1', 'o1', False))
         self.assertFalse(
-            conf.Conf({'s1': {'o1': 'False'}}).get_boolean('s1', 'o1', True))
+            conf.Conf({'s1': {'o1': 'False'}}).get_bool('s1', 'o1', True))
 
-    def test_get_boolean_default(self):
-        self.assertTrue(conf.Conf({}).get_boolean('s1', 'o1', True))
-        self.assertFalse(conf.Conf({}).get_boolean('s1', 'o1', False))
+    def test_get_bool_default(self):
+        self.assertTrue(conf.Conf({}).get_bool('s1', 'o1', True))
+        self.assertFalse(conf.Conf({}).get_bool('s1', 'o1', False))
 
-    def test_get_boolean_error(self):
+    def test_get_bool_error(self):
         calls = []
 
         def _exit(v):
@@ -81,7 +81,7 @@ class TestConf(TestCase):
         orig_exit = conf.exit
         try:
             conf.exit = _exit
-            conf.Conf({'s1': {'o1': 'z'}}).get_boolean('s1', 'o1', True)
+            conf.Conf({'s1': {'o1': 'z'}}).get_bool('s1', 'o1', True)
         finally:
             conf.exit = orig_exit
         self.assertEquals(calls, ["Configuration value [s1] o1 of 'z' cannot "

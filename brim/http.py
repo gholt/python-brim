@@ -18,20 +18,17 @@ WebOb http://www.webob.org/ but sometimes it's enough and you should
 be able to upgrade easily to WebOb once you do need it.
 
 Much like webob.exc there are classes for standard HTTP responses,
-such as :py:class:`HTTPNotFound` for 404. Continuing with webob.exc
-similarities, these classes are all subclasses of
-:py:class:`HTTPException` and therefore can be raised and caught as
-well as used as WSGI apps. The 2xx classes are all subclasses of
-:py:class:`HTTPOk`, 3xx subclasses of :py:class:`HTTPRedirection`,
-4xx subclasses of :py:class:`HTTPClientError`, and 5xx subclasses of
-:py:class:`HTTPServerError`. :py:class:`HTTPClientError` and
-:py:class:`HTTPServerError` also both subclass :py:class:`HTTPError`,
+such as HTTPNotFound for 404. Continuing with webob.exc similarities,
+these classes are all subclasses of HTTPException and therefore can
+be raised and caught as well as used as WSGI apps. The 2xx classes
+are all subclasses of HTTPOk, 3xx subclasses of HTTPRedirection, 4xx
+subclasses of HTTPClientError, and 5xx subclasses of HTTPServerError.
+HTTPClientError and HTTPServerError also both subclass HTTPError,
 like webob.exc.
 
 Instead of a Request object, this package just provides some simpler
-classes and functions, like :py:class:`QueryParser` and
-:py:func:`get_header_int`, and some replacement functions like
-:py:func:`quote` (it's Unicode-safe by using UTF8).
+classes and functions, like QueryParser and get_header_int, and some
+replacement functions like quote (it's Unicode-safe by using UTF8).
 """
 
 from urllib import quote as urllib_quote
@@ -500,11 +497,16 @@ class QueryParser(object):
     def get(self, name, default=None, last_only=True):
         """
         Returns the value of the query parameter, or the default
-        value if the parameter does not exist.
+        value if the parameter does not exist. If the default is None
+        and the parameter does not exist, an HTTPBadRequest with an
+        explanatory message is raised, indicating a required
+        parameter.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist.
+                        exist. If not specified, the parameter will
+                        be considered required, and HTTPBadRequest
+                        will be raised if the parameter is missing.
         :param last_only: If True (the default), only the last value
                           of the parameter will be returned if the
                           parameter is specified multiple times. If
@@ -513,15 +515,21 @@ class QueryParser(object):
         """
         v = self.query.get(name)
         if v is None:
-            return default
+            if default is not None:
+                return default
+            else:
+                raise HTTPBadRequest('Requires %s query parameter.\n' % name)
         if last_only:
             return v[-1]
         return v
 
-    def get_boolean(self, name, default=None):
+    def get_bool(self, name, default=None):
         """
         Returns the boolean value of the query parameter, or the
-        default value if the parameter does not exist.
+        default value if the parameter does not exist. If the default
+        is None and the parameter does not exist, an HTTPBadRequest
+        with an explanatory message is raised, indicating a required
+        parameter.
 
         If the parameter is included in the query string, but has no
         value (such as ?param), then ``not default`` will be
@@ -534,11 +542,13 @@ class QueryParser(object):
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist.
+                        exist. If not specified, the parameter will
+                        be considered required, and HTTPBadRequest
+                        will be raised if the parameter is missing.
         """
-        v = self.get(name)
-        if v is None:
-            return default
+        v = self.get(name, default)
+        if isinstance(v, bool):
+            return v
         # Parameter included with no value, means invert the default.
         if not v:
             return not default
@@ -552,15 +562,19 @@ class QueryParser(object):
     def get_int(self, name, default=None):
         """
         Returns the int value of the query parameter, or the default
-        value if the parameter does not exist.
+        value if the parameter does not exist. If the default is None
+        and the parameter does not exist, an HTTPBadRequest with an
+        explanatory message is raised, indicating a required
+        parameter.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist or has no value.
+                        exist or has no value. If not specified, the
+                        parameter will be considered required, and
+                        HTTPBadRequest will be raised if the
+                        parameter is missing.
         """
-        v = self.get(name)
-        if v is None:
-            return default
+        v = self.get(name, default)
         try:
             return int(v)
         except ValueError, err:
@@ -570,15 +584,19 @@ class QueryParser(object):
     def get_float(self, name, default=None):
         """
         Returns the float value of the query parameter, or the
-        default value if the parameter does not exist.
+        default value if the parameter does not exist. If the default
+        is None and the parameter does not exist, an HTTPBadRequest
+        with an explanatory message is raised, indicating a required
+        parameter.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist or has no value.
+                        exist or has no value. If not specified, the
+                        parameter will be considered required, and
+                        HTTPBadRequest will be raised if the
+                        parameter is missing.
         """
-        v = self.get(name)
-        if v is None:
-            return default
+        v = self.get(name, default)
         try:
             return float(v)
         except ValueError, err:
