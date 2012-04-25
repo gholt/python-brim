@@ -16,6 +16,14 @@ brim.conf
     :undoc-members:
     :show-inheritance:
 
+brim.daemon_sample
+==================
+
+.. automodule:: brim.daemon_sample
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 brim.http
 =========
 
@@ -36,14 +44,6 @@ brim.log
 ========
 
 .. automodule:: brim.log
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-brim.daemon_sample
-==================
-
-.. automodule:: brim.daemon_sample
     :members:
     :undoc-members:
     :show-inheritance:
