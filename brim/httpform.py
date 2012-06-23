@@ -269,13 +269,13 @@ if __name__ == '__main__':
         'sig value',
         '------WebKitFormBoundaryNcxTqxSlX7t4TDkR',
         'Content-Disposition: form-data; name="file1"; '
-            'filename="testfile1.txt"',
+        'filename="testfile1.txt"',
         'Content-Type: text/plain',
         '',
         'Test File\nOne\n',
         '------WebKitFormBoundaryNcxTqxSlX7t4TDkR',
         'Content-Disposition: form-data; name="file2"; '
-            'filename="testfile2.txt"',
+        'filename="testfile2.txt"',
         'Content-Type: text/plain',
         '',
         'Test\nFile\nTwo\n',
@@ -289,7 +289,7 @@ if __name__ == '__main__':
     ]))
     env = {
         'CONTENT_TYPE': 'multipart/form-data; '
-            'boundary=----WebKitFormBoundaryNcxTqxSlX7t4TDkR',
+        'boundary=----WebKitFormBoundaryNcxTqxSlX7t4TDkR',
         'wsgi.input': wsgi_input
     }
     for message in iter_form(env):

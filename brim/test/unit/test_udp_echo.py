@@ -77,7 +77,8 @@ class TestUDPEcho(TestCase):
         datagram = '1234'
         udp_echo.UDPEcho('test', {})(subserver, stats, sock, datagram, ip,
                                      port)
-        self.assertEquals(subserver.logger.notice_calls,
+        self.assertEquals(
+            subserver.logger.notice_calls,
             [(('served request of 4 bytes from %s:%d' % (ip, port),), {})])
         self.assertEquals(stats.stats, {'byte_count': len(datagram)})
         self.assertEquals(sock.sendto_calls, [((datagram, (ip, port)), {})])

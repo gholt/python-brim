@@ -592,7 +592,8 @@ class Test_get_listening_tcp_socket(TestCase):
             sock = service.get_listening_tcp_socket('1.2.3.4', 5678)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
@@ -608,7 +609,8 @@ class Test_get_listening_tcp_socket(TestCase):
             sock = service.get_listening_tcp_socket('1.2.3.4', 5678, retry=10)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 10 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
@@ -649,7 +651,8 @@ class Test_get_listening_tcp_socket(TestCase):
             ip = '1.2.3.4'
             port = 5678
             sock = service.get_listening_tcp_socket(ip, port, style='eventlet')
-            self.assertEquals(egetaddrinfo_calls,
+            self.assertEquals(
+                egetaddrinfo_calls,
                 [(ip, port, socket.AF_UNSPEC, socket.SOCK_STREAM)])
             self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_STREAM))
             self.assertEquals(set(sock.setsockopt_calls), set([
@@ -689,8 +692,9 @@ class Test_get_listening_tcp_socket(TestCase):
             eventlet.green.ssl.wrap_socket = _ewrap_socket
             certfile = 'certfile'
             keyfile = 'keyfile'
-            sock = service.get_listening_tcp_socket('1.2.3.4', 5678,
-                style='eventlet', certfile=certfile, keyfile=keyfile)
+            sock = service.get_listening_tcp_socket(
+                '1.2.3.4', 5678, style='eventlet', certfile=certfile,
+                keyfile=keyfile)
             self.assertEquals(sock, 'ewrappedsock')
             self.assertEquals(len(ewrap_socket_calls), 1)
             self.assertEquals(ewrap_socket_calls[0][1],
@@ -718,7 +722,8 @@ class Test_get_listening_tcp_socket(TestCase):
                                                         style='eventlet')
             except Exception, err:
                 exc = err
-            self.assertEquals(str(exc),
+            self.assertEquals(
+                str(exc),
                 'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
             self.assertEquals(len(esleep_calls), 29)
             self.assertEquals(len(self.sleep_calls), 0)
@@ -749,7 +754,8 @@ class Test_get_listening_tcp_socket(TestCase):
             service.get_listening_tcp_socket('1.2.3.4', 5678)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             'Could not determine address family of 1.2.3.4:5678 for binding.')
 
     def test_odd_exception_reraised(self):
@@ -818,7 +824,8 @@ class Test_get_listening_udp_socket(TestCase):
             sock = service.get_listening_udp_socket('1.2.3.4', 5678)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
@@ -834,7 +841,8 @@ class Test_get_listening_udp_socket(TestCase):
             sock = service.get_listening_udp_socket('1.2.3.4', 5678, retry=10)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 10 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
@@ -864,7 +872,8 @@ class Test_get_listening_udp_socket(TestCase):
             ip = '1.2.3.4'
             port = 5678
             sock = service.get_listening_udp_socket(ip, port, style='eventlet')
-            self.assertEquals(egetaddrinfo_calls,
+            self.assertEquals(
+                egetaddrinfo_calls,
                 [(ip, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)])
             self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
             self.assertEquals(set(sock.setsockopt_calls), set([
@@ -892,7 +901,8 @@ class Test_get_listening_udp_socket(TestCase):
                                                         style='eventlet')
             except Exception, err:
                 exc = err
-            self.assertEquals(str(exc),
+            self.assertEquals(
+                str(exc),
                 'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
             self.assertEquals(len(esleep_calls), 29)
             self.assertEquals(len(self.sleep_calls), 0)
@@ -923,7 +933,8 @@ class Test_get_listening_udp_socket(TestCase):
             service.get_listening_udp_socket('1.2.3.4', 5678)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             'Could not determine address family of 1.2.3.4:5678 for binding.')
 
     def test_odd_exception_reraised(self):
@@ -997,9 +1008,11 @@ class Test_sustain_workers(TestCase):
         logger = FakeLogger()
         service.sustain_workers(0, self.worker_func, logger)
         self.assertEquals(self.worker_func_calls, [(0,)])
-        self.assertEquals(logger.debug_calls,
+        self.assertEquals(
+            logger.debug_calls,
             [('wid:000 pid:%s Starting inproc worker.' % service.getpid(),)])
-        self.assertEquals(logger.info_calls,
+        self.assertEquals(
+            logger.info_calls,
             [('Exiting due to workers = 0 mode.',)])
 
     def test_workers0_no_logger(self):
@@ -1110,7 +1123,8 @@ class Test_sustain_workers(TestCase):
         service.fork = lambda *a: 0
         service.sustain_workers(1, self.worker_func, logger)
         # Asserts the TERM and HUP signal handlers are cleared with the child.
-        self.assertEquals(set(self.signal_calls[-2:]),
+        self.assertEquals(
+            set(self.signal_calls[-2:]),
             set([(service.SIGHUP, 0), (service.SIGTERM, 0)]))
         self.assertEquals(self.worker_func_calls, [(0,)])
         self.assertEquals(logger.debug_calls, [

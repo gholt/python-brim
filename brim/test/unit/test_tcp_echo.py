@@ -139,8 +139,8 @@ class TestTCPEcho(TestCase):
         self.assertEquals(c, {'chunk_read': 1234})
         exc = None
         try:
-            c = tcp_echo.TCPEcho.parse_conf('test',
-                    Conf({'test': {'chunk_read': 'abc'}}))
+            c = tcp_echo.TCPEcho.parse_conf(
+                'test', Conf({'test': {'chunk_read': 'abc'}}))
         except SystemExit, err:
             exc = err
         self.assertEquals(str(exc), "Configuration value [test] chunk_read of "

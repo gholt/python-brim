@@ -106,7 +106,8 @@ class HTTPException(Exception):
     """
 
     def __init__(self, body=None, headers=None, code=500):
-        Exception.__init__(self,
+        Exception.__init__(
+            self,
             '%s %s %s' % (code, CODE2NAME.get(code, 'Status'), body or '-'))
         self.code = code
         self.body = body or ''

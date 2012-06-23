@@ -58,27 +58,27 @@ class FakeServer(object):
     def __init__(self):
         self.start_time = 1234
         self.subservers = [
-            FakeSubserver(self, 'wsgi', 2, ['0', '1'],
-                {'one': 'worker', 'two': 'sum', 'three': 'min',
-                 'four': 'max'}),
-            FakeSubserver(self, 'wsgi2', 2, ['0', '1'],
-                {'One': 'worker', 'Two': 'sum', 'Three': 'min',
-                 'Four': 'max'}),
-            FakeSubserver(self, 'tcp', 2, ['0', '1'],
-                {'one': 'worker', 'two': 'sum', 'three': 'min',
-                 'four': 'max'}),
-            FakeSubserver(self, 'tcp2', 2, ['0', '1'],
-                {'One': 'worker', 'Two': 'sum', 'Three': 'min',
-                 'Four': 'max'}),
-            FakeSubserver(self, 'udp', 1, ['0'],
-                {'one': 'worker', 'two': 'worker', 'three': 'worker',
-                 'four': 'worker'}),
-            FakeSubserver(self, 'udp2', 1, ['0'],
-                {'One': 'worker', 'Two': 'worker', 'Three': 'worker',
-                 'Four': 'worker'}),
-            FakeSubserver(self, 'daemons', 2, ['a', 'b'],
-                {'one': 'worker', 'two': 'worker', 'three': 'worker',
-                 'four': 'worker'})]
+            FakeSubserver(self, 'wsgi', 2, ['0', '1'], {
+                'one': 'worker', 'two': 'sum', 'three': 'min',
+                'four': 'max'}),
+            FakeSubserver(self, 'wsgi2', 2, ['0', '1'], {
+                'One': 'worker', 'Two': 'sum', 'Three': 'min',
+                'Four': 'max'}),
+            FakeSubserver(self, 'tcp', 2, ['0', '1'], {
+                'one': 'worker', 'two': 'sum', 'three': 'min',
+                'four': 'max'}),
+            FakeSubserver(self, 'tcp2', 2, ['0', '1'], {
+                'One': 'worker', 'Two': 'sum', 'Three': 'min',
+                'Four': 'max'}),
+            FakeSubserver(self, 'udp', 1, ['0'], {
+                'one': 'worker', 'two': 'worker', 'three': 'worker',
+                'four': 'worker'}),
+            FakeSubserver(self, 'udp2', 1, ['0'], {
+                'One': 'worker', 'Two': 'worker', 'Three': 'worker',
+                'Four': 'worker'}),
+            FakeSubserver(self, 'daemons', 2, ['a', 'b'], {
+                'one': 'worker', 'two': 'worker', 'three': 'worker',
+                'four': 'worker'})]
         self.bucket_stats = [FakeStats(s.worker_names, s.stats_conf)
                              for s in self.subservers]
 
@@ -115,7 +115,7 @@ class TestStats(TestCase):
     def test_call_ignores_non_path(self):
         self.env['PATH_INFO'] = '/'
         stats.Stats('test', self.parsed_conf,
-                  self.next_app)(self.env, self.start_response)
+                    self.next_app)(self.env, self.start_response)
         self.assertEquals(self.next_app_calls,
                           [(self.env, self.start_response)])
         self.assertEquals(self.start_response_calls,
@@ -123,16 +123,18 @@ class TestStats(TestCase):
 
     def test_call_not_implemented(self):
         self.env['REQUEST_METHOD'] = 'PUT'
-        body = ''.join(stats.Stats('test', self.parsed_conf,
-                                 self.next_app)(self.env, self.start_response))
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('501 Not Implemented',
                             [('Content-Length', '0')])])
         self.assertEquals(body, '')
 
     def test_call_stats_zeroed(self):
-        body = ''.join(stats.Stats('test', self.parsed_conf,
-                                 self.next_app)(self.env, self.start_response))
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('200 OK', [('Content-Length', '811'),
                                        ('Content-Type', 'application/json')])])
@@ -166,8 +168,9 @@ class TestStats(TestCase):
 
     def test_call_stats_zeroed_head(self):
         self.env['REQUEST_METHOD'] = 'HEAD'
-        body = ''.join(stats.Stats('test', self.parsed_conf,
-                                 self.next_app)(self.env, self.start_response))
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('200 OK', [('Content-Length', '811'),
                                        ('Content-Type', 'application/json')])])
@@ -236,8 +239,9 @@ class TestStats(TestCase):
         bstats.set(1, 'two', daemons_tag + 12)
         bstats.set(1, 'three', daemons_tag + 13)
         bstats.set(1, 'four', daemons_tag + 14)
-        body = ''.join(stats.Stats('test', self.parsed_conf,
-                                 self.next_app)(self.env, self.start_response))
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('200 OK', [('Content-Length', '931'),
                                        ('Content-Type', 'application/json')])])

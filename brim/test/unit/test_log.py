@@ -42,8 +42,8 @@ class TestLogAdapter(TestCase):
     def test_process(self):
         a = log._LogAdapter(None, 'testserver')
         a.txn = 'abc'
-        self.assertEquals(a.process('test', {}),
-            ('test', {'extra': {'txn': 'abc', 'server': 'testserver'}}))
+        self.assertEquals(a.process('test', {}), (
+            'test', {'extra': {'txn': 'abc', 'server': 'testserver'}}))
 
     def test_effective_level(self):
         a = log._LogAdapter(FakeLogger(), 'testserver')
@@ -53,28 +53,30 @@ class TestLogAdapter(TestCase):
         logger = FakeLogger()
         a = log._LogAdapter(logger, 'testserver')
         a.exception('testexc')
-        self.assertEquals(logger.error_calls,
-            [(("testexc None ['None']",),
-              {'extra': {'txn': None, 'server': 'testserver'}})])
+        self.assertEquals(logger.error_calls, [(
+            ("testexc None ['None']",),
+            {'extra': {'txn': None, 'server': 'testserver'}})])
         try:
             raise Exception('blah')
         except Exception:
             a.exception('testexc2')
         self.assertEquals(len(logger.error_calls), 2)
-        self.assertEquals(logger.error_calls[-1][1],
-              {'extra': {'txn': None, 'server': 'testserver'}})
-        self.assertTrue(logger.error_calls[-1][0][0].startswith('testexc2 '
-            'Exception: blah [\'Traceback (most recent call last):\', \'  '
-            'File '))
-        self.assertTrue(logger.error_calls[-1][0][0].endswith(', in '
-            'test_exception\', "    raise Exception(\'blah\')", \'Exception: '
-            'blah\']'))
+        self.assertEquals(
+            logger.error_calls[-1][1],
+            {'extra': {'txn': None, 'server': 'testserver'}})
+        self.assertTrue(logger.error_calls[-1][0][0].startswith(
+            'testexc2 Exception: blah [\'Traceback (most recent call '
+            'last):\', \'  File '))
+        self.assertTrue(logger.error_calls[-1][0][0].endswith(
+            ', in test_exception\', "    raise Exception(\'blah\')", '
+            '\'Exception: blah\']'))
 
     def test_notice(self):
         logger = FakeLogger()
         a = log._LogAdapter(logger, 'testserver')
         a.notice('testnotice')
-        self.assertEquals(logger.log_calls, [(log.NOTICE, 'testnotice', (),
+        self.assertEquals(logger.log_calls, [(
+            log.NOTICE, 'testnotice', (),
             {'extra': {'txn': None, 'server': 'testserver'}})])
 
 
@@ -107,10 +109,12 @@ class TestSysloggableExcInfo(TestCase):
             raise Exception('test')
         except:
             sei = log.sysloggable_excinfo()
-            self.assertTrue(sei.startswith('Exception: test [\'Traceback '
-                '(most recent call last):\', \'  File '))
-            self.assertTrue(sei.endswith(', in test_sysloggable_excinfo\', '
-                '"    raise Exception(\'test\')", \'Exception: test\']'))
+            self.assertTrue(sei.startswith(
+                'Exception: test [\'Traceback (most recent call last):\', \'  '
+                'File '))
+            self.assertTrue(sei.endswith(
+                ', in test_sysloggable_excinfo\', "    raise '
+                'Exception(\'test\')", \'Exception: test\']'))
         try:
             raise KeyboardInterrupt()
         except KeyboardInterrupt:

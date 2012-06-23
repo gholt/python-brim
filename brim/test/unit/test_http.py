@@ -62,8 +62,10 @@ class TestHTTP(TestCase):
 
         env = {'REQUEST_METHOD': 'GET'}
         body = http.HTTPException()(env, _start_response)
-        self.assertEquals(start_response_calls, [('500 Internal Server Error',
-            [('Content-Length', '0'), ('Content-Type', 'text/plain')])])
+        self.assertEquals(
+            start_response_calls,
+            [('500 Internal Server Error',
+                [('Content-Length', '0'), ('Content-Type', 'text/plain')])])
         self.assertEquals(''.join(body), '')
 
     def test_call_200(self):
@@ -75,7 +77,8 @@ class TestHTTP(TestCase):
         env = {'REQUEST_METHOD': 'GET'}
         body = http.HTTPException(body='testvalue',
                                   code=200)(env, _start_response)
-        self.assertEquals(start_response_calls,
+        self.assertEquals(
+            start_response_calls,
             [('200 OK', [('Content-Length', '9'),
              ('Content-Type', 'text/plain')])])
         self.assertEquals(''.join(body), 'testvalue')
@@ -89,7 +92,8 @@ class TestHTTP(TestCase):
         env = {'REQUEST_METHOD': 'GET'}
         body = http.HTTPException(body='',
                                   code=200)(env, _start_response)
-        self.assertEquals(start_response_calls,
+        self.assertEquals(
+            start_response_calls,
             [('204 No Content', [('Content-Length', '0'),
              ('Content-Type', 'text/plain')])])
         self.assertEquals(''.join(body), '')
@@ -103,7 +107,8 @@ class TestHTTP(TestCase):
         env = {'REQUEST_METHOD': 'GET'}
         body = http.HTTPException(body='', headers={'content-length': 'abc'},
                                   code=200)(env, _start_response)
-        self.assertEquals(start_response_calls,
+        self.assertEquals(
+            start_response_calls,
             [('200 OK', [('Content-Length', 'abc'),
              ('Content-Type', 'text/plain')])])
         self.assertEquals(''.join(body), '')
@@ -117,7 +122,8 @@ class TestHTTP(TestCase):
         env = {'REQUEST_METHOD': 'HEAD'}
         body = http.HTTPException(body='testvalue',
                                   code=200)(env, _start_response)
-        self.assertEquals(start_response_calls,
+        self.assertEquals(
+            start_response_calls,
             [('200 OK', [('Content-Length', '9'),
              ('Content-Type', 'text/plain')])])
         self.assertEquals(''.join(body), '')
@@ -127,7 +133,7 @@ class TestQueryParser(TestCase):
 
     def setUp(self):
         self.q = http.QueryParser(
-                    'empty1&empty2=&tp1=val1&tp2=val2a&tp2=val2b')
+            'empty1&empty2=&tp1=val1&tp2=val2a&tp2=val2b')
 
     def test_init_empty_works(self):
         q = http.QueryParser()
@@ -214,8 +220,8 @@ class TestGetHeaderInt(TestCase):
 
     def test_get_header_int(self):
         self.assertEquals(http.get_header_int({}, 'test-header', 123), 123)
-        self.assertEquals(http.get_header_int({'HTTP_TEST_HEADER': '123'},
-            'test-header'), 123)
+        self.assertEquals(http.get_header_int(
+            {'HTTP_TEST_HEADER': '123'}, 'test-header'), 123)
         self.assertRaises(http.HTTPBadRequest,
                           http.get_header_int, {}, 'test-header')
         self.assertRaises(http.HTTPBadRequest, http.get_header_int,

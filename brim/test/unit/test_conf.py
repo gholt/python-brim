@@ -31,8 +31,8 @@ class TestConf(TestCase):
                           [v.lower() for v in conf.FALSE_VALUES])
 
     def test_true_false_values_distinct(self):
-        self.assertEquals(set(),
-            set(conf.TRUE_VALUES).intersection(set(conf.FALSE_VALUES)))
+        self.assertEquals(
+            set(), set(conf.TRUE_VALUES).intersection(set(conf.FALSE_VALUES)))
 
     def test_direct_store(self):
         d = {'s1': {'o1': '1.1', 'o2': '1.2'},
@@ -44,23 +44,23 @@ class TestConf(TestCase):
         self.assertEquals(f, conf.Conf({}, f).files)
 
     def test_get(self):
-        self.assertEquals('1.1',
-            conf.Conf({'s1': {'o1': '1.1'}}).get('s1', 'o1'))
+        self.assertEquals(
+            '1.1', conf.Conf({'s1': {'o1': '1.1'}}).get('s1', 'o1'))
 
     def test_get_default(self):
         self.assertEquals('d', conf.Conf({}).get('s1', 'o1', 'd'))
 
     def test_get_default_orig_is_none(self):
-        self.assertEquals('d',
-            conf.Conf({'s1': {'o1': None}}).get('s1', 'o1', 'd'))
+        self.assertEquals(
+            'd', conf.Conf({'s1': {'o1': None}}).get('s1', 'o1', 'd'))
 
     def test_get_default_orig_is_empty(self):
-        self.assertEquals('d',
-            conf.Conf({'s1': {'o1': ''}}).get('s1', 'o1', 'd'))
+        self.assertEquals(
+            'd', conf.Conf({'s1': {'o1': ''}}).get('s1', 'o1', 'd'))
 
     def test_get_default_orig_is_something(self):
-        self.assertEquals('s',
-            conf.Conf({'s1': {'o1': 's'}}).get('s1', 'o1', 'd'))
+        self.assertEquals(
+            's', conf.Conf({'s1': {'o1': 's'}}).get('s1', 'o1', 'd'))
 
     def test_get_bool(self):
         self.assertTrue(
@@ -88,10 +88,10 @@ class TestConf(TestCase):
                                   "be converted to boolean."])
 
     def test_get_int(self):
-        self.assertEquals(1,
-            conf.Conf({'s1': {'o1': '1'}}).get_int('s1', 'o1', -2))
-        self.assertEquals(-2,
-            conf.Conf({'s1': {'o1': '-2'}}).get_int('s1', 'o1', 1))
+        self.assertEquals(
+            1, conf.Conf({'s1': {'o1': '1'}}).get_int('s1', 'o1', -2))
+        self.assertEquals(
+            -2, conf.Conf({'s1': {'o1': '-2'}}).get_int('s1', 'o1', 1))
 
     def test_get_int_default(self):
         self.assertEquals(1, conf.Conf({}).get_int('s1', 'o1', 1))
@@ -108,14 +108,15 @@ class TestConf(TestCase):
             conf.Conf({'s1': {'o1': 'z'}}).get_int('s1', 'o1', 1)
         finally:
             conf.exit = orig_exit
-        self.assertEquals(calls,
+        self.assertEquals(
+            calls,
             ["Configuration value [s1] o1 of 'z' cannot be converted to int."])
 
     def test_get_float(self):
-        self.assertEquals(1.1,
-            conf.Conf({'s1': {'o1': '1.1'}}).get_float('s1', 'o1', -2.3))
-        self.assertEquals(-2.3,
-            conf.Conf({'s1': {'o1': '-2.3'}}).get_float('s1', 'o1', 1.1))
+        self.assertEquals(
+            1.1, conf.Conf({'s1': {'o1': '1.1'}}).get_float('s1', 'o1', -2.3))
+        self.assertEquals(
+            -2.3, conf.Conf({'s1': {'o1': '-2.3'}}).get_float('s1', 'o1', 1.1))
 
     def test_get_float_default(self):
         self.assertEquals(1.1, conf.Conf({}).get_float('s1', 'o1', 1.1))
@@ -239,7 +240,8 @@ option2 = 2.2
             conf.SafeConfigParser = _SafeConfigParser
             c = conf.read_conf(['test1.conf', 'test2.conf'],
                                exit_on_read_exception=False)
-            self.assertEquals(c.store,
+            self.assertEquals(
+                c.store,
                 {'section1': {'default1': '1', 'option1': '1.1',
                               'option2': '1.2'},
                  'section2': {'default1': '1', 'option1': '2.1',

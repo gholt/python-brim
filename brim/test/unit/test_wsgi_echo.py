@@ -81,24 +81,27 @@ class TestWSGIEcho(TestCase):
         self.assertEquals(self.env['brim.stats'].get('test.requests'), 1)
 
     def test_call_echo(self):
-        body = ''.join(wsgi_echo.WSGIEcho('test', self.parsed_conf,
-                    self.next_app)(self.env, self.start_response))
+        body = ''.join(wsgi_echo.WSGIEcho(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('200 OK', [('Content-Length', '8')])])
         self.assertEquals(body, 'testbody')
 
     def test_call_echo_capped(self):
         self.env['wsgi.input'] = StringIO('1234567890123')
-        body = ''.join(wsgi_echo.WSGIEcho('test', self.parsed_conf,
-                    self.next_app)(self.env, self.start_response))
+        body = ''.join(wsgi_echo.WSGIEcho(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('200 OK', [('Content-Length', '10')])])
         self.assertEquals(body, '1234567890')
 
     def test_call_echo_exception_on_read(self):
         del self.env['wsgi.input']
-        body = ''.join(wsgi_echo.WSGIEcho('test', self.parsed_conf,
-                    self.next_app)(self.env, self.start_response))
+        body = ''.join(wsgi_echo.WSGIEcho(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
                           [('200 OK', [('Content-Length', '0')])])
         self.assertEquals(body, '')
@@ -106,11 +109,11 @@ class TestWSGIEcho(TestCase):
     def test_parse_conf(self):
         c = wsgi_echo.WSGIEcho.parse_conf('test', Conf({}))
         self.assertEquals(c, {'path': '/echo', 'max_echo': 65536})
-        c = wsgi_echo.WSGIEcho.parse_conf('test',
-            Conf({'test': {'path': '/blah', 'max_echo': 1}}))
+        c = wsgi_echo.WSGIEcho.parse_conf(
+            'test', Conf({'test': {'path': '/blah', 'max_echo': 1}}))
         self.assertEquals(c, {'path': '/blah', 'max_echo': 1})
-        c = wsgi_echo.WSGIEcho.parse_conf('test',
-            Conf({'test2': {'path': '/blah', 'max_echo': 1}}))
+        c = wsgi_echo.WSGIEcho.parse_conf(
+            'test', Conf({'test2': {'path': '/blah', 'max_echo': 1}}))
         self.assertEquals(c, {'path': '/echo', 'max_echo': 65536})
 
     def test_stats_conf(self):

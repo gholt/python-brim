@@ -397,9 +397,9 @@ def sustain_workers(workers_desired, worker_func, logger=None):
                     worker_func(worker_id)
                 except Exception, err:
                     if logger:
-                        logger.exception('wid:%03d ppid:%d pid:%d Worker '
-                            'exited due to exception: %s' %
-                            (worker_id, ppid, getpid(), err))
+                        logger.exception(
+                            'wid:%03d ppid:%d pid:%d Worker exited due to '
+                            'exception: %s' % (worker_id, ppid, getpid(), err))
                     # Reraised in case of useful installed sys.excepthook.
                     raise
                 if logger:

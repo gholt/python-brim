@@ -336,9 +336,11 @@ class Subserver(object):
         :param conf: The brim.conf.Conf instance for the overall
                      server configuration.
         """
-        self.log_name = conf.get(self.name, 'log_name',
+        self.log_name = conf.get(
+            self.name, 'log_name',
             conf.get('brim', 'log_name', 'brim') + self.name)
-        self.log_level = conf.get(self.name, 'log_level',
+        self.log_level = conf.get(
+            self.name, 'log_level',
             conf.get('brim', 'log_level', 'INFO')).upper()
         try:
             import logging
@@ -346,7 +348,8 @@ class Subserver(object):
         except AttributeError:
             raise Exception(
                 'Invalid [%s] log_level %r.' % (self.name, self.log_level))
-        self.log_facility = conf.get(self.name, 'log_facility',
+        self.log_facility = conf.get(
+            self.name, 'log_facility',
             conf.get('brim', 'log_facility', 'LOCAL0')).upper()
         if not self.log_facility.startswith('LOG_'):
             self.log_facility = 'LOG_' + self.log_facility
@@ -356,7 +359,8 @@ class Subserver(object):
         except AttributeError:
             raise Exception('Invalid [%s] log_facility %r.' %
                             (self.name, self.log_facility))
-        self.json_dumps = conf.get(self.name, 'json_dumps',
+        self.json_dumps = conf.get(
+            self.name, 'json_dumps',
             conf.get('brim', 'json_dumps', 'json.dumps'))
         try:
             mod, fnc = self.json_dumps.rsplit('.', 1)
@@ -369,7 +373,8 @@ class Subserver(object):
             raise Exception(
                 'Could not load function %r for [%s] json_dumps.' %
                 (self.json_dumps, self.name))
-        self.json_loads = conf.get(self.name, 'json_loads',
+        self.json_loads = conf.get(
+            self.name, 'json_loads',
             conf.get('brim', 'json_loads', 'json.loads'))
         try:
             mod, fnc = self.json_loads.rsplit('.', 1)
@@ -418,28 +423,30 @@ class IPSubserver(Subserver):
     def _parse_conf(self, conf):
         Subserver._parse_conf(self, conf)
         self.ip = conf.get(self.name, 'ip', conf.get('brim', 'ip', '*'))
-        self.port = conf.get_int(self.name, 'port',
-            conf.get_int('brim', 'port', 80))
+        self.port = \
+            conf.get_int(self.name, 'port', conf.get_int('brim', 'port', 80))
         if self.server.no_daemon:
             self.worker_count = 0
             self.worker_names = ['0']
         else:
-            self.worker_count = conf.get_int(self.name, 'workers',
-                conf.get_int('brim', 'workers', 1))
+            self.worker_count = conf.get_int(
+                self.name, 'workers', conf.get_int('brim', 'workers', 1))
             self.worker_names = \
                 [str(i) for i in xrange(self.worker_count or 1)]
-        self.certfile = conf.get(self.name, 'certfile',
-            conf.get('brim', 'certfile'))
-        self.keyfile = conf.get(self.name, 'keyfile',
-            conf.get('brim', 'keyfile'))
-        self.client_timeout = conf.get_int(self.name, 'client_timeout',
+        self.certfile = \
+            conf.get(self.name, 'certfile', conf.get('brim', 'certfile'))
+        self.keyfile = \
+            conf.get(self.name, 'keyfile', conf.get('brim', 'keyfile'))
+        self.client_timeout = conf.get_int(
+            self.name, 'client_timeout',
             conf.get_int('brim', 'client_timeout', 60))
-        self.concurrent_per_worker = \
-            conf.get_int(self.name, 'concurrent_per_worker',
-                conf.get_int('brim', 'concurrent_per_worker', 1024))
-        self.backlog = conf.get_int(self.name, 'backlog',
-            conf.get_int('brim', 'backlog', 4096))
-        self.listen_retry = conf.get_int(self.name, 'listen_retry',
+        self.concurrent_per_worker = conf.get_int(
+            self.name, 'concurrent_per_worker',
+            conf.get_int('brim', 'concurrent_per_worker', 1024))
+        self.backlog = conf.get_int(
+            self.name, 'backlog', conf.get_int('brim', 'backlog', 4096))
+        self.listen_retry = conf.get_int(
+            self.name, 'listen_retry',
             conf.get_int('brim', 'listen_retry', 30))
         eventlet_hub = conf.get(self.name, 'eventlet_hub',
                                 conf.get('brim', 'eventlet_hub'))
@@ -456,8 +463,9 @@ class IPSubserver(Subserver):
                 self.eventlet_hub = __import__(eventlet_hub)
             except ImportError:
                 try:
-                    self.eventlet_hub = getattr(__import__('eventlet.hubs',
-                        fromlist=[eventlet_hub]), eventlet_hub)
+                    self.eventlet_hub = getattr(
+                        __import__('eventlet.hubs', fromlist=[eventlet_hub]),
+                        eventlet_hub)
                 except (AttributeError, ImportError):
                     pass
         if eventlet_hub and self.eventlet_hub is None:
@@ -478,25 +486,28 @@ class WSGISubserver(IPSubserver):
 
     def __init__(self, server, name):
         IPSubserver.__init__(self, server, name)
-        self.stats_conf.update({'request_count': 'sum',
-            'status_2xx_count': 'sum', 'status_3xx_count': 'sum',
-            'status_4xx_count': 'sum', 'status_5xx_count': 'sum'})
+        self.stats_conf.update({
+            'request_count': 'sum', 'status_2xx_count': 'sum',
+            'status_3xx_count': 'sum', 'status_4xx_count': 'sum',
+            'status_5xx_count': 'sum'})
 
     def _parse_conf(self, conf):
         IPSubserver._parse_conf(self, conf)
-        self.log_headers = conf.get_bool(self.name, 'log_headers',
+        self.log_headers = conf.get_bool(
+            self.name, 'log_headers',
             conf.get_bool('brim', 'log_headers', False))
-        self.count_status_codes = conf.get(self.name, 'count_status_codes',
+        self.count_status_codes = conf.get(
+            self.name, 'count_status_codes',
             conf.get('brim', 'count_status_codes', '404 408 499 501'))
         try:
-            self.count_status_codes = [int(c) for c in
-                self.count_status_codes.split()]
+            self.count_status_codes = \
+                [int(c) for c in self.count_status_codes.split()]
         except ValueError:
             raise Exception('Invalid [%s] count_status_codes %r.' %
                             (self.name, self.count_status_codes))
-        self.wsgi_input_iter_chunk_size = \
-            conf.get_int(self.name, 'wsgi_input_iter_chunk_size',
-                conf.get_int('brim', 'wsgi_input_iter_chunk_size', 4096))
+        self.wsgi_input_iter_chunk_size = conf.get_int(
+            self.name, 'wsgi_input_iter_chunk_size',
+            conf.get_int('brim', 'wsgi_input_iter_chunk_size', 4096))
 
         self.apps = []
         app_names = conf.get(self.name, 'apps', '').strip().split()
@@ -518,10 +529,10 @@ class WSGISubserver(IPSubserver):
             try:
                 args = len(getargspec(app_class.__init__).args)
                 if args != 4:
-                    raise Exception('Would not be able to instantiate %r for '
-                        'app [%s]. Incorrect number of args, %s, should be 4 '
-                        '(self, name, conf, next_app).' %
-                        (call, app_name, args))
+                    raise Exception(
+                        'Would not be able to instantiate %r for app [%s]. '
+                        'Incorrect number of args, %s, should be 4 (self, '
+                        'name, conf, next_app).' % (call, app_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably not a class.'
@@ -531,10 +542,10 @@ class WSGISubserver(IPSubserver):
             try:
                 args = len(getargspec(app_class.__call__).args)
                 if args != 3:
-                    raise Exception('Would not be able to use %r for app '
-                        '[%s]. Incorrect number of __call__ args, %s, should '
-                        'be 3 (self, env, start_response).' %
-                        (call, app_name, args))
+                    raise Exception(
+                        'Would not be able to use %r for app [%s]. Incorrect '
+                        'number of __call__ args, %s, should be 3 (self, env, '
+                        'start_response).' % (call, app_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably no __call__ method.'
@@ -545,10 +556,10 @@ class WSGISubserver(IPSubserver):
                 try:
                     args = len(getargspec(app_class.parse_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for app [%s]. '
-                            'Incorrect number of parse_conf args, %s, should '
-                            'be 3 (cls, name, conf).' %
-                            (call, app_name, args))
+                        raise Exception(
+                            'Cannot use %r for app [%s]. Incorrect number of '
+                            'parse_conf args, %s, should be 3 (cls, name, '
+                            'conf).' % (call, app_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'parse_conf probably not a method.'
@@ -561,10 +572,10 @@ class WSGISubserver(IPSubserver):
                 try:
                     args = len(getargspec(app_class.stats_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for app [%s]. '
-                            'Incorrect number of stats_conf args, %s, should '
-                            'be 3 (cls, name, conf).' %
-                            (call, app_name, args))
+                        raise Exception(
+                            'Cannot use %r for app [%s]. Incorrect number of '
+                            'stats_conf args, %s, should be 3 (cls, name, '
+                            'conf).' % (call, app_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'stats_conf probably not a method.'
@@ -577,9 +588,10 @@ class WSGISubserver(IPSubserver):
 
     def _privileged_start(self):
         try:
-            self.sock = get_listening_tcp_socket(self.ip, self.port,
-                backlog=self.backlog, retry=self.listen_retry,
-                certfile=self.certfile, keyfile=self.keyfile, style='eventlet')
+            self.sock = get_listening_tcp_socket(
+                self.ip, self.port, backlog=self.backlog,
+                retry=self.listen_retry, certfile=self.certfile,
+                keyfile=self.keyfile, style='eventlet')
         except socket_error, err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
@@ -884,9 +896,10 @@ class TCPSubserver(IPSubserver):
         try:
             args = len(getargspec(self.handler.__init__).args)
             if args != 3:
-                raise Exception('Would not be able to instantiate %r for '
-                    '[%s]. Incorrect number of args, %s, should be 3 (self, '
-                    'name, parsed_conf).' % (call, self.name, args))
+                raise Exception(
+                    'Would not be able to instantiate %r for [%s]. Incorrect '
+                    'number of args, %s, should be 3 (self, name, '
+                    'parsed_conf).' % (call, self.name, args))
         except TypeError, err:
             if str(err) == 'arg is not a Python function':
                 err = 'Probably not a class.'
@@ -896,10 +909,10 @@ class TCPSubserver(IPSubserver):
         try:
             args = len(getargspec(self.handler.__call__).args)
             if args != 6:
-                raise Exception('Would not be able to use %r for [%s]. '
-                    'Incorrect number of __call__ args, %s, should be 6 '
-                    '(self, subserver, stats, sock, ip, port).' %
-                    (call, self.name, args))
+                raise Exception(
+                    'Would not be able to use %r for [%s]. Incorrect number '
+                    'of __call__ args, %s, should be 6 (self, subserver, '
+                    'stats, sock, ip, port).' % (call, self.name, args))
         except TypeError, err:
             if str(err) == 'arg is not a Python function':
                 err = 'Probably no __call__ method.'
@@ -909,9 +922,10 @@ class TCPSubserver(IPSubserver):
             try:
                 args = len(getargspec(self.handler.parse_conf).args)
                 if args != 3:
-                    raise Exception('Cannot use %r for [%s]. Incorrect number '
-                        'of parse_conf args, %s, should be 3 (cls, name, '
-                        'conf).' % (call, self.name, args))
+                    raise Exception(
+                        'Cannot use %r for [%s]. Incorrect number of '
+                        'parse_conf args, %s, should be 3 (cls, name, conf).' %
+                        (call, self.name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'parse_conf probably not a method.'
@@ -924,9 +938,10 @@ class TCPSubserver(IPSubserver):
             try:
                 args = len(getargspec(self.handler.stats_conf).args)
                 if args != 3:
-                    raise Exception('Cannot use %r for [%s]. Incorrect number '
-                        'of stats_conf args, %s, should be 3 (cls, name, '
-                        'conf).' % (call, self.name, args))
+                    raise Exception(
+                        'Cannot use %r for [%s]. Incorrect number of '
+                        'stats_conf args, %s, should be 3 (cls, name, conf).' %
+                        (call, self.name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'stats_conf probably not a method.'
@@ -938,9 +953,10 @@ class TCPSubserver(IPSubserver):
 
     def _privileged_start(self):
         try:
-            self.sock = get_listening_tcp_socket(self.ip, self.port,
-                backlog=self.backlog, retry=self.listen_retry,
-                certfile=self.certfile, keyfile=self.keyfile, style='eventlet')
+            self.sock = get_listening_tcp_socket(
+                self.ip, self.port, backlog=self.backlog,
+                retry=self.listen_retry, certfile=self.certfile,
+                keyfile=self.keyfile, style='eventlet')
         except socket_error, err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
@@ -1036,7 +1052,8 @@ class UDPSubserver(IPSubserver):
         IPSubserver._parse_conf(self, conf)
         self.worker_count = 1
         self.worker_names = ['0']
-        self.max_datagram_size = conf.get_int(self.name, 'max_datagram_size',
+        self.max_datagram_size = conf.get_int(
+            self.name, 'max_datagram_size',
             conf.get_int('brim', 'max_datagram_size', 65536))
         call = conf.get(self.name, 'call')
         if not call:
@@ -1055,9 +1072,10 @@ class UDPSubserver(IPSubserver):
         try:
             args = len(getargspec(self.handler.__init__).args)
             if args != 3:
-                raise Exception('Would not be able to instantiate %r for '
-                    '[%s]. Incorrect number of args, %s, should be 3 (self, '
-                    'name, parsed_conf).' % (call, self.name, args))
+                raise Exception(
+                    'Would not be able to instantiate %r for [%s]. Incorrect '
+                    'number of args, %s, should be 3 (self, name, '
+                    'parsed_conf).' % (call, self.name, args))
         except TypeError, err:
             if str(err) == 'arg is not a Python function':
                 err = 'Probably not a class.'
@@ -1067,9 +1085,10 @@ class UDPSubserver(IPSubserver):
         try:
             args = len(getargspec(self.handler.__call__).args)
             if args != 7:
-                raise Exception('Would not be able to use %r for [%s]. '
-                    'Incorrect number of __call__ args, %s, should be 7 '
-                    '(self, subserver, stats, sock, datagram, ip, port).' %
+                raise Exception(
+                    'Would not be able to use %r for [%s]. Incorrect number '
+                    'of __call__ args, %s, should be 7 (self, subserver, '
+                    'stats, sock, datagram, ip, port).' %
                     (call, self.name, args))
         except TypeError, err:
             if str(err) == 'arg is not a Python function':
@@ -1080,14 +1099,15 @@ class UDPSubserver(IPSubserver):
             try:
                 args = len(getargspec(self.handler.parse_conf).args)
                 if args != 3:
-                    raise Exception('Cannot use %r for [%s]. Incorrect number '
-                        'of parse_conf args, %s, should be 3 (cls, name, '
-                        'conf).' % (call, self.name, args))
+                    raise Exception(
+                        'Cannot use %r for [%s]. Incorrect number of '
+                        'parse_conf args, %s, should be 3 (cls, name, conf).' %
+                        (call, self.name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'parse_conf probably not a method.'
-                raise Exception('Cannot use %r for [%s]. %s' %
-                                (call, self.name, err))
+                raise Exception(
+                    'Cannot use %r for [%s]. %s' % (call, self.name, err))
             self.handler_conf = self.handler.parse_conf(self.name, conf)
         else:
             self.handler_conf = conf
@@ -1095,9 +1115,10 @@ class UDPSubserver(IPSubserver):
             try:
                 args = len(getargspec(self.handler.stats_conf).args)
                 if args != 3:
-                    raise Exception('Cannot use %r for [%s]. Incorrect number '
-                        'of stats_conf args, %s, should be 3 (cls, name, '
-                        'conf).' % (call, self.name, args))
+                    raise Exception(
+                        'Cannot use %r for [%s]. Incorrect number of '
+                        'stats_conf args, %s, should be 3 (cls, name, conf).' %
+                        (call, self.name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'stats_conf probably not a method.'
@@ -1109,8 +1130,8 @@ class UDPSubserver(IPSubserver):
 
     def _privileged_start(self):
         try:
-            self.sock = get_listening_udp_socket(self.ip, self.port,
-                retry=self.listen_retry, style='eventlet')
+            self.sock = get_listening_udp_socket(
+                self.ip, self.port, retry=self.listen_retry, style='eventlet')
         except socket_error, err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
@@ -1209,9 +1230,10 @@ class DaemonsSubserver(Subserver):
             try:
                 args = len(getargspec(daemon_class.__init__).args)
                 if args != 3:
-                    raise Exception('Would not be able to instantiate %r for '
-                        'daemon [%s]. Incorrect number of args, %s, should be '
-                        '3 (self, name, conf).' % (call, daemon_name, args))
+                    raise Exception(
+                        'Would not be able to instantiate %r for daemon [%s]. '
+                        'Incorrect number of args, %s, should be 3 (self, '
+                        'name, conf).' % (call, daemon_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
                     err = 'Probably not a class.'
@@ -1221,9 +1243,10 @@ class DaemonsSubserver(Subserver):
             try:
                 args = len(getargspec(daemon_class.__call__).args)
                 if args != 3:
-                    raise Exception('Would not be able to use %r for daemon '
-                        '[%s]. Incorrect number of __call__ args, %s, should '
-                        'be 3 (self, subserver, stats).' %
+                    raise Exception(
+                        'Would not be able to use %r for daemon [%s]. '
+                        'Incorrect number of __call__ args, %s, should be 3 '
+                        '(self, subserver, stats).' %
                         (call, daemon_name, args))
             except TypeError, err:
                 if str(err) == 'arg is not a Python function':
@@ -1235,10 +1258,10 @@ class DaemonsSubserver(Subserver):
                 try:
                     args = len(getargspec(daemon_class.parse_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for daemon [%s]. '
-                            'Incorrect number of parse_conf args, %s, should '
-                            'be 3 (cls, name, conf).' %
-                            (call, daemon_name, args))
+                        raise Exception(
+                            'Cannot use %r for daemon [%s]. Incorrect number '
+                            'of parse_conf args, %s, should be 3 (cls, name, '
+                            'conf).' % (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'parse_conf probably not a method.'
@@ -1251,10 +1274,10 @@ class DaemonsSubserver(Subserver):
                 try:
                     args = len(getargspec(daemon_class.stats_conf).args)
                     if args != 3:
-                        raise Exception('Cannot use %r for daemon [%s]. '
-                            'Incorrect number of stats_conf args, %s, should '
-                            'be 3 (cls, name, conf).' %
-                            (call, daemon_name, args))
+                        raise Exception(
+                            'Cannot use %r for daemon [%s]. Incorrect number '
+                            'of stats_conf args, %s, should be 3 (cls, name, '
+                            'conf).' % (call, daemon_name, args))
                 except TypeError, err:
                     if str(err) == 'arg is not a Python function':
                         err = 'stats_conf probably not a method.'
@@ -1391,7 +1414,8 @@ class Server(object):
                   brim.conf.Conf instance if the server should be
                   started.
         """
-        parser = OptionParser(add_help_option=False, usage="""
+        parser = OptionParser(
+            add_help_option=False, usage="""
 Usage: %%prog [options] [command]
 
 Brim.Net Core Server %s
@@ -1417,32 +1441,35 @@ Command (defaults to 'no-daemon'):
                         core apps will be started and no daemons. This can
                         be useful for debugging.
             """.strip() % brim.version)
-        parser.add_option('-?', '-h', '--help', dest='help',
-            action='store_true', default=False,
-            help='Outputs this help information.')
-        parser.add_option('-c', '--conf', action='append', dest='conf_files',
-            metavar='PATH',
+        parser.add_option(
+            '-?', '-h', '--help', dest='help', action='store_true',
+            default=False, help='Outputs this help information.')
+        parser.add_option(
+            '-c', '--conf', action='append', dest='conf_files', metavar='PATH',
             help='By default, /etc/brimd.conf and ~/.brimd.conf are read for '
                  'configuration. You may override this by specifying a '
                  'specific conf file with -c. This option may be specified '
                  'more than once and the conf files will each be read in '
                  'order.')
-        parser.add_option('-p', '--pid-file', dest='pid_file',
-            default='/var/run/brimd.pid', metavar='PATH',
+        parser.add_option(
+            '-p', '--pid-file', dest='pid_file', default='/var/run/brimd.pid',
+            metavar='PATH',
             help='The path to the file to store the PID of the running main '
                  'brimd process.')
-        parser.add_option('-o', '--output', dest='output',
-            action='store_true', default=False,
+        parser.add_option(
+            '-o', '--output', dest='output', action='store_true',
+            default=False,
             help='When running as a daemon brimd will normally close '
                  'standard input, output, and error; this option will leave '
                  'them open, which can be useful for debugging. Also, if '
                  'brimd exits immediately with an error, the full stack trace '
                  'will be output.')
-        parser.add_option('-v', '--version', dest='version',
+        parser.add_option(
+            '-v', '--version', dest='version', action='store_true',
+            default=False, help='Displays the version of brimd.')
+        parser.add_option(
+            '-x', '--error-stack-trace', dest='error_stack_trace',
             action='store_true', default=False,
-            help='Displays the version of brimd.')
-        parser.add_option('-x', '--error-stack-trace',
-            dest='error_stack_trace', action='store_true', default=False,
             help='Displays a full stack trace on a start up error.')
 
         def _parser_error(msg):

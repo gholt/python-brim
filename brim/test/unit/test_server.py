@@ -294,7 +294,8 @@ class TestSendPidSig(TestCase):
             server._send_pid_sig('some.pid', 0, expect_exit=True)
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             '12345 did not exit after %s seconds.' % server.PID_WAIT_TIME)
         self.assertEquals(self.time_calls, [()] * (server.PID_WAIT_TIME + 1))
         self.assertEquals(self.sleep_calls,
@@ -539,7 +540,8 @@ class TestSubserver(TestCase):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             "Could not load function 'pickle.blah' for [test] json_dumps.")
 
         ss = self._class(FakeServer(), 'test')
@@ -566,7 +568,8 @@ class TestSubserver(TestCase):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             "Could not load function 'pickle.blah' for [test] json_dumps.")
 
     def test_parse_conf_json_loads(self):
@@ -594,7 +597,8 @@ class TestSubserver(TestCase):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             "Could not load function 'pickle.blah' for [test] json_loads.")
 
         ss = self._class(FakeServer(), 'test')
@@ -621,7 +625,8 @@ class TestSubserver(TestCase):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             "Could not load function 'pickle.blah' for [test] json_loads.")
 
     def test_privileged_start(self):
@@ -764,8 +769,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
-            "client_timeout of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] client_timeout of 'abc' cannot be "
+            "converted to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -781,8 +788,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] "
-            "client_timeout of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] client_timeout of 'abc' cannot be "
+            "converted to int.")
 
     def test_parse_conf_concurrent_per_worker(self):
         ss = self._class(FakeServer(), 'test')
@@ -799,8 +808,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
-            "concurrent_per_worker of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] concurrent_per_worker of 'abc' cannot "
+            "be converted to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -816,8 +827,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] "
-            "concurrent_per_worker of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] concurrent_per_worker of 'abc' cannot "
+            "be converted to int.")
 
     def test_parse_conf_backlog(self):
         ss = self._class(FakeServer(), 'test')
@@ -869,8 +882,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
-            "listen_retry of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] listen_retry of 'abc' cannot be "
+            "converted to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -886,8 +901,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] "
-            "listen_retry of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] listen_retry of 'abc' cannot be "
+            "converted to int.")
 
     def test_parse_conf_eventlet_hub(self):
         ss = self._class(FakeServer(), 'test')
@@ -916,8 +933,8 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            "Could not load [test] eventlet_hub 'invalid'.")
+        self.assertEquals(
+            str(exc), "Could not load [test] eventlet_hub 'invalid'.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -927,8 +944,8 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            "Could not load [test] eventlet_hub 'invalid.module'.")
+        self.assertEquals(
+            str(exc), "Could not load [test] eventlet_hub 'invalid.module'.")
 
     def test_parse_conf_workers(self):
         ss = self._class(FakeServer(), 'test')
@@ -963,8 +980,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] workers of "
-            "'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] workers of 'abc' cannot be converted "
+            "to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -998,8 +1017,10 @@ class TestIPSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] workers of "
-            "'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] workers of 'abc' cannot be converted "
+            "to int.")
 
 
 class AppWithInvalidInit(object):
@@ -1181,8 +1202,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
-            "log_headers of 'abc' cannot be converted to boolean.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] log_headers of 'abc' cannot be "
+            "converted to boolean.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -1198,8 +1221,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] "
-            "log_headers of 'abc' cannot be converted to boolean.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] log_headers of 'abc' cannot be "
+            "converted to boolean.")
 
     def test_parse_conf_count_status_codes(self):
         ss = self._class(FakeServer(), 'test')
@@ -1257,8 +1282,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
-            "wsgi_input_iter_chunk_size of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] wsgi_input_iter_chunk_size of 'abc' "
+            "cannot be converted to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -1274,8 +1301,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] "
-            "wsgi_input_iter_chunk_size of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] wsgi_input_iter_chunk_size of 'abc' "
+            "cannot be converted to int.")
 
     def test_configure_wsgi_apps(self):
         ss = self._class(FakeServer(), 'test')
@@ -1316,8 +1345,9 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Invalid call value "
-            "'brim_wsgi_echo_WSGIEcho' for app [one].")
+        self.assertEquals(
+            str(exc),
+            "Invalid call value 'brim_wsgi_echo_WSGIEcho' for app [one].")
 
     def test_configure_wsgi_apps_no_load(self):
         ss = self._class(FakeServer(), 'test')
@@ -1329,8 +1359,9 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Could not load class "
-            "'brim.wsgi_echo.sgi_cho' for app [one].")
+        self.assertEquals(
+            str(exc),
+            "Could not load class 'brim.wsgi_echo.sgi_cho' for app [one].")
 
     def test_configure_wsgi_apps_not_a_class(self):
         ss = self._class(FakeServer(), 'test')
@@ -1342,9 +1373,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
-            "'brim.server._send_pid_sig' for app [one]. Probably not a "
-            "class.")
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate 'brim.server._send_pid_sig' for "
+            "app [one]. Probably not a class.")
 
     def test_configure_wsgi_apps_invalid_init(self):
         ss = self._class(FakeServer(), 'test')
@@ -1357,7 +1389,9 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate "
             "'brim.test.unit.test_server.AppWithInvalidInit' for app "
             "[one]. Incorrect number of args, 1, should be 4 (self, name, "
             "conf, next_app).")
@@ -1373,7 +1407,9 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.AppWithInvalidCall' for app "
             "[one]. Incorrect number of __call__ args, 1, should be 3 (self, "
             "env, start_response).")
@@ -1389,7 +1425,9 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.AppWithNoCall' for app "
             "[one]. Probably no __call__ method.")
 
@@ -1404,9 +1442,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.AppWithInvalidParseConf1' for "
-            "app [one]. Incorrect number of parse_conf args, 1, should be "
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.AppWithInvalidParseConf1' "
+            "for app [one]. Incorrect number of parse_conf args, 1, should be "
             "3 (cls, name, conf).")
 
     def test_configure_wsgi_apps_invalid_parse_conf2(self):
@@ -1420,9 +1459,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.AppWithInvalidParseConf2' for "
-            "app [one]. parse_conf probably not a method.")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.AppWithInvalidParseConf2' "
+            "for app [one]. parse_conf probably not a method.")
 
     def test_configure_wsgi_apps_no_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -1454,10 +1494,11 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.AppWithInvalidStatsConf1' for "
-            "app [one]. Incorrect number of stats_conf args, 1, should be 3 "
-            "(cls, name, conf).")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.AppWithInvalidStatsConf1' "
+            "for app [one]. Incorrect number of stats_conf args, 1, should be "
+            "3 (cls, name, conf).")
 
     def test_configure_wsgi_apps_invalid_stats_conf2(self):
         ss = self._class(FakeServer(), 'test')
@@ -1470,9 +1511,10 @@ class TestWSGISubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.AppWithInvalidStatsConf2' for "
-            "app [one]. stats_conf probably not a method.")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.AppWithInvalidStatsConf2' "
+            "for app [one]. stats_conf probably not a method.")
 
     def test_configure_wsgi_apps_no_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -1511,8 +1553,8 @@ class TestWSGISubserver(TestIPSubserver):
             ss._privileged_start()
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            'Could not bind to *:80: [Errno 13] Permission denied')
+        self.assertEquals(
+            str(exc), 'Could not bind to *:80: [Errno 13] Permission denied')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -1595,13 +1637,15 @@ class TestWSGISubserver(TestIPSubserver):
         if output:
             self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((),
+            self.assertEquals(capture_exceptions_stdout_stderr_calls, [(
+                (),
                 {'exceptions': ss._capture_exception,
                  'stdout_func': ss._capture_stdout,
                  'stderr_func': ss._capture_stderr})])
         self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(ss.name, ss.log_name,
-            ss.log_level, ss.log_facility, ss.server.no_daemon)])
+        self.assertEquals(get_logger_calls, [(
+            ss.name, ss.log_name, ss.log_level, ss.log_facility,
+            ss.server.no_daemon)])
         self.assertEquals(sustain_workers_calls, [((1, ss._wsgi_worker),
                                                    {'logger': fake_logger})])
         self.assertEquals(shutdown_safe_calls, [(ss.sock,)])
@@ -1610,7 +1654,8 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger, fake_logger)
         for code in ss.count_status_codes:
             key = 'status_%d_count' % code
-            self.assertEquals(ss.stats_conf.get(key), 'sum',
+            self.assertEquals(
+                ss.stats_conf.get(key), 'sum',
                 'key %r value %r != %r' % (key, ss.stats_conf.get(key), 'sum'))
         self.assertEquals(fake_wsgi.HttpProtocol.default_request_version,
                           'HTTP/1.0')
@@ -1843,12 +1888,14 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(env.get('brim.json_loads'), ss.json_loads)
         if raises:
             if raises == 'start':
-                self.assertEquals(env.get('brim._start_response'),
+                self.assertEquals(
+                    env.get('brim._start_response'),
                     ('500 Internal Server Error', [('Content-Length', '0')],
                      None))
                 self.assertEquals(content, '')
             else:
-                self.assertEquals(env.get('brim._start_response'),
+                self.assertEquals(
+                    env.get('brim._start_response'),
                     ('200 OK', [('Content-Length', '10')], None))
                 self.assertEquals(content, 'partial')
             self.assertEquals(ss.logger.debug_calls, [])
@@ -1867,7 +1914,8 @@ class TestWSGISubserver(TestIPSubserver):
                 self.assertEquals(str(ss.logger.exception_calls[0][1][1]),
                                   'body exception')
         elif with_app:
-            self.assertEquals(env.get('brim._start_response'),
+            self.assertEquals(
+                env.get('brim._start_response'),
                 ('200 OK', [('Content-Length', '10')], None))
             self.assertEquals(content, 'test value')
             self.assertEquals(ss.logger.debug_calls, [])
@@ -1876,7 +1924,8 @@ class TestWSGISubserver(TestIPSubserver):
             self.assertEquals(ss.logger.error_calls, [])
             self.assertEquals(ss.logger.exception_calls, [])
         else:
-            self.assertEquals(env.get('brim._start_response'),
+            self.assertEquals(
+                env.get('brim._start_response'),
                 ('404 Not Found', [('Content-Length', '0')], None))
             self.assertEquals(content, '')
             self.assertEquals(ss.logger.debug_calls, [])
@@ -1896,15 +1945,16 @@ class TestWSGISubserver(TestIPSubserver):
         self.test_wsgi_entry(raises='body')
 
     def _log_request_build(self, start=1330037777.77):
-        return {'REQUEST_METHOD': 'GET',
-                'PATH_INFO': '/path',
-                'SERVER_PROTOCOL': 'HTTP/1.1',
-                'brim.start': start,
-                'brim.txn': 'abcdef',
-                'brim._start_response':
-                     ('200 OK', [('Content-Length', '10')], None),
-                'brim._bytes_in': 0,
-                'brim._bytes_out': 10}
+        return {
+            'REQUEST_METHOD': 'GET',
+            'PATH_INFO': '/path',
+            'SERVER_PROTOCOL': 'HTTP/1.1',
+            'brim.start': start,
+            'brim.txn': 'abcdef',
+            'brim._start_response': (
+                '200 OK', [('Content-Length', '10')], None),
+            'brim._bytes_in': 0,
+            'brim._bytes_out': 10}
 
     def _log_request_execute(self, env, end=1330037779.89, log_headers=False):
         ss = self._class(FakeServer(output=True), 'test')
@@ -1950,8 +2000,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 499 - - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 499 - - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -1968,8 +2019,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -1988,8 +2040,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 301 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 301 10 - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2008,8 +2061,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 404 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 404 10 - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2028,8 +2082,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 1)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 503 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 503 10 - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2071,8 +2126,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path%20/test HTTP/1.1 200 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path%20/test HTTP/1.1 200 10 - - - '
+            'abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2090,9 +2146,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path?param1=value1%20value2&param2 HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path?param1=value1%20value2&param2 '
+            'HTTP/1.1 200 10 - - - abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2110,8 +2166,8 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.4 - - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -2130,8 +2186,8 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.4 - - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -2151,8 +2207,8 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.4 - - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -2171,9 +2227,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.4 1.2.3.4 - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.4 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
+            '- - abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2192,9 +2248,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.5 1.2.3.4 - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
+            '- - abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2213,9 +2269,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.5 1.2.3.4 - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
+            '- - abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2235,9 +2291,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('1.2.3.5 1.2.3.4 - - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
+            '- - abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2256,8 +2312,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 - - - abcdef 2.12000 headers: '
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000 headers: '
             'X-Test:test%20value%0AContent-Type:text/plain',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -2276,8 +2333,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 499 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 499 10 - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2296,8 +2354,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 - 10 - - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 - 10 - - - abcdef '
+            '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2315,9 +2374,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - authtoken - '
-            '20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
-            '2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - authtoken - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
+            'abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2335,8 +2394,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 123 - - abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 123 - - '
+            'abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2354,8 +2414,8 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 - '
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             'http://some.host/path%2520/test?maybe=query+value - abcdef '
             '2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
@@ -2375,9 +2435,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 - - Some%20User%20Agent%20(v1.0) '
-            'abcdef 2.12000',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - '
+            'Some%20User%20Agent%20(v1.0) abcdef 2.12000',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2395,8 +2455,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 - - - abcdef 2.12000 test: one two',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000 test: one two',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2415,9 +2476,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [('- - - - 20120223T225619Z '
-            'GET /path HTTP/1.1 200 10 - - - abcdef 2.12000 test: one two '
-            'headers: Content-Type:text/plain',)])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000 test: one two headers: Content-Type:text/plain',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2445,10 +2506,11 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(len(ss.logger.error_calls), 1)
         self.assertEquals(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
-        self.assertTrue(e.startswith("UNCAUGHT EXCEPTION: wid:123 Exception: "
-            "test ['Traceback (most recent call last):', '  File "))
-        self.assertTrue(e.endswith('\', "    raise Exception(\'test\')", '
-            '\'Exception: test\']'))
+        self.assertTrue(e.startswith(
+            "UNCAUGHT EXCEPTION: wid:123 Exception: test ['Traceback (most "
+            "recent call last):', '  File "))
+        self.assertTrue(e.endswith(
+            '\', "    raise Exception(\'test\')", \'Exception: test\']'))
         self.assertEquals(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
@@ -2457,8 +2519,9 @@ class TestWSGISubserver(TestIPSubserver):
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
         self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [('STDOUT: wid:123 one',),
-            ('STDOUT: wid:123 two three',), ('STDOUT: wid:123 four',)])
+        self.assertEquals(ss.logger.info_calls, [
+            ('STDOUT: wid:123 one',), ('STDOUT: wid:123 two three',),
+            ('STDOUT: wid:123 four',)])
         self.assertEquals(ss.logger.notice_calls, [])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -2471,8 +2534,9 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [('STDERR: wid:123 one',),
-            ('STDERR: wid:123 two three',), ('STDERR: wid:123 four',)])
+        self.assertEquals(ss.logger.error_calls, [
+            ('STDERR: wid:123 one',), ('STDERR: wid:123 two three',),
+            ('STDERR: wid:123 four',)])
         self.assertEquals(ss.logger.exception_calls, [])
 
 
@@ -2654,8 +2718,8 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            "Invalid call value 'brim_tcp_echo_TCPEcho' for [test].")
+        self.assertEquals(
+            str(exc), "Invalid call value 'brim_tcp_echo_TCPEcho' for [test].")
 
     def test_configure_handler_no_load(self):
         ss = self._class(FakeServer(), 'test')
@@ -2666,7 +2730,8 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             "Could not load class 'brim.tcp_echo.cp_echo' for [test].")
 
     def test_configure_handler_not_a_class(self):
@@ -2678,8 +2743,10 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
-            "'brim.server._send_pid_sig' for [test]. Probably not a class.")
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate 'brim.server._send_pid_sig' for "
+            "[test]. Probably not a class.")
 
     def test_configure_handler_invalid_init(self):
         ss = self._class(FakeServer(), 'test')
@@ -2690,7 +2757,9 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate "
             "'brim.test.unit.test_server.TCPWithInvalidInit' for [test]. "
             "Incorrect number of args, 1, should be 3 (self, name, "
             "parsed_conf).")
@@ -2704,7 +2773,9 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.TCPWithInvalidCall' for [test]. "
             "Incorrect number of __call__ args, 1, should be 6 (self, "
             "subserver, stats, sock, ip, port).")
@@ -2718,7 +2789,9 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.TCPWithNoCall' for [test]. Probably "
             "no __call__ method.")
 
@@ -2732,9 +2805,10 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.TCPWithInvalidParseConf1' for "
-            "[test]. Incorrect number of parse_conf args, 1, should be 3 "
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.TCPWithInvalidParseConf1' "
+            "for [test]. Incorrect number of parse_conf args, 1, should be 3 "
             "(cls, name, conf).")
 
     def test_configure_handler_invalid_parse_conf2(self):
@@ -2747,9 +2821,10 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.TCPWithInvalidParseConf2' for "
-            "[test]. parse_conf probably not a method.")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.TCPWithInvalidParseConf2' "
+            "for [test]. parse_conf probably not a method.")
 
     def test_configure_handler_no_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -2776,9 +2851,10 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.TCPWithInvalidStatsConf1' for "
-            "[test]. Incorrect number of stats_conf args, 1, should be 3 "
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.TCPWithInvalidStatsConf1' "
+            "for [test]. Incorrect number of stats_conf args, 1, should be 3 "
             "(cls, name, conf).")
 
     def test_configure_handler_invalid_stats_conf2(self):
@@ -2791,9 +2867,10 @@ class TestTCPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.TCPWithInvalidStatsConf2' for "
-            "[test]. stats_conf probably not a method.")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.TCPWithInvalidStatsConf2' "
+            "for [test]. stats_conf probably not a method.")
 
     def test_configure_handler_no_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -2820,8 +2897,8 @@ class TestTCPSubserver(TestIPSubserver):
             ss._privileged_start()
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            'Could not bind to *:80: [Errno 13] Permission denied')
+        self.assertEquals(
+            str(exc), 'Could not bind to *:80: [Errno 13] Permission denied')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -2899,13 +2976,15 @@ class TestTCPSubserver(TestIPSubserver):
         if output:
             self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((),
+            self.assertEquals(capture_exceptions_stdout_stderr_calls, [(
+                (),
                 {'exceptions': ss._capture_exception,
                  'stdout_func': ss._capture_stdout,
                  'stderr_func': ss._capture_stderr})])
         self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(ss.name, ss.log_name,
-            ss.log_level, ss.log_facility, ss.server.no_daemon)])
+        self.assertEquals(get_logger_calls, [(
+            ss.name, ss.log_name, ss.log_level, ss.log_facility,
+            ss.server.no_daemon)])
         self.assertEquals(sustain_workers_calls, [((1, ss._tcp_worker),
                                                    {'logger': fake_logger})])
         self.assertEquals(shutdown_safe_calls, [(ss.sock,)])
@@ -3004,8 +3083,8 @@ class TestTCPSubserver(TestIPSubserver):
         else:
             self.assertEquals(use_hub_calls, [(None,)])
         self.assertEquals(ss.handler.__class__.__name__, 'TCPEcho')
-        self.assertEquals(GreenPool_calls,
-            [((), {'size': ss.concurrent_per_worker})])
+        self.assertEquals(
+            GreenPool_calls, [((), {'size': ss.concurrent_per_worker})])
         self.assertEquals(len(spawn_n_calls), 1)
         self.assertEquals(len(spawn_n_calls[0]), 6)
         self.assertEquals(spawn_n_calls[0][0].__class__.__name__, 'TCPEcho')
@@ -3065,10 +3144,11 @@ class TestTCPSubserver(TestIPSubserver):
         self.assertEquals(len(ss.logger.error_calls), 1)
         self.assertEquals(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
-        self.assertTrue(e.startswith("UNCAUGHT EXCEPTION: tid:123 Exception: "
-            "test ['Traceback (most recent call last):', '  File "))
-        self.assertTrue(e.endswith('\', "    raise Exception(\'test\')", '
-            '\'Exception: test\']'))
+        self.assertTrue(e.startswith(
+            "UNCAUGHT EXCEPTION: tid:123 Exception: test ['Traceback (most "
+            "recent call last):', '  File "))
+        self.assertTrue(e.endswith(
+            '\', "    raise Exception(\'test\')", \'Exception: test\']'))
         self.assertEquals(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
@@ -3077,8 +3157,9 @@ class TestTCPSubserver(TestIPSubserver):
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
         self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [('STDOUT: tid:123 one',),
-            ('STDOUT: tid:123 two three',), ('STDOUT: tid:123 four',)])
+        self.assertEquals(ss.logger.info_calls, [
+            ('STDOUT: tid:123 one',), ('STDOUT: tid:123 two three',),
+            ('STDOUT: tid:123 four',)])
         self.assertEquals(ss.logger.notice_calls, [])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -3091,8 +3172,9 @@ class TestTCPSubserver(TestIPSubserver):
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [('STDERR: tid:123 one',),
-            ('STDERR: tid:123 two three',), ('STDERR: tid:123 four',)])
+        self.assertEquals(ss.logger.error_calls, [
+            ('STDERR: tid:123 one',), ('STDERR: tid:123 two three',),
+            ('STDERR: tid:123 four',)])
         self.assertEquals(ss.logger.exception_calls, [])
 
 
@@ -3241,8 +3323,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] "
-            "max_datagram_size of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] max_datagram_size of 'abc' cannot be "
+            "converted to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -3258,8 +3342,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except SystemExit, err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] "
-            "max_datagram_size of 'abc' cannot be converted to int.")
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] max_datagram_size of 'abc' cannot be "
+            "converted to int.")
 
     def test_parse_conf_no_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -3311,8 +3397,8 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            "Invalid call value 'brim_udp_echo_UDPEcho' for [test].")
+        self.assertEquals(
+            str(exc), "Invalid call value 'brim_udp_echo_UDPEcho' for [test].")
 
     def test_configure_handler_no_load(self):
         ss = self._class(FakeServer(), 'test')
@@ -3323,7 +3409,8 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
+        self.assertEquals(
+            str(exc),
             "Could not load class 'brim.udp_echo.cp_echo' for [test].")
 
     def test_configure_handler_not_a_class(self):
@@ -3335,8 +3422,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
-            "'brim.server._send_pid_sig' for [test]. Probably not a class.")
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate 'brim.server._send_pid_sig' for "
+            "[test]. Probably not a class.")
 
     def test_configure_handler_invalid_init(self):
         ss = self._class(FakeServer(), 'test')
@@ -3347,7 +3436,9 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate "
             "'brim.test.unit.test_server.UDPWithInvalidInit' for [test]. "
             "Incorrect number of args, 1, should be 3 (self, name, "
             "parsed_conf).")
@@ -3361,7 +3452,9 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.UDPWithInvalidCall' for [test]. "
             "Incorrect number of __call__ args, 1, should be 7 (self, "
             "subserver, stats, sock, datagram, ip, port).")
@@ -3375,7 +3468,9 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.UDPWithNoCall' for [test]. Probably "
             "no __call__ method.")
 
@@ -3389,9 +3484,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.UDPWithInvalidParseConf1' for "
-            "[test]. Incorrect number of parse_conf args, 1, should be 3 "
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.UDPWithInvalidParseConf1' "
+            "for [test]. Incorrect number of parse_conf args, 1, should be 3 "
             "(cls, name, conf).")
 
     def test_configure_handler_invalid_parse_conf2(self):
@@ -3404,9 +3500,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.UDPWithInvalidParseConf2' for "
-            "[test]. parse_conf probably not a method.")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.UDPWithInvalidParseConf2' "
+            "for [test]. parse_conf probably not a method.")
 
     def test_configure_handler_no_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -3433,9 +3530,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.UDPWithInvalidStatsConf1' for "
-            "[test]. Incorrect number of stats_conf args, 1, should be 3 "
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.UDPWithInvalidStatsConf1' "
+            "for [test]. Incorrect number of stats_conf args, 1, should be 3 "
             "(cls, name, conf).")
 
     def test_configure_handler_invalid_stats_conf2(self):
@@ -3448,9 +3546,10 @@ class TestUDPSubserver(TestIPSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
-            "'brim.test.unit.test_server.UDPWithInvalidStatsConf2' for "
-            "[test]. stats_conf probably not a method.")
+        self.assertEquals(
+            str(exc),
+            "Cannot use 'brim.test.unit.test_server.UDPWithInvalidStatsConf2' "
+            "for [test]. stats_conf probably not a method.")
 
     def test_configure_handler_no_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -3477,8 +3576,8 @@ class TestUDPSubserver(TestIPSubserver):
             ss._privileged_start()
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc),
-            'Could not bind to *:80: [Errno 13] Permission denied')
+        self.assertEquals(
+            str(exc), 'Could not bind to *:80: [Errno 13] Permission denied')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -3592,14 +3691,15 @@ class TestUDPSubserver(TestIPSubserver):
         if output:
             self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((),
-                {'exceptions': ss._capture_exception,
-                 'stdout_func': ss._capture_stdout,
-                 'stderr_func': ss._capture_stderr})])
+            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((), {
+                'exceptions': ss._capture_exception,
+                'stdout_func': ss._capture_stdout,
+                'stderr_func': ss._capture_stderr})])
         self.assertEquals(ss.start_time, 1)
         self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(ss.name, ss.log_name,
-            ss.log_level, ss.log_facility, ss.server.no_daemon)])
+        self.assertEquals(get_logger_calls, [(
+            ss.name, ss.log_name, ss.log_level, ss.log_facility,
+            ss.server.no_daemon)])
         self.assertEquals(ss.logger, fake_logger)
         self.assertEquals(fake_logger.error_calls, [])
         self.assertEquals(ss.handler.__class__.__name__, 'UDPEcho')
@@ -3608,8 +3708,8 @@ class TestUDPSubserver(TestIPSubserver):
             self.assertEquals(use_hub_calls, [])
         else:
             self.assertEquals(use_hub_calls, [(None,)])
-        self.assertEquals(GreenPool_calls,
-            [((), {'size': ss.concurrent_per_worker})])
+        self.assertEquals(GreenPool_calls, [
+            ((), {'size': ss.concurrent_per_worker})])
         self.assertEquals(len(spawn_n_calls), 1)
         self.assertEquals(len(spawn_n_calls[0]), 7)
         self.assertEquals(spawn_n_calls[0][0].__class__.__name__, 'UDPEcho')
@@ -3622,8 +3722,8 @@ class TestUDPSubserver(TestIPSubserver):
         if raises:
             self.assertEquals(recvfrom_calls, [(ss.max_datagram_size,)])
         else:
-            self.assertEquals(recvfrom_calls,
-                [(ss.max_datagram_size,), (ss.max_datagram_size,)])
+            self.assertEquals(recvfrom_calls, [
+                (ss.max_datagram_size,), (ss.max_datagram_size,)])
         if raises == 'socket einval':
             self.assertEquals(exc, None)
         elif raises == 'socket other':
@@ -3671,10 +3771,11 @@ class TestUDPSubserver(TestIPSubserver):
         self.assertEquals(len(ss.logger.error_calls), 1)
         self.assertEquals(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
-        self.assertTrue(e.startswith("UNCAUGHT EXCEPTION: uid:123 Exception: "
-            "test ['Traceback (most recent call last):', '  File "))
-        self.assertTrue(e.endswith('\', "    raise Exception(\'test\')", '
-            '\'Exception: test\']'))
+        self.assertTrue(e.startswith(
+            "UNCAUGHT EXCEPTION: uid:123 Exception: test ['Traceback (most "
+            "recent call last):', '  File "))
+        self.assertTrue(e.endswith(
+            '\', "    raise Exception(\'test\')", \'Exception: test\']'))
         self.assertEquals(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
@@ -3683,8 +3784,9 @@ class TestUDPSubserver(TestIPSubserver):
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
         self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [('STDOUT: uid:123 one',),
-            ('STDOUT: uid:123 two three',), ('STDOUT: uid:123 four',)])
+        self.assertEquals(ss.logger.info_calls, [
+            ('STDOUT: uid:123 one',), ('STDOUT: uid:123 two three',),
+            ('STDOUT: uid:123 four',)])
         self.assertEquals(ss.logger.notice_calls, [])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -3697,8 +3799,9 @@ class TestUDPSubserver(TestIPSubserver):
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [('STDERR: uid:123 one',),
-            ('STDERR: uid:123 two three',), ('STDERR: uid:123 four',)])
+        self.assertEquals(ss.logger.error_calls, [
+            ('STDERR: uid:123 one',), ('STDERR: uid:123 two three',),
+            ('STDERR: uid:123 four',)])
         self.assertEquals(ss.logger.exception_calls, [])
 
 
@@ -3866,8 +3969,10 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Invalid call value "
-            "'brim_daemon_sample_DaemonSample' for daemon [one].")
+        self.assertEquals(
+            str(exc),
+            "Invalid call value 'brim_daemon_sample_DaemonSample' for daemon "
+            "[one].")
 
     def test_configure_daemons_no_load(self):
         ss = self._class(FakeServer(), 'test')
@@ -3879,8 +3984,10 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Could not load class "
-            "'brim.daemon_sample.aemon_sample' for daemon [one].")
+        self.assertEquals(
+            str(exc),
+            "Could not load class 'brim.daemon_sample.aemon_sample' for "
+            "daemon [one].")
 
     def test_configure_daemons_not_a_class(self):
         ss = self._class(FakeServer(), 'test')
@@ -3892,9 +3999,10 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
-            "'brim.server._send_pid_sig' for daemon [one]. Probably not a "
-            "class.")
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate 'brim.server._send_pid_sig' for "
+            "daemon [one]. Probably not a class.")
 
     def test_configure_daemons_invalid_init(self):
         ss = self._class(FakeServer(), 'test')
@@ -3907,7 +4015,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to instantiate "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to instantiate "
             "'brim.test.unit.test_server.DaemonWithInvalidInit' for daemon "
             "[one]. Incorrect number of args, 1, should be 3 (self, name, "
             "conf).")
@@ -3923,7 +4033,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.DaemonWithInvalidCall' for daemon "
             "[one]. Incorrect number of __call__ args, 1, should be 3 (self, "
             "subserver, stats).")
@@ -3939,7 +4051,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Would not be able to use "
+        self.assertEquals(
+            str(exc),
+            "Would not be able to use "
             "'brim.test.unit.test_server.DaemonWithNoCall' for daemon "
             "[one]. Probably no __call__ method.")
 
@@ -3954,7 +4068,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
+        self.assertEquals(
+            str(exc),
+            "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidParseConf1' for "
             "daemon [one]. Incorrect number of parse_conf args, 1, should be "
             "3 (cls, name, conf).")
@@ -3970,7 +4086,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
+        self.assertEquals(
+            str(exc),
+            "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidParseConf2' for "
             "daemon [one]. parse_conf probably not a method.")
 
@@ -4004,7 +4122,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
+        self.assertEquals(
+            str(exc),
+            "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf1' for "
             "daemon [one]. Incorrect number of stats_conf args, 1, should be "
             "3 (cls, name, conf).")
@@ -4020,7 +4140,9 @@ class TestDaemonsSubserver(TestSubserver):
             ss._parse_conf(Conf(confd))
         except Exception, err:
             exc = err
-        self.assertEquals(str(exc), "Cannot use "
+        self.assertEquals(
+            str(exc),
+            "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf2' for "
             "daemon [one]. stats_conf probably not a method.")
 
@@ -4089,16 +4211,17 @@ class TestDaemonsSubserver(TestSubserver):
         if output:
             self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((),
-                {'exceptions': ss._capture_exception,
-                 'stdout_func': ss._capture_stdout,
-                 'stderr_func': ss._capture_stderr})])
+            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((), {
+                'exceptions': ss._capture_exception,
+                'stdout_func': ss._capture_stdout,
+                'stderr_func': ss._capture_stderr})])
         self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(ss.name, ss.log_name,
-            ss.log_level, ss.log_facility, ss.server.no_daemon)])
+        self.assertEquals(get_logger_calls, [(
+            ss.name, ss.log_name, ss.log_level, ss.log_facility,
+            ss.server.no_daemon)])
         self.assertEquals(ss.worker_count, 1)
-        self.assertEquals(sustain_workers_calls,
-            [((ss.worker_count, ss._daemon), {'logger': fake_logger})])
+        self.assertEquals(sustain_workers_calls, [
+            ((ss.worker_count, ss._daemon), {'logger': fake_logger})])
         self.assertEquals(ss.worker_id, -1)
         self.assertEquals(ss.start_time, 1)
         self.assertEquals(ss.logger, fake_logger)
@@ -4149,8 +4272,8 @@ class TestDaemonsSubserver(TestSubserver):
         self.assertEquals(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
         self.assertEquals(ss.daemons[0][0], 'one')
         self.assertEquals(ss.daemons[0][1].__name__, 'DaemonWithStatsConf')
-        self.assertEquals(ss.daemons[0][2].store,
-            {'test': {'daemons': 'one'},
+        self.assertEquals(ss.daemons[0][2].store, {
+            'test': {'daemons': 'one'},
             'one': {'call': 'brim.test.unit.test_server.DaemonWithStatsConf'}})
         self.assertEquals(len(daemon.calls), 1)
         self.assertEquals(len(daemon.calls[0]), 2)
@@ -4183,10 +4306,11 @@ class TestDaemonsSubserver(TestSubserver):
         self.assertEquals(len(ss.logger.error_calls), 1)
         self.assertEquals(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
-        self.assertTrue(e.startswith("UNCAUGHT EXCEPTION: did:123 Exception: "
-            "test ['Traceback (most recent call last):', '  File "))
-        self.assertTrue(e.endswith('\', "    raise Exception(\'test\')", '
-            '\'Exception: test\']'))
+        self.assertTrue(e.startswith(
+            "UNCAUGHT EXCEPTION: did:123 Exception: test ['Traceback (most "
+            "recent call last):', '  File "))
+        self.assertTrue(e.endswith(
+            '\', "    raise Exception(\'test\')", \'Exception: test\']'))
         self.assertEquals(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
@@ -4195,8 +4319,9 @@ class TestDaemonsSubserver(TestSubserver):
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
         self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [('STDOUT: did:123 one',),
-            ('STDOUT: did:123 two three',), ('STDOUT: did:123 four',)])
+        self.assertEquals(ss.logger.info_calls, [
+            ('STDOUT: did:123 one',), ('STDOUT: did:123 two three',),
+            ('STDOUT: did:123 four',)])
         self.assertEquals(ss.logger.notice_calls, [])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -4209,8 +4334,9 @@ class TestDaemonsSubserver(TestSubserver):
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [('STDERR: did:123 one',),
-            ('STDERR: did:123 two three',), ('STDERR: did:123 four',)])
+        self.assertEquals(ss.logger.error_calls, [
+            ('STDERR: did:123 one',), ('STDERR: did:123 two three',),
+            ('STDERR: did:123 four',)])
         self.assertEquals(ss.logger.exception_calls, [])
 
 
@@ -4486,10 +4612,10 @@ class TestServer(TestCase):
         self.assertEquals(self.stdout.getvalue(), '')
         self.assertEquals(self.stderr.getvalue(), '')
         self.assertEquals(self.fork_calls, [()])
-        self.assertEquals(self.send_pid_sig_calls,
-            [((self.serv.pid_file, 0), {}),
-             ((self.serv.pid_file, server.SIGHUP),
-              {'expect_exit': True, 'pid_override': 12345})])
+        self.assertEquals(self.send_pid_sig_calls, [
+            ((self.serv.pid_file, 0), {}),
+            ((self.serv.pid_file, server.SIGHUP),
+                {'expect_exit': True, 'pid_override': 12345})])
 
     def test_reload_no_conf(self):
         self.serv.args = ['reload']
@@ -4513,10 +4639,10 @@ class TestServer(TestCase):
         self.assertEquals(self.stdout.getvalue(), '')
         self.assertEquals(self.stderr.getvalue(), '')
         self.assertEquals(self.fork_calls, [()])
-        self.assertEquals(self.send_pid_sig_calls,
-            [((self.serv.pid_file, 0), {}),
-             ((self.serv.pid_file, server.SIGHUP),
-              {'expect_exit': True, 'pid_override': 12345})])
+        self.assertEquals(self.send_pid_sig_calls, [
+            ((self.serv.pid_file, 0), {}),
+            ((self.serv.pid_file, server.SIGHUP),
+                {'expect_exit': True, 'pid_override': 12345})])
 
     def test_force_reload_no_conf(self):
         self.serv.args = ['force-reload']
@@ -4540,26 +4666,26 @@ class TestServer(TestCase):
         self.assertEquals(self.stdout.getvalue(), '')
         self.assertEquals(self.stderr.getvalue(), '')
         self.assertEquals(self.fork_calls, [()])
-        self.assertEquals(self.send_pid_sig_calls,
-            [((self.serv.pid_file, 0), {}),
-             ((self.serv.pid_file, server.SIGHUP),
-              {'expect_exit': True, 'pid_override': 12345})])
+        self.assertEquals(self.send_pid_sig_calls, [
+            ((self.serv.pid_file, 0), {}),
+            ((self.serv.pid_file, server.SIGHUP),
+                {'expect_exit': True, 'pid_override': 12345})])
 
     def test_shutdown(self):
         self.serv.args = ['shutdown']
         self.assertEquals(self.serv.main(), 0)
         self.assertEquals(self.stdout.getvalue(), '')
         self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls,
-            [((self.serv.pid_file, server.SIGHUP), {'expect_exit': True})])
+        self.assertEquals(self.send_pid_sig_calls, [
+            ((self.serv.pid_file, server.SIGHUP), {'expect_exit': True})])
 
     def test_stop(self):
         self.serv.args = ['stop']
         self.assertEquals(self.serv.main(), 0)
         self.assertEquals(self.stdout.getvalue(), '')
         self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls,
-            [((self.serv.pid_file, server.SIGTERM), {'expect_exit': True})])
+        self.assertEquals(self.send_pid_sig_calls, [
+            ((self.serv.pid_file, server.SIGTERM), {'expect_exit': True})])
 
     def test_status_running(self):
         self.serv.args = ['status']
@@ -4626,7 +4752,8 @@ class TestServer(TestCase):
         self.assertEquals(self.serv.log_name, 'brim')
         self.assertEquals(self.serv.log_level, 'INFO')
         self.assertEquals(self.serv.log_facility, 'LOG_LOCAL0')
-        self.assertEquals(sorted(s.name for s in self.serv.subservers),
+        self.assertEquals(
+            sorted(s.name for s in self.serv.subservers),
             ['daemons', 'tcp', 'tcp2', 'udp', 'udp2', 'wsgi', 'wsgi2'])
         # Just verifies subserver._parse_conf was called.
         wsgi = [s for s in self.serv.subservers if s.name == 'wsgi'][0]
@@ -4747,8 +4874,8 @@ class TestServer(TestCase):
             server.sustain_workers = orig_sustain_workers
         # Since we're in no-daemon, Server didn't call sustain_workers, but the
         # wsgi subserver did.
-        self.assertEquals(sustain_workers_calls,
-            [((0, subserv._wsgi_worker), {'logger': subserv.logger})])
+        self.assertEquals(sustain_workers_calls, [
+            ((0, subserv._wsgi_worker), {'logger': subserv.logger})])
 
     def test_start_no_subservers(self):
         self.conf = Conf({'brim': {'port': '0'}})
@@ -4825,8 +4952,8 @@ class TestServer(TestCase):
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
+        self.assertEquals(sustain_workers_calls, [
+            ((1, self.serv._start_subserver), {'logger': self.serv.logger})])
         self.assertEquals(self.capture_calls, [
             ((), {'exceptions': self.serv._capture_exception,
                   'stdout_func': self.serv._capture_stdout,
@@ -4852,8 +4979,8 @@ class TestServer(TestCase):
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
+        self.assertEquals(sustain_workers_calls, [
+            ((1, self.serv._start_subserver), {'logger': self.serv.logger})])
         self.assertEquals(self.capture_calls, [])
 
     def test_start_subserver(self, no_setproctitle=False):
@@ -4876,8 +5003,8 @@ class TestServer(TestCase):
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls,
-            [((1, self.serv._start_subserver), {'logger': self.serv.logger})])
+        self.assertEquals(sustain_workers_calls, [
+            ((1, self.serv._start_subserver), {'logger': self.serv.logger})])
         self.assertEquals(self.capture_calls, [
             ((), {'exceptions': self.serv._capture_exception,
                   'stdout_func': self.serv._capture_stdout,
@@ -4930,28 +5057,28 @@ class TestServer(TestCase):
     def test_capture_stdout(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.info_calls,
-            [('STDOUT: main one',), ('STDOUT: main two',),
-             ('STDOUT: main three',)])
+        self.assertEquals(self.serv.logger.info_calls, [
+            ('STDOUT: main one',), ('STDOUT: main two',),
+            ('STDOUT: main three',)])
 
         self.serv.logger = FakeLogger()
         self.serv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.info_calls,
-            [('STDOUT: main one',), ('STDOUT: main two',),
-             ('STDOUT: main three',)])
+        self.assertEquals(self.serv.logger.info_calls, [
+            ('STDOUT: main one',), ('STDOUT: main two',),
+            ('STDOUT: main three',)])
 
     def test_capture_stderr(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.error_calls,
-            [('STDERR: main one',), ('STDERR: main two',),
-             ('STDERR: main three',)])
+        self.assertEquals(self.serv.logger.error_calls, [
+            ('STDERR: main one',), ('STDERR: main two',),
+            ('STDERR: main three',)])
 
         self.serv.logger = FakeLogger()
         self.serv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.error_calls,
-            [('STDERR: main one',), ('STDERR: main two',),
-             ('STDERR: main three',)])
+        self.assertEquals(self.serv.logger.error_calls, [
+            ('STDERR: main one',), ('STDERR: main two',),
+            ('STDERR: main three',)])
 
 
 if __name__ == '__main__':

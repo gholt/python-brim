@@ -85,7 +85,8 @@ class TestDaemonSample(TestCase):
             daemon_sample.time = orig_time
         self.assertEquals(str(exc), 'testexit')
         self.assertEquals(sleep_calls, [(60,)] * 3)
-        self.assertEquals(fake_server.logger.info_calls,
+        self.assertEquals(
+            fake_server.logger.info_calls,
             ['test sample daemon log line 1',
              'test sample daemon log line 2',
              'test sample daemon log line 3'])
@@ -95,16 +96,16 @@ class TestDaemonSample(TestCase):
     def test_parse_conf(self):
         c = daemon_sample.DaemonSample.parse_conf('test', Conf({}))
         self.assertEquals(c, {'interval': 60})
-        c = daemon_sample.DaemonSample.parse_conf('test',
-            Conf({'test': {'interval': 123}}))
+        c = daemon_sample.DaemonSample.parse_conf(
+            'test', Conf({'test': {'interval': 123}}))
         self.assertEquals(c, {'interval': 123})
-        c = daemon_sample.DaemonSample.parse_conf('test',
-            Conf({'test2': {'interval': 123}}))
+        c = daemon_sample.DaemonSample.parse_conf(
+            'test', Conf({'test2': {'interval': 123}}))
         self.assertEquals(c, {'interval': 60})
 
     def test_stats_conf(self):
-        self.assertEquals(daemon_sample.DaemonSample.stats_conf('test',
-            {'interval': 60}), ['iterations', 'last_run'])
+        self.assertEquals(daemon_sample.DaemonSample.stats_conf(
+            'test', {'interval': 60}), ['iterations', 'last_run'])
 
 
 if __name__ == '__main__':
