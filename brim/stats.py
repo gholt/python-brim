@@ -22,6 +22,7 @@ See Stats.parse_conf for configuration options.
 from sys import maxint
 from brim.http import QueryParser
 
+
 class Stats(object):
     """
     A WSGI application that reports the brimd server stats as a
