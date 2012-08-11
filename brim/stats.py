@@ -20,7 +20,7 @@ See Stats.parse_conf for configuration options.
 """
 
 from sys import maxint
-
+from brim.http import QueryParser
 
 class Stats(object):
     """
@@ -84,9 +84,17 @@ class Stats(object):
                             stats.bucket_names[i],
                             {})[name] = stats.get(i, name)
         body['start_time'] = server.start_time
-        body = env['brim.json_dumps'](body) + '\n'
-        start_response('200 OK', [('Content-Length', str(len(body))),
-                                  ('Content-Type', 'application/json')])
+        callback = QueryParser(env['QUERY_STRING']).get('callback',
+                                                        default=False)
+        if callback:
+            body = '%s(%s)' % (callback, env['brim.json_dumps'](body))
+            start_response('200 OK', [('Content-Length', str(len(body))),
+                                      ('Content-Type',
+                                       'application/javascript')])
+        else:
+            body = env['brim.json_dumps'](body) + '\n'
+            start_response('200 OK', [('Content-Length', str(len(body))),
+                                      ('Content-Type', 'application/json')])
         if env['REQUEST_METHOD'] == 'HEAD':
             return []
         return [body]

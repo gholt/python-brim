@@ -103,7 +103,8 @@ class TestStats(TestCase):
                     'brim': FakeServer().subservers[0],
                     'wsgi.input': StringIO('testbody'),
                     'brim.json_dumps': dumps,
-                    'brim.json_loads': loads}
+                    'brim.json_loads': loads,
+                    'QUERY_STRING': ''}
         self.parsed_conf = {'path': '/testpath'}
 
     def test_init_attrs(self):
@@ -165,6 +166,17 @@ class TestStats(TestCase):
         self.assertEquals(body['udp2'], a['udp2'])
         self.assertEquals(body['daemons'], a['daemons'])
         self.assertEquals(body, a)
+
+    def test_jsonp_callback(self):
+        self.env['QUERY_STRING'] = 'callback=jptest'
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
+        self.assertEquals(self.start_response_calls,
+                          [('200 OK', [('Content-Length', '818'),
+                                       ('Content-Type',
+                                        'application/javascript')])])
+        self.assertEquals(True, body.startswith('jptest('))
 
     def test_call_stats_zeroed_head(self):
         self.env['REQUEST_METHOD'] = 'HEAD'
