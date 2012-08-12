@@ -15,6 +15,8 @@
 """
 Reports the brimd server stats as a JSON reponse. The stats
 contain basic things like the server start time and request counts.
+You may also add a jsonp or callback query variable for JSONP
+support.
 
 See Stats.parse_conf for configuration options.
 """
@@ -27,7 +29,8 @@ class Stats(object):
     """
     A WSGI application that reports the brimd server stats as a
     JSON reponse. The stats contain basic things like the server
-    start time and request counts.
+    start time and request counts. You may also add a jsonp or
+    callback query variable for JSONP support.
 
     :param name: The name of the app, indicates the app's section in
                  the overall configuration for the WSGI server.
