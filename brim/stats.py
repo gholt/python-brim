@@ -85,8 +85,8 @@ class Stats(object):
                             stats.bucket_names[i],
                             {})[name] = stats.get(i, name)
         body['start_time'] = server.start_time
-        callback = QueryParser(env['QUERY_STRING']).get('callback',
-                                                        default=False)
+        qp = QueryParser(env['QUERY_STRING'])
+        callback = qp.get('jsonp', default=qp.get('callback', default=False))
         if callback:
             body = '%s(%s)' % (callback, env['brim.json_dumps'](body))
             start_response('200 OK', [('Content-Length', str(len(body))),
