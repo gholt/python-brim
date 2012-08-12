@@ -167,16 +167,49 @@ class TestStats(TestCase):
         self.assertEquals(body['daemons'], a['daemons'])
         self.assertEquals(body, a)
 
-    def test_jsonp_callback(self):
-        self.env['QUERY_STRING'] = 'callback=jptest'
+    def test_jsonp(self):
+        self.env['QUERY_STRING'] = 'jsonp=jptest1'
         body = ''.join(stats.Stats(
             'test', self.parsed_conf, self.next_app)(
                 self.env, self.start_response))
         self.assertEquals(self.start_response_calls,
-                          [('200 OK', [('Content-Length', '818'),
+                          [('200 OK', [('Content-Length', '819'),
                                        ('Content-Type',
                                         'application/javascript')])])
-        self.assertEquals(True, body.startswith('jptest('))
+        self.assertEquals(True, body.startswith('jptest1('))
+
+    def test_jsonp_callback(self):
+        self.env['QUERY_STRING'] = 'callback=jptest2'
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
+        self.assertEquals(self.start_response_calls,
+                          [('200 OK', [('Content-Length', '819'),
+                                       ('Content-Type',
+                                        'application/javascript')])])
+        self.assertEquals(True, body.startswith('jptest2('))
+
+    def test_jsonp_over_callback1(self):
+        self.env['QUERY_STRING'] = 'jsonp=jptest3&callback=jptest4'
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
+        self.assertEquals(self.start_response_calls,
+                          [('200 OK', [('Content-Length', '819'),
+                                       ('Content-Type',
+                                        'application/javascript')])])
+        self.assertEquals(True, body.startswith('jptest3('))
+
+    def test_jsonp_over_callback2(self):
+        self.env['QUERY_STRING'] = 'callback=jptest3&jsonp=jptest4'
+        body = ''.join(stats.Stats(
+            'test', self.parsed_conf, self.next_app)(
+                self.env, self.start_response))
+        self.assertEquals(self.start_response_calls,
+                          [('200 OK', [('Content-Length', '819'),
+                                       ('Content-Type',
+                                        'application/javascript')])])
+        self.assertEquals(True, body.startswith('jptest4('))
 
     def test_call_stats_zeroed_head(self):
         self.env['REQUEST_METHOD'] = 'HEAD'
