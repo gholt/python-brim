@@ -15,18 +15,22 @@
 """
 Reports the brimd server stats as a JSON reponse. The stats
 contain basic things like the server start time and request counts.
+You may also add a jsonp or callback query variable for JSONP
+support.
 
 See Stats.parse_conf for configuration options.
 """
 
 from sys import maxint
+from brim.http import QueryParser
 
 
 class Stats(object):
     """
     A WSGI application that reports the brimd server stats as a
     JSON reponse. The stats contain basic things like the server
-    start time and request counts.
+    start time and request counts. You may also add a jsonp or
+    callback query variable for JSONP support.
 
     :param name: The name of the app, indicates the app's section in
                  the overall configuration for the WSGI server.
@@ -84,9 +88,17 @@ class Stats(object):
                             stats.bucket_names[i],
                             {})[name] = stats.get(i, name)
         body['start_time'] = server.start_time
-        body = env['brim.json_dumps'](body) + '\n'
-        start_response('200 OK', [('Content-Length', str(len(body))),
-                                  ('Content-Type', 'application/json')])
+        qp = QueryParser(env['QUERY_STRING'])
+        callback = qp.get('jsonp', default=qp.get('callback', default=False))
+        if callback:
+            body = '%s(%s)' % (callback, env['brim.json_dumps'](body))
+            start_response('200 OK', [('Content-Length', str(len(body))),
+                                      ('Content-Type',
+                                       'application/javascript')])
+        else:
+            body = env['brim.json_dumps'](body) + '\n'
+            start_response('200 OK', [('Content-Length', str(len(body))),
+                                      ('Content-Type', 'application/json')])
         if env['REQUEST_METHOD'] == 'HEAD':
             return []
         return [body]
