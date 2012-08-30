@@ -646,21 +646,17 @@ class WSGISubserver(IPSubserver):
                 raise
         pool.waitall()
 
-    def _wsgi_entry(self, env, start_response=None, next_app=None):
+    def _wsgi_entry(self, env, start_response):
         """
-        Called by Eventlet's WSGI layer or get_response to handle
-        incoming requests. This wraps the request handling to add
-        additional WSGI env values, count the bytes transmitted and
-        received, and log the request/response once it has completed.
-
-        Note that you must read at least once from the response before
-        env['brim._start_response'] will be set.
+        Called by Eventlet's WSGI layer to handle incoming requests.
+        This wraps the request handling to add additional WSGI env
+        values, count the bytes transmitted and received, and log the
+        request/response once it has completed.
         """
 
         def _start_response(status, headers, exc_info=None):
             env['brim._start_response'] = (status, headers, exc_info)
-            if start_response:
-                start_response(status, headers, exc_info)
+            start_response(status, headers, exc_info)
 
         try:
             env['brim'] = self
@@ -668,7 +664,7 @@ class WSGISubserver(IPSubserver):
             env.setdefault('brim.stats',
                            _Stats(self.bucket_stats, self.worker_id))
             env.setdefault('brim.logger', self.logger)
-            env.setdefault('brim.txn', env.get('HTTP_X_TXN', uuid4().hex))
+            env.setdefault('brim.txn', uuid4().hex)
             self.logger.txn = env['brim.txn']
             env['brim._bytes_in'] = 0
             env['brim._bytes_out'] = 0
@@ -677,8 +673,7 @@ class WSGISubserver(IPSubserver):
             env.setdefault('brim.additional_request_log_info', [])
             env.setdefault('brim.json_dumps', self.json_dumps)
             env.setdefault('brim.json_loads', self.json_loads)
-            body = _WsgiOutput(
-                (next_app or self.first_app)(env, _start_response), env)
+            body = _WsgiOutput(self.first_app(env, _start_response), env)
         except Exception, err:
             self.logger.exception('WSGI EXCEPTION:')
             _start_response('500 Internal Server Error',
@@ -702,7 +697,7 @@ class WSGISubserver(IPSubserver):
 
     def _log_request(self, env):
         """
-        After each request has completed, this method is called
+        After each request has completed, Eventlet calls this method
         and we log the request/response details at the NOTICE log
         level.
         """
@@ -731,6 +726,8 @@ class WSGISubserver(IPSubserver):
                     '%s:%s' % (h[5:].replace('_', '-').title(), v)
                     for h, v in env.items() if h.startswith('HTTP_'))
             code = status.split(' ', 1)[0]
+            if env.get('brim._client_disconnect', False):
+                code = HTTP_CLIENT_DISCONNECT
             try:
                 code = int(code)
             except ValueError:
@@ -759,10 +756,7 @@ class WSGISubserver(IPSubserver):
                          env.get('HTTP_REFERER'),
                          env.get('HTTP_USER_AGENT'),
                          env['brim.txn'],
-                         '%.5f' % (time() - env['brim.start']),
-                         env.get('brim._client_disconnect') and 'disconnect',
-                         env.get('brim.authenticated_user'),
-                         env.get('brim.wsgi_source')]
+                         '%.5f' % (time() - env['brim.start'])]
             additional_info = env.get('brim.additional_request_log_info')
             if additional_info:
                 log_items.extend(additional_info)
@@ -804,7 +798,7 @@ class WSGISubserver(IPSubserver):
                 self.logger.error('STDERR: wid:%03d %s' %
                                   (self.worker_id, line))
 
-    def clone_env(self, env, wsgi_input=None):
+    def clone_env(self, env):
         """
         Returns a new WSGI environment dictionary with values copied
         from the given WSGI environment. This can be useful when
@@ -822,21 +816,21 @@ class WSGISubserver(IPSubserver):
                 ...
         """
         newenv = {}
-        for key in ('brim', 'brim.json_dumps', 'brim.json_loads',
-                    'brim.logger', 'brim.stats', 'brim.txn', 'HTTP_REFERER',
-                    'HTTP_USER_AGENT', 'HTTP_X_AUTH_TOKEN',
-                    'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_X_FORWARDED_FOR',
-                    'REMOTE_ADDR', 'REMOTE_USER', 'REQUEST_METHOD',
-                    'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL'):
+        for key in ('brim.txn', 'HTTP_REFERER', 'HTTP_USER_AGENT',
+                    'HTTP_X_AUTH_TOKEN', 'HTTP_X_CLUSTER_CLIENT_IP',
+                    'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR', 'REMOTE_USER',
+                    'REQUEST_METHOD', 'SERVER_NAME', 'SERVER_PORT',
+                    'SERVER_PROTOCOL'):
             if key in env:
                 newenv[key] = env[key]
         return newenv
 
-    def get_response(self, env, next_app=None):
+    def get_response(self, env):
         """
         Performs a WSGI request using the WSGI environment given and
-        returns the response. This is useful for WSGI apps that wish
-        to perform subrequests. For example::
+        returns the resulting status line, headers, and content. This
+        is useful for WSGI apps that wish to perform subrequests that
+        go through the full WSGI pipeline. For example::
 
             ...
             def __call__(self, env, start_response):
@@ -848,26 +842,24 @@ class WSGISubserver(IPSubserver):
                     env['brim'].get_response(newenv)
                 ...
 
-        You can also specify a different WSGI pipeline to travel
-        through with next_app. For example, auth middleware might
-        want its subrequests to only travel from the next app in its
-        pipeline onward.
-
         :param env: The WSGI environment of the request.
-        :param next_app: Optional; indicates the next WSGI app to
-                         send the request through rather than the
-                         entire WSGI pipeline.
-        :returns: The response as (status_line, headers_iteritems,
-                  excinfo, content_iter).
+        :returns: The response as (status_line, headers_iteritems, excinfo,
+                  content_iter).
         """
-        content_iter = iter(self._wsgi_entry(env, next_app=next_app))
+        start_response_result = [(None, None, None)]
+
+        def _start_response(status_line, headers_iteritems, *excinfo):
+            start_response_result[0] = \
+                (status_line, headers_iteritems, excinfo)
+
+        content_iter = iter(self._wsgi_entry(env, _start_response))
         first_chunk = None
         try:
             first_chunk = content_iter.next()
             content_iter = chain([first_chunk], content_iter)
         except StopIteration:
             content_iter = iter([])
-        status_line, headers_iteritems, excinfo = env['brim._start_response']
+        status_line, headers_iteritems, excinfo = start_response_result[0]
         return status_line, headers_iteritems, excinfo, content_iter
 
 
