@@ -1793,7 +1793,7 @@ class TestWSGISubserver(TestIPSubserver):
     def test_wsgi_worker_raises_other(self):
         self.test_wsgi_worker(raises='other')
 
-    def test_wsgi_entry(self, with_app=False, raises=False):
+    def test_wsgi_entry(self, with_app=False, raises=False, with_txn=None):
         ss = self._class(FakeServer(output=True), 'test')
         if with_app:
             confd = self._get_default_confd()
@@ -1850,6 +1850,8 @@ class TestWSGISubserver(TestIPSubserver):
         uuid4_orig = server.uuid4
         time_orig = server.time
         env = {'PATH_INFO': '/echo', 'wsgi.input': StringIO('test value')}
+        if with_txn:
+            env['HTTP_X_TXN'] = with_txn
         try:
             server.uuid4 = _uuid4
             server.time = _time
@@ -1869,7 +1871,10 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(env.get('brim.stats').bucket_stats, ss.bucket_stats)
         self.assertEquals(env.get('brim.stats').bucket_id, ss.worker_id)
         self.assertEquals(env.get('brim.logger'), ss.logger)
-        self.assertEquals(env.get('brim.txn'), uuid4_instance.hex)
+        if with_txn:
+            self.assertEquals(env.get('brim.txn'), with_txn)
+        else:
+            self.assertEquals(env.get('brim.txn'), uuid4_instance.hex)
         if with_app:
             self.assertEquals(env.get('brim._bytes_in'), 10)
             self.assertEquals(env.get('brim._bytes_out'), 10)
@@ -1944,6 +1949,9 @@ class TestWSGISubserver(TestIPSubserver):
     def test_wsgi_entry_raises_body_exception(self):
         self.test_wsgi_entry(raises='body')
 
+    def test_wsgi_entry_with_passed_txn(self):
+        self.test_wsgi_entry(with_txn='passed_txn')
+
     def _log_request_build(self, start=1330037777.77):
         return {
             'REQUEST_METHOD': 'GET',
@@ -2002,7 +2010,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 499 - - - - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2021,7 +2029,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2042,7 +2050,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 301 10 - - - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2063,7 +2071,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 404 10 - - - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2084,7 +2092,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 503 10 - - - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2128,7 +2136,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path%20/test HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+            'abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2148,7 +2156,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path?param1=value1%20value2&param2 '
-            'HTTP/1.1 200 10 - - - abcdef 2.12000',)])
+            'HTTP/1.1 200 10 - - - abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2168,7 +2176,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+            'abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2188,7 +2196,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+            'abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2209,7 +2217,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+            'abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2229,7 +2237,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.4 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
-            '- - abcdef 2.12000',)])
+            '- - abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2250,7 +2258,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
-            '- - abcdef 2.12000',)])
+            '- - abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2271,7 +2279,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
-            '- - abcdef 2.12000',)])
+            '- - abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2293,7 +2301,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
-            '- - abcdef 2.12000',)])
+            '- - abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2314,7 +2322,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
-            '2.12000 headers: '
+            '2.12000 - - - headers: '
             'X-Test:test%20value%0AContent-Type:text/plain',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
@@ -2325,17 +2333,17 @@ class TestWSGISubserver(TestIPSubserver):
         env['brim._client_disconnect'] = True
         ss = self._log_request_execute(env)
         self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
         self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
         self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
         self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
         self.assertEquals(ss.logger.debug_calls, [])
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
-            '- - - - 20120223T225619Z GET /path HTTP/1.1 499 10 - - - abcdef '
-            '2.12000',)])
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000 disconnect - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2356,7 +2364,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 - 10 - - - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2376,7 +2384,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - authtoken - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
-            'abcdef 2.12000',)])
+            'abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2396,7 +2404,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 123 - - '
-            'abcdef 2.12000',)])
+            'abcdef 2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2417,7 +2425,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             'http://some.host/path%2520/test?maybe=query+value - abcdef '
-            '2.12000',)])
+            '2.12000 - - -',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2437,7 +2445,47 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - '
-            'Some%20User%20Agent%20(v1.0) abcdef 2.12000',)])
+            'Some%20User%20Agent%20(v1.0) abcdef 2.12000 - - -',)])
+        self.assertEquals(ss.logger.error_calls, [])
+        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEquals(ss.logger.txn, None)
+
+    def test_log_request_authenticated_user(self):
+        env = self._log_request_build()
+        env['brim.authenticated_user'] = 'someuser'
+        ss = self._log_request_execute(env)
+        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000 - someuser -',)])
+        self.assertEquals(ss.logger.error_calls, [])
+        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEquals(ss.logger.txn, None)
+
+    def test_log_request_wsgi_source(self):
+        env = self._log_request_build()
+        env['brim.wsgi_source'] = 'somesource'
+        ss = self._log_request_execute(env)
+        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEquals(ss.logger.debug_calls, [])
+        self.assertEquals(ss.logger.info_calls, [])
+        self.assertEquals(ss.logger.notice_calls, [(
+            '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
+            '2.12000 - - somesource',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2457,7 +2505,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
-            '2.12000 test: one two',)])
+            '2.12000 - - - test: one two',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
@@ -2478,7 +2526,7 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(ss.logger.info_calls, [])
         self.assertEquals(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
-            '2.12000 test: one two headers: Content-Type:text/plain',)])
+            '2.12000 - - - test: one two headers: Content-Type:text/plain',)])
         self.assertEquals(ss.logger.error_calls, [])
         self.assertEquals(ss.logger.exception_calls, [])
         self.assertEquals(ss.logger.txn, None)
