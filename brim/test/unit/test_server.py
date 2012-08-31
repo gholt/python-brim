@@ -1182,10 +1182,50 @@ class TestWSGISubserver(TestIPSubserver):
 
     def test_parse_conf_defaults(self):
         ss = TestIPSubserver.test_parse_conf_defaults(self)
+        self.assertEquals(ss.log_auth_tokens, False)
         self.assertEquals(ss.log_headers, False)
         self.assertEquals(ss.count_status_codes, [404, 408, 499, 501])
         self.assertEquals(ss.wsgi_input_iter_chunk_size, 4096)
         self.assertEquals(ss.apps, [])
+
+    def test_parse_conf_log_auth_tokens(self):
+        ss = self._class(FakeServer(), 'test')
+        confd = self._get_default_confd()
+        confd.setdefault('brim', {})['log_auth_tokens'] = 'yes'
+        ss._parse_conf(Conf(confd))
+        self.assertEquals(ss.log_auth_tokens, True)
+
+        ss = self._class(FakeServer(), 'test')
+        exc = None
+        try:
+            confd = self._get_default_confd()
+            confd.setdefault('brim', {})['log_auth_tokens'] = 'abc'
+            ss._parse_conf(Conf(confd))
+        except SystemExit, err:
+            exc = err
+        self.assertEquals(
+            str(exc),
+            "Configuration value [brim] log_auth_tokens of 'abc' cannot be "
+            "converted to boolean.")
+
+        ss = self._class(FakeServer(), 'test')
+        confd = self._get_default_confd()
+        confd.setdefault('test', {})['log_auth_tokens'] = 'yes'
+        ss._parse_conf(Conf(confd))
+        self.assertEquals(ss.log_auth_tokens, True)
+
+        ss = self._class(FakeServer(), 'test')
+        exc = None
+        try:
+            confd = self._get_default_confd()
+            confd.setdefault('test', {})['log_auth_tokens'] = 'abc'
+            ss._parse_conf(Conf(confd))
+        except SystemExit, err:
+            exc = err
+        self.assertEquals(
+            str(exc),
+            "Configuration value [test] log_auth_tokens of 'abc' cannot be "
+            "converted to boolean.")
 
     def test_parse_conf_log_headers(self):
         ss = self._class(FakeServer(), 'test')
@@ -1964,9 +2004,11 @@ class TestWSGISubserver(TestIPSubserver):
             'brim._bytes_in': 0,
             'brim._bytes_out': 10}
 
-    def _log_request_execute(self, env, end=1330037779.89, log_headers=False):
+    def _log_request_execute(self, env, end=1330037779.89,
+                             log_auth_tokens=False, log_headers=False):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
+        ss.log_auth_tokens = log_auth_tokens
         ss.log_headers = log_headers
         ss.bucket_stats = server._BucketStats(['test'], {
             'request_count': 'sum', 'status_2xx_count': 'sum',
@@ -2372,7 +2414,7 @@ class TestWSGISubserver(TestIPSubserver):
     def test_log_auth_token(self):
         env = self._log_request_build()
         env['HTTP_X_AUTH_TOKEN'] = 'authtoken'
-        ss = self._log_request_execute(env)
+        ss = self._log_request_execute(env, log_auth_tokens=True)
         self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
         self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
         self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
