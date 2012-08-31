@@ -497,6 +497,9 @@ class WSGISubserver(IPSubserver):
 
     def _parse_conf(self, conf):
         IPSubserver._parse_conf(self, conf)
+        self.log_auth_tokens = conf.get_bool(
+            self.name, 'log_auth_tokens',
+            conf.get_bool('brim', 'log_auth_tokens', False))
         self.log_headers = conf.get_bool(
             self.name, 'log_headers',
             conf.get_bool('brim', 'log_headers', False))
@@ -749,9 +752,12 @@ class WSGISubserver(IPSubserver):
                 stats.incr('status_4xx_count')
             elif xx == 5:
                 stats.incr('status_5xx_count')
+            auth_token = None
+            if self.log_auth_tokens:
+                auth_token = env.get('HTTP_X_AUTH_TOKEN')
             log_items = [client,
                          env.get('REMOTE_ADDR'),
-                         env.get('HTTP_X_AUTH_TOKEN'),
+                         auth_token,
                          env.get('REMOTE_USER'),
                          strftime('%Y%m%dT%H%M%SZ', gmtime()),
                          env['REQUEST_METHOD'],
