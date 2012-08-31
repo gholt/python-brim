@@ -256,7 +256,11 @@ class _WsgiInput(object):
 
     def read(self, size=None):
         if size:
-            rv = self.flo.read(size)
+            try:
+                rv = self.flo.read(size)
+            except TypeError:
+                # Workaround for Eventlet bug with no content length
+                rv = ''
         else:
             rv = self.flo.read()
         self.env['brim._bytes_in'] += len(rv)
