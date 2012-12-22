@@ -77,6 +77,11 @@
 # wsgi_input_iter_chunk_size = <bytes>
 #   The number of bytes read per chunk when the WSGI input is used as an
 #   iterator. This use case isn't very common. Default: 4096
+# wsgi_output_iter_chunk_size = <bytes>
+#   The number of bytes read per chunk when using Transfer-encoding: Chunked and
+#   iterating out a response. Useful to decrease for long polling, short message
+#   connections such as HTML5 Server-Sent Events. Technically in violation of the
+#   WSGI spec but supported by Eventlet. Default: 4096
 
 [wsgi2]
 #   You can have multiple sets of WSGI apps configured by adding additional

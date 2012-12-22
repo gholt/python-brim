@@ -515,6 +515,9 @@ class WSGISubserver(IPSubserver):
         self.wsgi_input_iter_chunk_size = conf.get_int(
             self.name, 'wsgi_input_iter_chunk_size',
             conf.get_int('brim', 'wsgi_input_iter_chunk_size', 4096))
+        self.wsgi_output_iter_chunk_size = conf.get_int(
+            self.name, 'wsgi_output_iter_chunk_size',
+            conf.get_int('brim', 'wsgi_output_iter_chunk_size', 4096))
 
         self.apps = []
         app_names = conf.get(self.name, 'apps', '').strip().split()
@@ -647,6 +650,7 @@ class WSGISubserver(IPSubserver):
         pool = GreenPool(size=self.concurrent_per_worker)
         try:
             wsgi.server(self.sock, self._wsgi_entry, _EventletWSGINullLogger(),
+                        minimum_chunk_size=self.wsgi_output_iter_chunk_size,
                         custom_pool=pool)
         except socket_error, err:
             if err.errno != EINVAL:

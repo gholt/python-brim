@@ -1805,7 +1805,8 @@ class TestWSGISubserver(TestIPSubserver):
         self.assertEquals(pool.size, ss.concurrent_per_worker)
         self.assertEquals(server_calls, [(
             (ss.sock, ss._wsgi_entry, null_logger),
-            {'custom_pool': pool})])
+            {'minimum_chunk_size': 4096,
+             'custom_pool': pool})])
         if raises == 'socket einval':
             self.assertEquals(exc, None)
         elif raises == 'socket other':
