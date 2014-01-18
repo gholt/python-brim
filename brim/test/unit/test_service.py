@@ -1,23 +1,25 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Tests for brim.service."""
+"""Copyright and License.
 
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import socket
 import ssl
 import time
 from errno import EADDRINUSE, EPERM
 from os import devnull
-from StringIO import StringIO
 from unittest import main, TestCase
 from nose import SkipTest
 
@@ -58,16 +60,17 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
         self.stdout = stdout = FakeFile(456)
         self.stderr = stderr = FakeFile(789)
         service.capture_exceptions_stdout_stderr()
-        self.assertEquals(set([b for a, b in self.dup2calls]),
-                          set([stdout.fileno(), stderr.fileno()]))
-        self.assertEquals(stdout._flush_calls, 1)
-        self.assertEquals(stderr._flush_calls, 1)
+        self.assertEqual(
+            set([b for a, b in self.dup2calls]),
+            set([stdout.fileno(), stderr.fileno()]))
+        self.assertEqual(stdout._flush_calls, 1)
+        self.assertEqual(stderr._flush_calls, 1)
 
     def test_does_not_call_dup2_on_things_not_understood(self):
         self.stdout = 'stdout'
         self.stderr = 'stderr'
         service.capture_exceptions_stdout_stderr()
-        self.assertEquals(len(self.dup2calls), 0)
+        self.assertEqual(len(self.dup2calls), 0)
 
     def test_ignores_dup2_exceptions(self):
         self.stdout = open(devnull, 'wb')
@@ -107,9 +110,9 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(_exc)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         self.excepthook(1, 2, 3)
-        self.assertEquals(calls, [(1, 2, 3)])
+        self.assertEqual(calls, [(1, 2, 3)])
 
     def test_stdout_calls_us(self):
         self.stdout = 'stdout'
@@ -120,9 +123,9 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(stdout_func=_stdout)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         print >>self.stdout, 'test'
-        self.assertEquals(calls, [('test\n',)])
+        self.assertEqual(calls, [('test\n',)])
 
     def test_stderr_calls_us(self):
         self.stdout = 'stdout'
@@ -133,9 +136,9 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(stderr_func=_stderr)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         print >>self.stderr, 'test'
-        self.assertEquals(calls, [('test\n',)])
+        self.assertEqual(calls, [('test\n',)])
 
     def test_combine_writes(self):
         self.stdout = 'stdout'
@@ -146,11 +149,11 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(stdout_func=_stdout)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         print >>self.stdout, 'test',
-        self.assertEquals(calls, [])
+        self.assertEqual(calls, [])
         print >>self.stdout, 'and more'
-        self.assertEquals(calls, [('test and more\n',)])
+        self.assertEqual(calls, [('test and more\n',)])
 
     def test_combine_writes_unless_flush(self):
         self.stdout = 'stdout'
@@ -161,13 +164,13 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(stdout_func=_stdout)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         print >>self.stdout, 'test',
-        self.assertEquals(calls, [])
+        self.assertEqual(calls, [])
         self.stdout.flush()
-        self.assertEquals(calls, [('test',)])
+        self.assertEqual(calls, [('test',)])
         print >>self.stdout, 'and more'
-        self.assertEquals(calls, [('test',), (' and more\n',)])
+        self.assertEqual(calls, [('test',), (' and more\n',)])
 
     def test_close_just_flushes(self):
         self.stdout = 'stdout'
@@ -178,13 +181,13 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(stdout_func=_stdout)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         print >>self.stdout, 'test',
-        self.assertEquals(calls, [])
+        self.assertEqual(calls, [])
         self.stdout.close()
-        self.assertEquals(calls, [('test',)])
+        self.assertEqual(calls, [('test',)])
         print >>self.stdout, 'and more'
-        self.assertEquals(calls, [('test',), (' and more\n',)])
+        self.assertEqual(calls, [('test',), (' and more\n',)])
 
     def test_writelines(self):
         self.stdout = 'stdout'
@@ -195,11 +198,11 @@ class Test_capture_exceptions_stdout_stderr(TestCase):
             calls.append(args)
 
         service.capture_exceptions_stdout_stderr(stdout_func=_stdout)
-        self.assertEquals(len(calls), 0)
+        self.assertEqual(len(calls), 0)
         self.stdout.writelines(['abc\n', 'def', 'ghi\n', 'jkl'])
-        self.assertEquals(calls, [('abc\ndefghi\n',)])
+        self.assertEqual(calls, [('abc\ndefghi\n',)])
         self.stdout.flush()
-        self.assertEquals(calls, [('abc\ndefghi\n',), ('jkl',)])
+        self.assertEqual(calls, [('abc\ndefghi\n',), ('jkl',)])
 
 
 class Test_droppriv(TestCase):
@@ -262,74 +265,73 @@ class Test_droppriv(TestCase):
 
     def test_droppriv_to_same_uid_gid(self):
         service.droppriv('user')
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(1,)])
-        self.assertEquals(self.setgid_calls, [(2,)])
-        self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(self.setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [('/',)])
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(1,)])
+        self.assertEqual(self.setgid_calls, [(2,)])
+        self.assertEqual(self.os_umask_calls, [(0022,)])
+        self.assertEqual(self.setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [('/',)])
 
     def test_droppriv_to_different_uid_default_gid(self):
         self.pwnam['user'].pw_uid = 10
         self.pwnam['user'].pw_gid = 20
         self.grnam['group'].gr_gid = 30
         service.droppriv('user')
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(10,)])
-        self.assertEquals(self.setgid_calls, [(20,)])
-        self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(self.setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [('/',)])
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(10,)])
+        self.assertEqual(self.setgid_calls, [(20,)])
+        self.assertEqual(self.os_umask_calls, [(0022,)])
+        self.assertEqual(self.setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [('/',)])
 
     def test_droppriv_to_different_uid_gid(self):
         self.pwnam['user'].pw_uid = 10
         self.pwnam['user'].pw_gid = 20
         self.grnam['group'].gr_gid = 30
         service.droppriv('user', 'group')
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(10,)])
-        self.assertEquals(self.setgid_calls, [(30,)])
-        self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(self.setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [('/',)])
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(10,)])
+        self.assertEqual(self.setgid_calls, [(30,)])
+        self.assertEqual(self.os_umask_calls, [(0022,)])
+        self.assertEqual(self.setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [('/',)])
 
     def test_droppriv_umask(self):
         service.droppriv('user', umask=0123)
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(1,)])
-        self.assertEquals(self.setgid_calls, [(2,)])
-        self.assertEquals(self.os_umask_calls, [(0123,)])
-        self.assertEquals(self.setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [('/',)])
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(1,)])
+        self.assertEqual(self.setgid_calls, [(2,)])
+        self.assertEqual(self.os_umask_calls, [(0123,)])
+        self.assertEqual(self.setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [('/',)])
 
     def test_droppriv_unknown_user(self):
         exc = None
         try:
             service.droppriv('unknown')
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Cannot switch to unknown user 'unknown'.")
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [])
-        self.assertEquals(self.setgid_calls, [])
-        self.assertEquals(self.os_umask_calls, [])
-        self.assertEquals(self.setsid_calls, [])
-        self.assertEquals(self.chdir_calls, [])
+        self.assertEqual(str(exc), "Cannot switch to unknown user 'unknown'.")
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [])
+        self.assertEqual(self.setgid_calls, [])
+        self.assertEqual(self.os_umask_calls, [])
+        self.assertEqual(self.setsid_calls, [])
+        self.assertEqual(self.chdir_calls, [])
 
     def test_droppriv_unknown_group(self):
         exc = None
         try:
             service.droppriv('user', 'unknown')
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "Cannot switch to unknown group 'unknown'.")
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [])
-        self.assertEquals(self.setgid_calls, [])
-        self.assertEquals(self.os_umask_calls, [])
-        self.assertEquals(self.setsid_calls, [])
-        self.assertEquals(self.chdir_calls, [])
+        self.assertEqual(str(exc), "Cannot switch to unknown group 'unknown'.")
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [])
+        self.assertEqual(self.setgid_calls, [])
+        self.assertEqual(self.os_umask_calls, [])
+        self.assertEqual(self.setsid_calls, [])
+        self.assertEqual(self.chdir_calls, [])
 
     def test_setuid_failure(self):
 
@@ -341,19 +343,19 @@ class Test_droppriv(TestCase):
         try:
             service.setuid = _setuid
             service.droppriv('user')
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             service.setuid = orig_setuid
-        self.assertEquals(str(exc),
-                          "Permission denied when switching to user 'user'.")
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [])
+        self.assertEqual(
+            str(exc), "Permission denied when switching to user 'user'.")
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [])
         # This also asserts setgid is called before setuid.
-        self.assertEquals(self.setgid_calls, [(2,)])
-        self.assertEquals(self.os_umask_calls, [])
-        self.assertEquals(self.setsid_calls, [])
-        self.assertEquals(self.chdir_calls, [])
+        self.assertEqual(self.setgid_calls, [(2,)])
+        self.assertEqual(self.os_umask_calls, [])
+        self.assertEqual(self.setsid_calls, [])
+        self.assertEqual(self.chdir_calls, [])
 
     def test_setgid_failure(self):
 
@@ -365,19 +367,19 @@ class Test_droppriv(TestCase):
         try:
             service.setgid = _setgid
             service.droppriv('user', 'group')
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             service.setgid = orig_setgid
-        self.assertEquals(str(exc),
-                          "Permission denied when switching to group 'group'.")
-        self.assertEquals(self.setgroups_calls, [([],)])
+        self.assertEqual(
+            str(exc), "Permission denied when switching to group 'group'.")
+        self.assertEqual(self.setgroups_calls, [([],)])
         # This also asserts setuid is not called before setgid.
-        self.assertEquals(self.setuid_calls, [])
-        self.assertEquals(self.setgid_calls, [])
-        self.assertEquals(self.os_umask_calls, [])
-        self.assertEquals(self.setsid_calls, [])
-        self.assertEquals(self.chdir_calls, [])
+        self.assertEqual(self.setuid_calls, [])
+        self.assertEqual(self.setgid_calls, [])
+        self.assertEqual(self.os_umask_calls, [])
+        self.assertEqual(self.setsid_calls, [])
+        self.assertEqual(self.chdir_calls, [])
 
     def test_setgroups_failure(self):
         setgroups_calls = []
@@ -393,17 +395,17 @@ class Test_droppriv(TestCase):
         try:
             service.setgroups = _setgroups
             service.droppriv('user')
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             service.setgroups = orig_setgroups
-        self.assertEquals(str(exc), 'test')
-        self.assertEquals(setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [])
-        self.assertEquals(self.setgid_calls, [])
-        self.assertEquals(self.os_umask_calls, [])
-        self.assertEquals(self.setsid_calls, [])
-        self.assertEquals(self.chdir_calls, [])
+        self.assertEqual(str(exc), 'test')
+        self.assertEqual(setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [])
+        self.assertEqual(self.setgid_calls, [])
+        self.assertEqual(self.os_umask_calls, [])
+        self.assertEqual(self.setsid_calls, [])
+        self.assertEqual(self.chdir_calls, [])
 
     def test_setgroups_perm_failure_ignored(self):
         setgroups_calls = []
@@ -419,17 +421,17 @@ class Test_droppriv(TestCase):
         try:
             service.setgroups = _setgroups
             service.droppriv('user')
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             service.setgroups = orig_setgroups
-        self.assertEquals(exc, None)
-        self.assertEquals(setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(1,)])
-        self.assertEquals(self.setgid_calls, [(2,)])
-        self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(self.setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [('/',)])
+        self.assertEqual(exc, None)
+        self.assertEqual(setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(1,)])
+        self.assertEqual(self.setgid_calls, [(2,)])
+        self.assertEqual(self.os_umask_calls, [(0022,)])
+        self.assertEqual(self.setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [('/',)])
 
     def test_setsid_failure(self):
         setsid_calls = []
@@ -445,17 +447,17 @@ class Test_droppriv(TestCase):
         try:
             service.setsid = _setsid
             service.droppriv('user')
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             service.setsid = orig_setsid
-        self.assertEquals(str(exc), 'test')
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(1,)])
-        self.assertEquals(self.setgid_calls, [(2,)])
-        self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [])
+        self.assertEqual(str(exc), 'test')
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(1,)])
+        self.assertEqual(self.setgid_calls, [(2,)])
+        self.assertEqual(self.os_umask_calls, [(0022,)])
+        self.assertEqual(setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [])
 
     def test_setsid_perm_failure_ignored(self):
         setsid_calls = []
@@ -471,17 +473,17 @@ class Test_droppriv(TestCase):
         try:
             service.setsid = _setsid
             service.droppriv('user')
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             service.setsid = orig_setsid
-        self.assertEquals(exc, None)
-        self.assertEquals(self.setgroups_calls, [([],)])
-        self.assertEquals(self.setuid_calls, [(1,)])
-        self.assertEquals(self.setgid_calls, [(2,)])
-        self.assertEquals(self.os_umask_calls, [(0022,)])
-        self.assertEquals(setsid_calls, [()])
-        self.assertEquals(self.chdir_calls, [('/',)])
+        self.assertEqual(exc, None)
+        self.assertEqual(self.setgroups_calls, [([],)])
+        self.assertEqual(self.setuid_calls, [(1,)])
+        self.assertEqual(self.setgid_calls, [(2,)])
+        self.assertEqual(self.os_umask_calls, [(0022,)])
+        self.assertEqual(setsid_calls, [()])
+        self.assertEqual(self.chdir_calls, [('/',)])
 
 
 class FakeSocket(object):
@@ -564,71 +566,72 @@ class Test_get_listening_tcp_socket(TestCase):
         ip = '1.2.3.4'
         port = 5678
         sock = service.get_listening_tcp_socket(ip, port)
-        self.assertEquals(self.getaddrinfo_calls,
-                          [(ip, port, socket.AF_UNSPEC, socket.SOCK_STREAM)])
-        self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_STREAM))
-        self.assertEquals(set(sock.setsockopt_calls), set([
+        self.assertEqual(
+            self.getaddrinfo_calls,
+            [(ip, port, socket.AF_UNSPEC, socket.SOCK_STREAM)])
+        self.assertEqual(sock.init, (socket.AF_INET, socket.SOCK_STREAM))
+        self.assertEqual(set(sock.setsockopt_calls), set([
             (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
             (socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 600)]))
-        self.assertEquals(sock.bind_calls, [((ip, port),)])
-        self.assertEquals(sock.listen_calls, [(4096,)])
-        self.assertEquals(self.wrap_socket_calls, [])
+        self.assertEqual(sock.bind_calls, [((ip, port),)])
+        self.assertEqual(sock.listen_calls, [(4096,)])
+        self.assertEqual(self.wrap_socket_calls, [])
 
     def test_happy_path_inet6(self):
         self.getaddrinfo_return = ((socket.AF_INET6,),)
         sock = service.get_listening_tcp_socket('1.2.3.4', 5678)
-        self.assertEquals(sock.init, (socket.AF_INET6, socket.SOCK_STREAM))
+        self.assertEqual(sock.init, (socket.AF_INET6, socket.SOCK_STREAM))
 
     def test_uses_passed_backlog(self):
         backlog = 1000
         sock = service.get_listening_tcp_socket('1.2.3.4', 5678, backlog)
-        self.assertEquals(sock.listen_calls, [(backlog,)])
+        self.assertEqual(sock.listen_calls, [(backlog,)])
 
     def test_retries(self):
         socket.socket = NonBindingSocket
         exc = None
         try:
-            sock = service.get_listening_tcp_socket('1.2.3.4', 5678)
-        except Exception, err:
+            service.get_listening_tcp_socket('1.2.3.4', 5678)
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
-        self.assertEquals(self.time_value, 31)
-        self.assertEquals(len(self.time_calls), 31)
+        self.assertEqual(self.time_value, 31)
+        self.assertEqual(len(self.time_calls), 31)
         # Sleeps 29 times and then sees it's been 30s (the default retry time).
-        self.assertEquals(len(self.sleep_calls), 29)
+        self.assertEqual(len(self.sleep_calls), 29)
 
     def test_uses_passed_retry(self):
         socket.socket = NonBindingSocket
         exc = None
         try:
-            sock = service.get_listening_tcp_socket('1.2.3.4', 5678, retry=10)
-        except Exception, err:
+            service.get_listening_tcp_socket('1.2.3.4', 5678, retry=10)
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 10 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
-        self.assertEquals(self.time_value, 11)
-        self.assertEquals(len(self.time_calls), 11)
+        self.assertEqual(self.time_value, 11)
+        self.assertEqual(len(self.time_calls), 11)
         # Sleeps 9 times and then sees it's been 10s.
-        self.assertEquals(len(self.sleep_calls), 9)
+        self.assertEqual(len(self.sleep_calls), 9)
 
     def test_wraps_socket(self):
         certfile = 'certfile'
         keyfile = 'keyfile'
-        sock = service.get_listening_tcp_socket('1.2.3.4', 5678,
-                                                certfile=certfile,
-                                                keyfile=keyfile)
-        self.assertEquals(sock, 'wrappedsock')
-        self.assertEquals(len(self.wrap_socket_calls), 1)
-        self.assertEquals(self.wrap_socket_calls[0][1],
-                          {'certfile': 'certfile', 'keyfile': 'keyfile'})
+        sock = service.get_listening_tcp_socket(
+            '1.2.3.4', 5678, certfile=certfile, keyfile=keyfile)
+        self.assertEqual(sock, 'wrappedsock')
+        self.assertEqual(len(self.wrap_socket_calls), 1)
+        self.assertEqual(
+            self.wrap_socket_calls[0][1],
+            {'certfile': 'certfile', 'keyfile': 'keyfile'})
 
     def test_uses_eventlet_socket(self):
         try:
@@ -651,17 +654,17 @@ class Test_get_listening_tcp_socket(TestCase):
             ip = '1.2.3.4'
             port = 5678
             sock = service.get_listening_tcp_socket(ip, port, style='eventlet')
-            self.assertEquals(
+            self.assertEqual(
                 egetaddrinfo_calls,
                 [(ip, port, socket.AF_UNSPEC, socket.SOCK_STREAM)])
-            self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_STREAM))
-            self.assertEquals(set(sock.setsockopt_calls), set([
+            self.assertEqual(sock.init, (socket.AF_INET, socket.SOCK_STREAM))
+            self.assertEqual(set(sock.setsockopt_calls), set([
                 (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
                 (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
                 (socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 600)]))
-            self.assertEquals(sock.bind_calls, [((ip, port),)])
-            self.assertEquals(sock.listen_calls, [(4096,)])
-            self.assertEquals(self.wrap_socket_calls, [])
+            self.assertEqual(sock.bind_calls, [((ip, port),)])
+            self.assertEqual(sock.listen_calls, [(4096,)])
+            self.assertEqual(self.wrap_socket_calls, [])
         finally:
             eventlet.green.socket.socket = orig_esocket
             eventlet.green.socket.getaddrinfo = orig_egetaddrinfo
@@ -695,10 +698,11 @@ class Test_get_listening_tcp_socket(TestCase):
             sock = service.get_listening_tcp_socket(
                 '1.2.3.4', 5678, style='eventlet', certfile=certfile,
                 keyfile=keyfile)
-            self.assertEquals(sock, 'ewrappedsock')
-            self.assertEquals(len(ewrap_socket_calls), 1)
-            self.assertEquals(ewrap_socket_calls[0][1],
-                              {'certfile': 'certfile', 'keyfile': 'keyfile'})
+            self.assertEqual(sock, 'ewrappedsock')
+            self.assertEqual(len(ewrap_socket_calls), 1)
+            self.assertEqual(
+                ewrap_socket_calls[0][1],
+                {'certfile': 'certfile', 'keyfile': 'keyfile'})
         finally:
             eventlet.green.socket.socket = orig_esocket
             eventlet.green.socket.getaddrinfo = orig_egetaddrinfo
@@ -718,15 +722,15 @@ class Test_get_listening_tcp_socket(TestCase):
             eventlet.green.socket.socket = NonBindingSocket
             exc = None
             try:
-                sock = service.get_listening_tcp_socket('1.2.3.4', 5678,
-                                                        style='eventlet')
-            except Exception, err:
+                service.get_listening_tcp_socket(
+                    '1.2.3.4', 5678, style='eventlet')
+            except Exception as err:
                 exc = err
-            self.assertEquals(
+            self.assertEqual(
                 str(exc),
                 'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
-            self.assertEquals(len(esleep_calls), 29)
-            self.assertEquals(len(self.sleep_calls), 0)
+            self.assertEqual(len(esleep_calls), 29)
+            self.assertEqual(len(self.sleep_calls), 0)
         finally:
             eventlet.sleep = orig_sleep
             eventlet.green.socket.socket = orig_esocket
@@ -735,26 +739,26 @@ class Test_get_listening_tcp_socket(TestCase):
         exc = None
         try:
             service.get_listening_tcp_socket('1.2.3.4', 5678, style='invalid')
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Socket style 'invalid' not understood.")
+        self.assertEqual(str(exc), "Socket style 'invalid' not understood.")
 
     def test_ip_as_none_is_all(self):
         sock = service.get_listening_tcp_socket(None, 5678)
-        self.assertEquals(sock.bind_calls[0][0][0], '0.0.0.0')
+        self.assertEqual(sock.bind_calls[0][0][0], '0.0.0.0')
 
     def test_ip_as_star_is_all(self):
         sock = service.get_listening_tcp_socket('*', 5678)
-        self.assertEquals(sock.bind_calls[0][0][0], '0.0.0.0')
+        self.assertEqual(sock.bind_calls[0][0][0], '0.0.0.0')
 
     def test_no_family_raises_exception(self):
         self.getaddrinfo_return = ((socket.AF_APPLETALK,),)
         exc = None
         try:
             service.get_listening_tcp_socket('1.2.3.4', 5678)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             'Could not determine address family of 1.2.3.4:5678 for binding.')
 
@@ -763,9 +767,9 @@ class Test_get_listening_tcp_socket(TestCase):
         exc = None
         try:
             service.get_listening_tcp_socket('1.2.3.4', 5678)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'badbind')
+        self.assertEqual(str(exc), 'badbind')
 
 
 class Test_get_listening_udp_socket(TestCase):
@@ -805,51 +809,52 @@ class Test_get_listening_udp_socket(TestCase):
         ip = '1.2.3.4'
         port = 5678
         sock = service.get_listening_udp_socket(ip, port)
-        self.assertEquals(self.getaddrinfo_calls,
-                          [(ip, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)])
-        self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
-        self.assertEquals(set(sock.setsockopt_calls), set([
+        self.assertEqual(
+            self.getaddrinfo_calls,
+            [(ip, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)])
+        self.assertEqual(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
+        self.assertEqual(set(sock.setsockopt_calls), set([
             (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)]))
-        self.assertEquals(sock.bind_calls, [((ip, port),)])
+        self.assertEqual(sock.bind_calls, [((ip, port),)])
 
     def test_happy_path_inet6(self):
         self.getaddrinfo_return = ((socket.AF_INET6,),)
         sock = service.get_listening_udp_socket('1.2.3.4', 5678)
-        self.assertEquals(sock.init, (socket.AF_INET6, socket.SOCK_DGRAM))
+        self.assertEqual(sock.init, (socket.AF_INET6, socket.SOCK_DGRAM))
 
     def test_retries(self):
         socket.socket = NonBindingSocket
         exc = None
         try:
-            sock = service.get_listening_udp_socket('1.2.3.4', 5678)
-        except Exception, err:
+            service.get_listening_udp_socket('1.2.3.4', 5678)
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
-        self.assertEquals(self.time_value, 31)
-        self.assertEquals(len(self.time_calls), 31)
+        self.assertEqual(self.time_value, 31)
+        self.assertEqual(len(self.time_calls), 31)
         # Sleeps 29 times and then sees it's been 30s (the default retry time).
-        self.assertEquals(len(self.sleep_calls), 29)
+        self.assertEqual(len(self.sleep_calls), 29)
 
     def test_uses_passed_retry(self):
         socket.socket = NonBindingSocket
         exc = None
         try:
-            sock = service.get_listening_udp_socket('1.2.3.4', 5678, retry=10)
-        except Exception, err:
+            service.get_listening_udp_socket('1.2.3.4', 5678, retry=10)
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             'Could not bind to 1.2.3.4:5678 after trying for 10 seconds.')
         # Calls time once before loop to calculate when to stop and once per
         # loop to see if it's time to stop.
-        self.assertEquals(self.time_value, 11)
-        self.assertEquals(len(self.time_calls), 11)
+        self.assertEqual(self.time_value, 11)
+        self.assertEqual(len(self.time_calls), 11)
         # Sleeps 9 times and then sees it's been 10s.
-        self.assertEquals(len(self.sleep_calls), 9)
+        self.assertEqual(len(self.sleep_calls), 9)
 
     def test_uses_eventlet_socket(self):
         try:
@@ -872,13 +877,13 @@ class Test_get_listening_udp_socket(TestCase):
             ip = '1.2.3.4'
             port = 5678
             sock = service.get_listening_udp_socket(ip, port, style='eventlet')
-            self.assertEquals(
+            self.assertEqual(
                 egetaddrinfo_calls,
                 [(ip, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)])
-            self.assertEquals(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
-            self.assertEquals(set(sock.setsockopt_calls), set([
+            self.assertEqual(sock.init, (socket.AF_INET, socket.SOCK_DGRAM))
+            self.assertEqual(set(sock.setsockopt_calls), set([
                 (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)]))
-            self.assertEquals(sock.bind_calls, [((ip, port),)])
+            self.assertEqual(sock.bind_calls, [((ip, port),)])
         finally:
             eventlet.green.socket.socket = orig_esocket
             eventlet.green.socket.getaddrinfo = orig_egetaddrinfo
@@ -897,15 +902,15 @@ class Test_get_listening_udp_socket(TestCase):
             eventlet.green.socket.socket = NonBindingSocket
             exc = None
             try:
-                sock = service.get_listening_udp_socket('1.2.3.4', 5678,
-                                                        style='eventlet')
-            except Exception, err:
+                service.get_listening_udp_socket(
+                    '1.2.3.4', 5678, style='eventlet')
+            except Exception as err:
                 exc = err
-            self.assertEquals(
+            self.assertEqual(
                 str(exc),
                 'Could not bind to 1.2.3.4:5678 after trying for 30 seconds.')
-            self.assertEquals(len(esleep_calls), 29)
-            self.assertEquals(len(self.sleep_calls), 0)
+            self.assertEqual(len(esleep_calls), 29)
+            self.assertEqual(len(self.sleep_calls), 0)
         finally:
             eventlet.sleep = orig_sleep
             eventlet.green.socket.socket = orig_esocket
@@ -914,26 +919,26 @@ class Test_get_listening_udp_socket(TestCase):
         exc = None
         try:
             service.get_listening_udp_socket('1.2.3.4', 5678, style='invalid')
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Socket style 'invalid' not understood.")
+        self.assertEqual(str(exc), "Socket style 'invalid' not understood.")
 
     def test_ip_as_none_is_all(self):
         sock = service.get_listening_udp_socket(None, 5678)
-        self.assertEquals(sock.bind_calls[0][0][0], '0.0.0.0')
+        self.assertEqual(sock.bind_calls[0][0][0], '0.0.0.0')
 
     def test_ip_as_star_is_all(self):
         sock = service.get_listening_udp_socket('*', 5678)
-        self.assertEquals(sock.bind_calls[0][0][0], '0.0.0.0')
+        self.assertEqual(sock.bind_calls[0][0][0], '0.0.0.0')
 
     def test_no_family_raises_exception(self):
         self.getaddrinfo_return = ((socket.AF_APPLETALK,),)
         exc = None
         try:
             service.get_listening_udp_socket('1.2.3.4', 5678)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             'Could not determine address family of 1.2.3.4:5678 for binding.')
 
@@ -942,17 +947,17 @@ class Test_get_listening_udp_socket(TestCase):
         exc = None
         try:
             service.get_listening_udp_socket('1.2.3.4', 5678)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'badbind')
+        self.assertEqual(str(exc), 'badbind')
 
 
 class Test_signum2str(TestCase):
 
     def test_signum2str(self):
-        self.assertEquals(service.signum2str(1), 'SIGHUP')
-        self.assertEquals(service.signum2str(12), 'SIGUSR2')
-        self.assertEquals(service.signum2str(999999), 'UNKNOWN')
+        self.assertEqual(service.signum2str(1), 'SIGHUP')
+        self.assertEqual(service.signum2str(12), 'SIGUSR2')
+        self.assertEqual(service.signum2str(999999), 'UNKNOWN')
 
 
 class FakeLogger(object):
@@ -1007,17 +1012,17 @@ class Test_sustain_workers(TestCase):
     def test_workers0(self):
         logger = FakeLogger()
         service.sustain_workers(0, self.worker_func, logger)
-        self.assertEquals(self.worker_func_calls, [(0,)])
-        self.assertEquals(
+        self.assertEqual(self.worker_func_calls, [(0,)])
+        self.assertEqual(
             logger.debug_calls,
             [('wid:000 pid:%s Starting inproc worker.' % service.getpid(),)])
-        self.assertEquals(
+        self.assertEqual(
             logger.info_calls,
             [('Exiting due to workers = 0 mode.',)])
 
     def test_workers0_no_logger(self):
         service.sustain_workers(0, self.worker_func)
-        self.assertEquals(self.worker_func_calls, [(0,)])
+        self.assertEqual(self.worker_func_calls, [(0,)])
 
     def test_sigterm_exit(self):
         logger = FakeLogger()
@@ -1028,9 +1033,9 @@ class Test_sustain_workers(TestCase):
 
         service.os_wait = _os_wait
         service.sustain_workers(1, self.worker_func, logger)
-        self.assertEquals(logger.debug_calls, [])
-        self.assertEquals(logger.info_calls, [('Exiting due to SIGTERM.',)])
-        self.assertEquals(self.killpg_calls, [(0, service.SIGTERM)])
+        self.assertEqual(logger.debug_calls, [])
+        self.assertEqual(logger.info_calls, [('Exiting due to SIGTERM.',)])
+        self.assertEqual(self.killpg_calls, [(0, service.SIGTERM)])
 
     def test_sighup_exit(self):
         logger = FakeLogger()
@@ -1041,9 +1046,9 @@ class Test_sustain_workers(TestCase):
 
         service.os_wait = _os_wait
         service.sustain_workers(1, self.worker_func, logger)
-        self.assertEquals(logger.debug_calls, [])
-        self.assertEquals(logger.info_calls, [('Exiting due to SIGHUP.',)])
-        self.assertEquals(self.killpg_calls, [(0, service.SIGHUP)])
+        self.assertEqual(logger.debug_calls, [])
+        self.assertEqual(logger.info_calls, [('Exiting due to SIGHUP.',)])
+        self.assertEqual(self.killpg_calls, [(0, service.SIGHUP)])
 
     def test_keyboard_interrupt_exit(self):
         logger = FakeLogger()
@@ -1053,9 +1058,9 @@ class Test_sustain_workers(TestCase):
 
         service.os_wait = _os_wait
         service.sustain_workers(1, self.worker_func, logger)
-        self.assertEquals(logger.debug_calls, [])
-        self.assertEquals(logger.info_calls, [('Exiting due to SIGINT.',)])
-        self.assertEquals(self.killpg_calls, [(0, service.SIGINT)])
+        self.assertEqual(logger.debug_calls, [])
+        self.assertEqual(logger.info_calls, [('Exiting due to SIGINT.',)])
+        self.assertEqual(self.killpg_calls, [(0, service.SIGINT)])
 
     def test_no_logger_ok(self):
 
@@ -1064,7 +1069,7 @@ class Test_sustain_workers(TestCase):
 
         service.os_wait = _os_wait
         service.sustain_workers(1, self.worker_func)
-        self.assertEquals(self.killpg_calls, [(0, service.SIGINT)])
+        self.assertEqual(self.killpg_calls, [(0, service.SIGINT)])
 
     def test_oserror_unknown_reraise(self):
         logger = FakeLogger()
@@ -1076,9 +1081,9 @@ class Test_sustain_workers(TestCase):
         exc = None
         try:
             service.sustain_workers(1, self.worker_func, logger)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
+        self.assertEqual(str(exc), 'testing')
 
     def test_oserror_eintr_cycle(self):
         logger = FakeLogger()
@@ -1094,10 +1099,10 @@ class Test_sustain_workers(TestCase):
 
         service.os_wait = _os_wait
         service.sustain_workers(1, self.worker_func, logger)
-        self.assertEquals(logger.debug_calls, [])
-        self.assertEquals(logger.info_calls, [('Exiting due to SIGINT.',)])
-        self.assertEquals(self.killpg_calls, [(0, service.SIGINT)])
-        self.assertEquals(self.called[0], 2)
+        self.assertEqual(logger.debug_calls, [])
+        self.assertEqual(logger.info_calls, [('Exiting due to SIGINT.',)])
+        self.assertEqual(self.killpg_calls, [(0, service.SIGINT)])
+        self.assertEqual(self.called[0], 2)
 
     def test_oserror_echild_cycle(self):
         logger = FakeLogger()
@@ -1113,26 +1118,26 @@ class Test_sustain_workers(TestCase):
 
         service.os_wait = _os_wait
         service.sustain_workers(1, self.worker_func, logger)
-        self.assertEquals(logger.debug_calls, [])
-        self.assertEquals(logger.info_calls, [('Exiting due to SIGINT.',)])
-        self.assertEquals(self.killpg_calls, [(0, service.SIGINT)])
-        self.assertEquals(self.called[0], 2)
+        self.assertEqual(logger.debug_calls, [])
+        self.assertEqual(logger.info_calls, [('Exiting due to SIGINT.',)])
+        self.assertEqual(self.killpg_calls, [(0, service.SIGINT)])
+        self.assertEqual(self.called[0], 2)
 
     def test_child(self):
         logger = FakeLogger()
         service.fork = lambda *a: 0
         service.sustain_workers(1, self.worker_func, logger)
         # Asserts the TERM and HUP signal handlers are cleared with the child.
-        self.assertEquals(
+        self.assertEqual(
             set(self.signal_calls[-2:]),
             set([(service.SIGHUP, 0), (service.SIGTERM, 0)]))
-        self.assertEquals(self.worker_func_calls, [(0,)])
-        self.assertEquals(logger.debug_calls, [
+        self.assertEqual(self.worker_func_calls, [(0,)])
+        self.assertEqual(logger.debug_calls, [
             ('wid:000 ppid:%s pid:%s Starting worker.' %
                 (service.getppid(), service.getpid()),),
             ('wid:000 ppid:%s pid:%s Worker exited.' %
                 (service.getppid(), service.getpid()),)])
-        self.assertEquals(logger.info_calls, [])
+        self.assertEqual(logger.info_calls, [])
 
     def test_child_exception(self):
 
@@ -1144,16 +1149,16 @@ class Test_sustain_workers(TestCase):
         exc = None
         try:
             service.sustain_workers(1, _worker_func, logger)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
-        self.assertEquals(logger.debug_calls, [
+        self.assertEqual(str(exc), 'testing')
+        self.assertEqual(logger.debug_calls, [
             ('wid:000 ppid:%s pid:%s Starting worker.' %
                 (service.getppid(), service.getpid()),)])
-        self.assertEquals(logger.info_calls, [])
-        self.assertEquals(logger.exception_calls, [
-            ('wid:000 ppid:%s pid:%s Worker exited due to exception: testing' %
-                (service.getppid(), service.getpid()),)])
+        self.assertEqual(logger.info_calls, [])
+        self.assertEqual(logger.exception_calls, [(
+            'wid:000 ppid:%s pid:%s Worker exited due to exception: testing' %
+            (service.getppid(), service.getpid()),)])
 
     def test_no_sleep_on_initial_launch(self):
         fork_calls = []
@@ -1168,8 +1173,8 @@ class Test_sustain_workers(TestCase):
         service.os_wait = _os_wait
         service.fork = _fork
         service.sustain_workers(5, self.worker_func)
-        self.assertEquals(fork_calls, [()] * 5)
-        self.assertEquals(self.sleep_calls, [])
+        self.assertEqual(fork_calls, [()] * 5)
+        self.assertEqual(self.sleep_calls, [])
 
     def test_sleep_on_relaunches(self):
         fork_calls = []
@@ -1188,8 +1193,8 @@ class Test_sustain_workers(TestCase):
         service.os_wait = _os_wait
         service.fork = _fork
         service.sustain_workers(5, self.worker_func)
-        self.assertEquals(fork_calls, [()] * 6)
-        self.assertEquals(self.sleep_calls, [(1,)])
+        self.assertEqual(fork_calls, [()] * 6)
+        self.assertEqual(self.sleep_calls, [(1,)])
 
 
 if __name__ == '__main__':

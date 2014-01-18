@@ -1,0 +1,2 @@
+include AUTHORS CHANGELOG LICENSE brimd.conf-sample
+graft doc

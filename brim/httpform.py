@@ -1,32 +1,16 @@
-# Copyright 2012 Gregory Holt and 2011 OpenStack, LLC.
-# Original source taken from OpenStack Swift FormPost middleware and
-# modified to be more generic.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Module for working with HTTP Form POSTs iteratively.
 
-"""
-Module for working with HTTP Form POSTs iteratively; in other words,
-parsing an HTTP Form POST without reading the whole thing into memory
-first. Many thanks to Michael Barton for the original prototype which
-I mangled into OpenStack Swift's formpost middleware and then into
-this module.
+.. warning::
 
-More and better docs later as well as tests, this should be
-considered just an early prototype for now and subject to drastic
-change.
+    This is an early version of this module. It has no tests, limited
+    documentation, and is subject to major changes.
 
-The basic usage is to iterate over iter_form results, which
+Provides tools for parsing an HTTP Form POST without reading the whole
+thing into memory first. Many thanks to Michael Barton for the original
+prototype which I mangled into OpenStack Swift's formpost middleware and
+then into this module.
+
+The basic usage is to iterate over iter_form results, which are
 rfc822.Message instances::
 
     from brim.httpform import iter_form, parse_attrs
@@ -46,41 +30,54 @@ rfc822.Message instances::
                 varname = attrs['name']
                 varvalue = body
 
-See also the simple test at the end of this file.
+See also the simple test at the end of the source file.
 """
+"""Copyright and License.
 
+Copyright 2012-2014 Gregory Holt
+Copyright 2011 OpenStack, LLC.
+
+Original source taken from OpenStack Swift FormPost middleware and
+modified to be more generic.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import re
-import rfc822
+from rfc822 import Message
 
 
 _ATTRIBUTES_RE = re.compile(r'(\w+)=(".*?"|[^";]+)(; ?|$)')
 
 
 class FormInvalid(Exception):
-    """
-    Raised by iter_form if it has parsing difficulties of an incoming
-    form.
-    """
-
     pass
 
 
 def parse_attrs(header):
-    """
-    Given the value of a header like::
+    """Returns (value, attr_dict) for an HTTP attr header.
 
-        Content-Disposition: form-data; name="somefile"; filename="test.html"
+    Given a header like::
 
-    Return data like::
+        Content-Disposition: form-data; name="abc"; filename="test.html"
 
-        ("form-data", {"name": "somefile", "filename": "test.html"})
+    Returns::
+
+        ("form-data", {"name": "abc", "filename": "test.html"})
 
     Example usage with an rfc822.Message::
 
-        value, attrs = parse_attrs(message.getheader('content-disposition'))
-
-    :param header: Value of a header (the part after the ': ').
-    :returns: (value name, dict) of the attribute data parsed (see above).
+        value, attrs = parse_attrs(
+            message.getheader('content-disposition'))
     """
     attributes = {}
     attrs = ''
@@ -169,10 +166,10 @@ class _FormPartFileLikeObject(object):
 
 
 class CappedFileLikeObject(object):
-    """
-    A file-like object wrapping another file-like object that raises
-    an EOFError if the amount of data read exceeds a given
-    max_file_size.
+    """Reads a limited amount from a file-like object.
+
+    A file-like object wrapping another file-like object that raises an
+    EOFError if the amount of data read exceeds a given max_file_size.
 
     This is useful to cap the form data size accepted::
 
@@ -182,10 +179,6 @@ class CappedFileLikeObject(object):
             except EOFError:
                 raise HTTPRequestEntityTooLarge(
                     'Max form part size is 4096.\\n')
-
-    :param fp: The file-like object to wrap.
-    :param max_file_size: The maximum bytes to read before raising an
-                          EOFError.
     """
 
     def __init__(self, fp, max_file_size):
@@ -209,16 +202,18 @@ class CappedFileLikeObject(object):
 
 
 def iter_form(env, read_chunk_size=4096):
-    """
+    """Yields messages for an HTTP Form POST.
+
     Parses an HTTP Form POST and yields rfc822.Message instances for
-    each form part. See the overview module documentation for usage.
+    each form part. See the overview module :py:mod:`brim.httpform`
+    for usage.
 
     :param env: The WSGI environment for the incoming request.
-    :param read_chunk_size: The maximum amount to read at once from
-                            the incoming request.
+    :param read_chunk_size: The maximum amount to read at once from the
+        incoming request.
     :returns: A generator yielding rfc822.Messages; be sure to fully
-              read from the message.fp file-like object before
-              continuing to the next message of the generator.
+        read from the message.fp file-like object before continuing to
+        the next message of the generator.
     """
     content_type, attrs = parse_attrs(env.get('CONTENT_TYPE') or '')
     if content_type != 'multipart/form-data':
@@ -236,13 +231,13 @@ def iter_form(env, read_chunk_size=4096):
     while not done:
         fp = _FormPartFileLikeObject(wsgi_input, boundary, input_buffer,
                                      read_chunk_size)
-        yield rfc822.Message(fp, 0)
+        yield Message(fp, 0)
         done = fp.no_more_messages
         input_buffer = fp.input_buffer
 
 
 if __name__ == '__main__':
-    # TODO: Real tests
+    # TODO: Real tests in brim.test.unit.test_httpform
     # This is just a quick test.
     from StringIO import StringIO
 
@@ -285,13 +280,11 @@ if __name__ == '__main__':
         '',
         '',
         '------WebKitFormBoundaryNcxTqxSlX7t4TDkR--',
-        '',
-    ]))
+        '']))
     env = {
         'CONTENT_TYPE': 'multipart/form-data; '
         'boundary=----WebKitFormBoundaryNcxTqxSlX7t4TDkR',
-        'wsgi.input': wsgi_input
-    }
+        'wsgi.input': wsgi_input}
     for message in iter_form(env):
         print '---'
         body = message.fp.read()

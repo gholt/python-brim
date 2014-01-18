@@ -1,82 +1,72 @@
 Brim.Net Core Package
 *********************
 
-    Copyright 2012 Gregory Holt
+.. include:: ../version.rst
+
+Latest documentation is always available at http://gholt.github.io/brim/
+
+Source code available at http://github.com/gholt/brim/
+
+    Copyright 2012-2014 Gregory Holt
 
     Portions (httpform) Copyright 2011 OpenStack, LLC.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+    Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
         http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+    Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 1
 
-   license
+    readme
+    license
+    authors
+    changelog
+    brimdconfsample
 
-Overview
-========
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 .. warning::
 
     This is a prerelease version of this project. As such, even as the author I don't completely trust this code yet. It works for the specific cases I've tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible "oddities", please file issues on github: http://github.com/gholt/brim Thanks, and be careful!
 
-This is the core project for Brim.Net Python-based applications. It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server), straight TCP and UDP socket applications, and maintaining background daemons. The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency -- when a subprocess exits without being requested to, it will be restarted automatically.
+
+API
+===
+
+.. toctree::
+
+    api
+
+
+.. _overview:
+
+Overview
+========
+
+This is the core package for Brim.Net Python-based applications.
+
+It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server), straight TCP and UDP socket applications, and maintaining background daemons.
+
+The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency -- when a subprocess exits without being requested to, it will be restarted automatically.
 
 Required Dependencies
 ---------------------
 
-* `Python >= 2.6 <http://python.org/>`_ Not tested with Python 3 yet.
-* `Eventlet >= 0.9.16 <http://eventlet.net/>`_
-* Unix platform: This should run on any Unix platform, though only tested on Ubuntu 10.04 LTS to date.
+* `Python >= 2.7 <http://python.org/>`_ Not tested with Python 3 yet.
+* `Eventlet >= 0.14.0 <http://eventlet.net/>`_
+* Unix platform: This should run on any Unix platform, though only tested on Ubuntu 12.04 LTS to date.
 
 Optional Dependencies
 ---------------------
 
 * `SetProcTitle <http://code.google.com/p/py-setproctitle/>`_ If this is installed, brimd will change its process titles to be more meaningful.
 * `SimpleJSON <https://github.com/simplejson/simplejson>`_ or other JSON library containing json.dumps and json.loads compatible functions. You can configure brimd to use these alternate libraries if you wish and complying apps and daemons will also use the alternate libraries.
-
-Build and Test Dependencies
----------------------------
-
-* `Coverage <http://nedbatchelder.com/code/coverage/>`_ to report on test coverage.
-* `Git <http://git-scm.com/>`_ since the code is hosted on `GitHub <http://github.com/gholt/brim>`_.
-* `Nose <http://readthedocs.org/docs/nose/en/latest/>`_ for the test suite.
-* `PIP <http://pypi.python.org/pypi/pip>`_ to install additional Python packages.
-* `Sphinx <http://sphinx.pocoo.org/>`_ to build documentation.
-
-Example Install on Ubuntu 10.04
--------------------------------
-::
-
-    $ sudo apt-get install git-core python python-pip
-    $ sudo pip install eventlet
-    $ sudo pip install setproctitle  # optional
-    $ git clone git://github.com/gholt/brim
-    $ cd brim
-    $ sudo python setup.py install
-
-Example Install for Build and Test on Ubuntu 10.04
---------------------------------------------------
-::
-
-    $ sudo apt-get install git-core python python-coverage python-nose \
-      python-pip python-simplejson python-sphinx
-    $ sudo pip install eventlet
-    $ sudo pip install setproctitle
-    $ git clone git://github.com/gholt/brim
-    $ cd brim
-    $ sudo python setup.py develop
-    $ python setup.py build_sphinx
-    $ ./.unittests
+* `Py-BCrypt <https://pypi.python.org/pypi/py-bcrypt>`_ to make use of :py:mod:`brim.wsgi_basic_auth`.
 
 
 Usage Examples
@@ -86,40 +76,41 @@ Usage Examples
 Example WSGI Usage
 ------------------
 
-* Create /etc/brimd.conf::
+* Create ~/.brimd.conf::
 
     [wsgi]
+    port = 8901
     apps = echo stats
 
     [echo]
     call = brim.wsgi_echo.WSGIEcho
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
 
 * Start the server::
 
-    $ sudo brimd start
+    $ brimd start
 
 * Access the "echo" app (echos *Just a test.* back)::
 
-    $ curl -i http://127.0.0.1/echo --data-binary 'Just a test.'
+    $ curl -i http://127.0.0.1:8901/echo --data-binary 'Just a test.'
 
 * Access a non-existent path (404s)::
 
-    $ curl -i http://127.0.0.1/invalid
+    $ curl -i http://127.0.0.1:8901/invalid
 
 * Access the "stats" app (returns JSON formatted server stats)::
 
-    $ curl -s http://127.0.0.1/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
 
 * Stop the server::
 
-    $ sudo brimd stop
+    $ brimd stop
 
 Run ``brimd -h`` for more details on server control. It supports the standard init.d-style commands as well a special no-daemon mode for debugging.
 
-Also, see the included brimd.conf-sample for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.
+Also, see the included :ref:`brimd.conf-sample <brimdconfsample>` for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.
 
 
 Example WSGI Multi-Configuration Usage
@@ -127,144 +118,149 @@ Example WSGI Multi-Configuration Usage
 
 You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:
 
-* Create /etc/brimd.conf::
+* Create ~/.brimd.conf::
 
     [wsgi]
+    port = 8901
     apps = echo stats
 
-    [wsgi2]
-    port = 81
+    [wsgi#alternate]
+    port = 8902
     apps = echo2 stats
 
     [echo]
     call = brim.wsgi_echo.WSGIEcho
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
 
     [echo2]
     call = brim.wsgi_echo.WSGIEcho
     path = /echo2
 
-You can see the new section [wsgi2] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.
+You can see the new section [wsgi#alternate] that defines the second listening port with its own configuration of the echo app and the shared stats configuration.
 
 * Start the server::
 
-    $ sudo brimd start
+    $ brimd start
 
 * Access the "echo" app on the main port::
 
-    $ curl -i http://127.0.0.1/echo --data-binary 'Just a test.'
+    $ curl -i http://127.0.0.1:8901/echo --data-binary 'Just a test.'
 
 * Access the "echo" app on the second port::
 
-    $ curl -i http://127.0.0.1:81/echo2 --data-binary 'Just a test.'
+    $ curl -i http://127.0.0.1:8902/echo2 --data-binary 'Just a test.'
 
 * Note that the apps don't answer on the other ports::
 
-    $ curl -i http://127.0.0.1/echo2 --data-binary 'Just a test.'
-    $ curl -i http://127.0.0.1:81/echo --data-binary 'Just a test.'
+    $ curl -i http://127.0.0.1:8901/echo2 --data-binary 'Just a test.'
+    $ curl -i http://127.0.0.1:8902/echo --data-binary 'Just a test.'
 
 * Access the "stats" app and see it's configured on both ports::
 
-    $ curl -s http://127.0.0.1/stats | python -mjson.tool
-    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8902/stats | python -mjson.tool
 
 * Stop the server::
 
-    $ sudo brimd stop
+    $ brimd stop
 
-The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
+The included :ref:`brimd.conf-sample <brimdconfsample>` shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
 Example TCP Straight Socket Application Usage
 ---------------------------------------------
 
-* Create /etc/brimd.conf::
+* Create ~/.brimd.conf::
 
     [tcp]
+    port = 8903
     call = brim.tcp_echo.TCPEcho
 
 * Start the server::
 
-    $ sudo brimd start
+    $ brimd start
 
 * Access the "echo" app (echos *Just a test.* back)::
 
-    $ echo 'Just a test.' | nc -q 2 127.0.0.1 80
+    $ echo 'Just a test.' | nc -q 2 127.0.0.1 8903
 
 * Stop the server::
 
-    $ sudo brimd stop
+    $ brimd stop
 
-* Create a multi-port /etc/brimd.conf::
+* Create a multi-port ~/.brimd.conf::
 
     [tcp]
+    port = 8903
     call = brim.tcp_echo.TCPEcho
 
-    [tcp2]
+    [tcp#alternate]
+    port = 8904
     call = brim.tcp_echo.TCPEcho
-    port = 81
 
 * Start the server::
 
-    $ sudo brimd start
+    $ brimd start
 
 * Access the "echo" apps (echo *Just a test.* back)::
 
-    $ echo 'Just a test.' | nc -q 2 127.0.0.1 80
-    $ echo 'Just a test.' | nc -q 2 127.0.0.1 81
+    $ echo 'Just a test.' | nc -q 2 127.0.0.1 8903
+    $ echo 'Just a test.' | nc -q 2 127.0.0.1 8904
 
 * Stop the server::
 
-    $ sudo brimd stop
+    $ brimd stop
 
-The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
+The included :ref:`brimd.conf-sample <brimdconfsample>` shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
 Example UDP Application Usage
 -----------------------------
 
-* Create /etc/brimd.conf::
+* Create ~/.brimd.conf::
 
     [udp]
+    port = 8905
     call = brim.udp_echo.UDPEcho
 
 * Start the server::
 
-    $ sudo brimd start
+    $ brimd start
 
 * Access the "echo" app (echos *Just a test.* back)::
 
-    $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 80
+    $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8905
 
 * Stop the server::
 
-    $ sudo brimd stop
+    $ brimd stop
 
-* Create a multi-port /etc/brimd.conf::
+* Create a multi-port ~/.brimd.conf::
 
     [udp]
+    port = 8905
     call = brim.udp_echo.UDPEcho
 
-    [udp2]
+    [udp#alternate]
+    port = 8906
     call = brim.udp_echo.UDPEcho
-    port = 81
 
 * Start the server::
 
-    $ sudo brimd start
+    $ brimd start
 
 * Access the "echo" apps (echo *Just a test.* back)::
 
-    $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 80
-    $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 81
+    $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8905
+    $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8906
 
 * Stop the server::
 
-    $ sudo brimd stop
+    $ brimd stop
 
-The included brimd.conf-sample shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
+The included :ref:`brimd.conf-sample <brimdconfsample>` shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
 Example Daemon Usage
@@ -302,9 +298,10 @@ Developing WSGI applications for brimd is quite similar to other Python WSGI ser
             start_response('200 OK', [('Content-Length', str(len(body)))])
             return body
 
-Here's an example /etc/brimd.conf with this app active::
+Here's an example ~/.brimd.conf with this app active::
 
     [wsgi]
+    port = 8901
     apps = helloworld
 
     [helloworld]
@@ -312,8 +309,8 @@ Here's an example /etc/brimd.conf with this app active::
 
 We can then start the server and access the new app::
 
-    $ sudo brimd restart
-    $ curl -i http://127.0.0.1/helloworld
+    $ brimd restart
+    $ curl -i http://127.0.0.1:8901/helloworld
     HTTP/1.1 200 OK
     Content-Length: 13
     Date: Sat, 14 Jan 2012 22:57:38 GMT
@@ -353,7 +350,7 @@ To pre-parse the configuration, you just add a class method of parse_conf that t
 
 Now, let's restart the server without yet updating the config and see what happens::
 
-    $ sudo brimd restart
+    $ brimd restart
     [helloworld] you must configure a path to serve.
 
 It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, ``parse_conf`` is called in the main process and ``__init__`` is called in each subprocess.
@@ -361,6 +358,7 @@ It's important to note that this early config parsing is done in the main server
 Now, let's update our configuration::
 
     [wsgi]
+    port = 8901
     apps = helloworld
 
     [helloworld]
@@ -369,8 +367,8 @@ Now, let's update our configuration::
 
 And now try using our app again::
 
-    $ sudo brimd restart
-    $ curl -i http://127.0.0.1/here
+    $ brimd restart
+    $ curl -i http://127.0.0.1:8901/here
     HTTP/1.1 200 OK
     Content-Length: 13
     Date: Sat, 14 Jan 2012 23:05:20 GMT
@@ -415,40 +413,25 @@ To continue our example, let's add stats to our application. We'll count how man
 
 You can see that we configure the stats with the new stats_conf class method. The method returns a list of (stat_name, stat_type) pairs. stat_name is the str name of the stat and stat_type is one of the following:
 
-    worker
-
-        Indicates a worker only stat. No overall stat will be reported.
-
-    sum
-
-        Indicates an overall stat should be reported that is a sum of the stat from all workers.
-
-    min
-
-        Indicates an overall stat should be reported that is the smallest value of the stat from all workers.
-
-    max
-
-        Indicates an overall stat should be reported that is the largest value of the stat from all workers.
+======  =======================================================================
+worker  Indicates a worker only stat. No overall stat will be reported.
+sum     Indicates an overall stat should be reported that is a sum of the stat from all workers.
+min     Indicates an overall stat should be reported that is the smallest value of the stat from all workers.
+max     Indicates an overall stat should be reported that is the largest value of the stat from all workers.
+======  =======================================================================
 
 When handling actual requests, we can access the stats via the ``env['brim.stats']`` object, which supports the following methods:
 
-        get(<name>)
+==================  ===========================================================
+get(<name>)         Return the int value of the stat <name>.
+set(<name>, value)  Sets the value of the stat <name>. The value will be treated as an unsigned integer.
+incr(<name>)        Increments the value of the stat <name> by 1.
+==================  ===========================================================
 
-            Return the int value of the stat <name>.
-
-        set(<name>, value)
-
-            Sets the value of the stat <name>. The value will be treated as an unsigned integer.
-
-
-        incr(<name>)
-
-            Increments the value of the stat <name> by 1.
-
-So now, let's add the brim.stats.Stats app to our configuration so we'll be able to get a report on the server stats; we'll also set up two workers to show the separate worker stats::
+So now, let's add the brim.wsgi_stats.WSGIStats app to our configuration so we'll be able to get a report on the server stats; we'll also set up two workers to show the separate worker stats::
 
     [wsgi]
+    port = 8901
     apps = helloworld stats
     workers = 2
 
@@ -457,14 +440,14 @@ So now, let's add the brim.stats.Stats app to our configuration so we'll be able
     path = /here
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
 
 Let's try it out::
 
-    $ sudo brimd restart
-    $ curl http://127.0.0.1/here
+    $ brimd restart
+    $ curl http://127.0.0.1:8901/here
     Hello World!
-    $ curl -s http://127.0.0.1/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "wsgi": {
             "0": {
@@ -478,11 +461,11 @@ Let's try it out::
             "helloworld.last_called": 1330399869, 
             "helloworld.requests": 1, 
     ...
-    $ curl http://127.0.0.1/here
+    $ curl http://127.0.0.1:8901/here
     Hello World!
-    $ curl http://127.0.0.1/here
+    $ curl http://127.0.0.1:8901/here
     Hello World!
-    $ curl -s http://127.0.0.1/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "wsgi": {
             "0": {
@@ -499,9 +482,9 @@ Let's try it out::
 
 With very low load, a single worker often gets all the requests. If you have Apache Bench installed you might try that to get a better load test::
 
-    $ ab -n 12345 http://127.0.0.1/here
+    $ ab -n 12345 http://127.0.0.1:8901/here
     ...
-    $ curl -s http://127.0.0.1/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "wsgi": {
             "0": {
@@ -520,65 +503,54 @@ With very low load, a single worker often gets all the requests. If you have Apa
 Extra WSGI env Items
 ....................
 
-brim
+==================  ===========================================================
+brim                This is the :py:class:`brim.server.Server` instance itself. Normally you don't need access to this, but some apps like :py:class:`brim.wsgi_stats.WSGIStats` do.
 
-    This is the brim.server.Server instance itself. Normally you don't need access to this, but some apps like brim.stats.Stats do.
+brim.start          The time.time() the request started processing.
 
-brim.start
+brim.logger         A logging.Logger instance for most logging needs. This logger can be configured in brimd.conf and by default it logs at the INFO level and above to syslog's LOCAL0 facility. Note that the server automatically logs request/responses at the NOTICE level, so you don't have to.
 
-    The time.time() the request started processing.
+brim.txn            A uuid.uuid4().hex value to unique identify the request. This can be very useful when logging so that you can track what a request is doing on a busy server. This is automatically added to every log line the brim.logger logs.
 
-brim.logger
+brim.log_info       A list of strings that will be appended to the request log line that brimd generates. This can be useful for identifying requests or what actions requests may have taken.
 
-    A logging.Logger instance for most logging needs. This logger can be configured in brimd.conf and by default it logs at the INFO level and above to syslog's LOCAL0 facility. Note that the server automatically logs request/responses at the NOTICE level, so you don't have to.
+                    It's usually best to add your app's info all at once with a prefix word, like::
 
-brim.txn
+                        env['brim.log_info'].extend(['myapp:', 'myinfo1', 'myinfo2'])
 
-    A uuid.uuid4().hex value to unique identify the request. This can be very useful when logging so that you can track what a request is doing on a busy server. This is automatically added to every log line the brim.logger logs.
+                    You could just add it all as one word::
+                    
+                        env['brim.log_info'].append('myapp: myinfo1 myinfo2')
 
-brim.additional_request_log_info
+                    But understand that this will encode the spaces to %20 on the log line.
 
-    A list of strings that will be appended to the request log line that brimd generates. This can be useful for identifying requests or what actions requests may have taken.
+brim.stats          An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app's stats_conf class method. See the :py:class:`brim.wsgi_echo.WSGIEcho` and :py:class:`brim.wsgi_stats.WSGIStats` apps for examples of how to use these stats. This stats object will implement at least the following methods::
 
-    It's usually best to add your app's info all at once with a prefix word, like:
+                        get(<name>)         Return the int value of the
+                                            stat <name>.
+                        set(<name>, int)    Sets the int value of the
+                                            stat <name>. The value will
+                                            be treated as unsigned.
+                        incr(<name>)        Increments the value of the
+                                            stat <name> by 1.
 
-    ``env['brim.additional_request_log_info'].extend(['myapp:', 'myinfo1', 'myinfo2'])``
-
-    You could just add it all as one word ``.append('myapp: myinfo1 myinfo2')`` but understand that this will encode the spaces to %20 on the log line.
-
-brim.stats
-
-    An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app's stats_conf class method. See the brim.wsgi_echo.WSGIEcho and brim.stats.Stats apps for examples of how to use these stats. This stats object will implement the following methods:
-
-        get(<name>)
-
-            Return the int value of the stat <name>.
-
-        set(<name>, int)
-
-            Sets the in value of the stat <name>. The value will be treated as unsigned.
-
-        incr(<name>)
-
-            Increments the value of the stat <name> by 1.
-
-| brim.json_dumps
-| brim.json_loads
-
-    These are the JSON dumps and loads functions for converting to and from JSON and Python objects. By default, these are json.dumps and json.loads, but faster libraries are out there and can be configured in brimd.conf. Using these env items means you'll automatically use whatever is configured.
+brim.json_dumps
+brim.json_loads     These are the JSON dumps and loads functions for converting to and from JSON and Python objects. By default, these are json.dumps and json.loads, but faster libraries are out there and can be configured in brimd.conf. Using these env items means you'll automatically use whatever is configured.
+==================  ===========================================================
 
 
 Server Stats
 ............
 
-The brimd server tracks various statistics, such as the server start time and number of requests processed. The brim.stats.Stats app can be configured to provide access to these stats via a JSON response::
+The brimd server tracks various statistics, such as the server start time and number of requests processed. The :py:class:`brim.wsgi_stats.WSGIStats` app can be configured to provide access to these stats via a JSON response::
 
     [wsgi]
+    port = 8901
     apps = stats
     workers = 2
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
     # path = <path>
     #   The request path to match and serve; any other paths will be passed on
     #   to the next WSGI app in the chain. This can serve as a basic
@@ -587,7 +559,7 @@ The brimd server tracks various statistics, such as the server start time and nu
 
 After restarting the server, you can now access these stats::
 
-    $ curl -s http://127.0.0.1/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     {
         "start_time": 1330395908,
         "wsgi": {
@@ -595,60 +567,33 @@ After restarting the server, you can now access these stats::
                 "request_count": 29243,
                 "start_time": 1330395908,
                 "status_2xx_count": 22995,
-                "status_3xx_count": 0,
-                "status_404_count": 0,
-                "status_408_count": 0,
-                "status_499_count": 0,
-                "status_4xx_count": 6248,
-                "status_501_count": 0,
-                "status_5xx_count": 0
+                "status_4xx_count": 6248
             },
             "1": {
                 "request_count": 29453,
                 "start_time": 1330395908,
                 "status_2xx_count": 23358,
-                "status_3xx_count": 0,
-                "status_404_count": 0,
-                "status_408_count": 0,
-                "status_499_count": 0,
-                "status_4xx_count": 6095,
-                "status_501_count": 0,
-                "status_5xx_count": 0
+                "status_4xx_count": 6095
             },
             "request_count": 58696,
             "status_2xx_count": 46353,
-            "status_3xx_count": 0,
-            "status_404_count": 0,
-            "status_408_count": 0,
-            "status_499_count": 0,
-            "status_4xx_count": 12343,
-            "status_501_count": 0,
-            "status_5xx_count": 0
+            "status_4xx_count": 12343
         }
     }
 
 Notice there are overall server stats and individual worker stats. Here is what's available by default (apps can configure additional stats):
 
-request_count
-
-    This is the number of requests served by the server and is simply a sum of all the worker's request_counts.
-
-start_time
-
-    This is the int(time.time()) the server was started. Each worker also has a start_time that indicates when that subprocess was started. If a subprocess crashes and restarts, this start_time will be different than the overall server start_time.
-
-| status_2xx_count
-| status_3xx_count
-| status_4xx_count
-| status_5xx_count
-
-    These are the counts of requests that returned the response code ranges stated. For example, a high status_5xx_count can indicate a major server problem.
-
-| status_404_count
-| status_408_count
-| etc.
-
-    These track specific response codes. Which response codes are tracked can be configured in brimd.conf, but are 404, 408, 499, and 501 by default. A high 404 count on a server that normally shouldn't do so can indicate missing files or a bad incoming link. 408 Request Timeout and 499 Disconnect can indicate network problems or perhaps too aggressive timeouts. 501 Not Implemented counts can often be subtracted from the status_5xx_count to get a true count of real server problems.
+==================  ===========================================================
+request_count       This is the number of requests served by the server and is simply a sum of all the worker's request_counts.
+start_time          This is the ``int(time.time())`` the server was started. Each worker also has a start_time that indicates when that subprocess was started. If a subprocess crashes and restarts, this start_time will be different than the overall server start_time.
+status_2xx_count
+status_3xx_count
+status_4xx_count
+status_5xx_count    These are the counts of requests that returned the response code ranges stated. For example, a high status_5xx_count can indicate a major server problem.
+status_404_count
+status_408_count
+etc.                These track specific response codes. Which response codes are tracked can be configured in brimd.conf, but are 404, 408, 499, and 501 by default. A high 404 count on a server that normally shouldn't do so can indicate missing files or a bad incoming link. 408 Request Timeout and 499 Disconnect can indicate network problems or perhaps too aggressive timeouts. 501 Not Implemented counts can often be subtracted from the status_5xx_count to get a true count of real server problems.
+==================  ===========================================================
 
 
 TCP Straight Socket Application Development
@@ -665,26 +610,27 @@ Developing brimd straight TCP socket applications is very simple::
             sock.send('Hello World!\n')
             sock.close()
 
-You'd probably want a lot of error checking in your call, but this works for now. So let's set up an /etc/brimd.conf to run this application::
+You'd probably want a lot of error checking in your call, but this works for now. So let's set up an ~/.brimd.conf to run this application::
 
     [tcp]
+    port = 8903
     call = mypackage.mymodule.HelloWorld
 
 We can then start the server and access the new app::
 
-    $ sudo brimd restart
-    $ nc -q 2 127.0.0.1 80
+    $ brimd restart
+    $ nc -q 2 127.0.0.1 8903
     Hello World!
 
-The ``__call__`` method is called for each incoming connection with the subserver, stats, socket, ip, and port of the connection. The subserver is the brim.server.TCPSubserver that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just established TCP connection.
+The ``__call__`` method is called for each incoming connection with the subserver, stats, socket, ip, and port of the connection. The subserver is the :py:class:`brim.server.TCPSubserver` that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just established TCP connection.
 
-The ``__init__`` takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of brim.conf.Conf.
+The ``__init__`` takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of :py:class:`brim.conf.Conf`.
 
 The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.
 
-The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's ``__init__`` method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.
+The conf, while by default is the full server :py:class:`brim.conf.Conf` instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's ``__init__`` method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.
 
-To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist::
+To pre-parse the configuration, you just add a class method of parse_conf that takes the :py:class:`brim.conf.Conf` instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist::
 
     class HelloWorld(object):
 
@@ -707,7 +653,7 @@ To pre-parse the configuration, you just add a class method of parse_conf that t
 
 Now, let's restart the server without yet updating the config and see what happens::
 
-    $ sudo brimd restart
+    $ brimd restart
     [tcp] you must configure a message to serve.
 
 It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, ``parse_conf`` is called in the main process and ``__init__`` is called in each subprocess.
@@ -715,13 +661,14 @@ It's important to note that this early config parsing is done in the main server
 Now, let's update our configuration::
 
     [tcp]
+    port = 8903
     call = mypackage.mymodule.HelloWorld
     message = Hello, hello!
 
 And now try using our app again::
 
-    $ sudo brimd restart
-    $ nc -q 2 127.0.0.1 80
+    $ brimd restart
+    $ nc -q 2 127.0.0.1 8903
     Hello, hello!
 
 To continue our example, let's add stats to our application. We'll count how many times we're called and the last time we were called::
@@ -747,124 +694,108 @@ To continue our example, let's add stats to our application. We'll count how man
         def parse_conf(cls, name, conf):
             message = conf.get(name, 'message')
             if not message:
-                raise Exception('[%s] you must configure a message to serve.' %
-                                name)
+                raise Exception(
+                    '[%s] you must configure a message to serve.' % name)
             return message
 
         @classmethod
         def stats_conf(cls, name, conf):
             # This is the new class method to configure additional stats, it
             # returns a list of (stat_name, stat_type) tuples.
-            return [('%s.connections' % name, 'sum'),
-                    ('%s.last_called' % name, 'max')]
+            return [('connections', 'sum'), ('last_called', 'max')]
 
 You can see that we configure the stats with the new stats_conf class method. The method returns a list of (stat_name, stat_type) pairs. stat_name is the str name of the stat and stat_type is one of the following:
 
-    worker
-
-        Indicates a worker only stat. No overall stat will be reported.
-
-    sum
-
-        Indicates an overall stat should be reported that is a sum of the stat from all workers.
-
-    min
-
-        Indicates an overall stat should be reported that is the smallest value of the stat from all workers.
-
-    max
-
-        Indicates an overall stat should be reported that is the largest value of the stat from all workers.
+======  =======================================================================
+worker  Indicates a worker only stat. No overall stat will be reported.
+sum     Indicates an overall stat should be reported that is a sum of the stat from all workers.
+min     Indicates an overall stat should be reported that is the smallest value of the stat from all workers.
+max     Indicates an overall stat should be reported that is the largest value of the stat from all workers.
+======  =======================================================================
 
 When handling actual requests, we can access the stats via the passed stats object, which supports the following methods:
 
-        get(<name>)
+==================  ===========================================================
+get(<name>)         Return the int value of the stat <name>.
+set(<name>, value)  Sets the value of the stat <name>. The value will be treated as an unsigned integer.
+incr(<name>)        Increments the value of the stat <name> by 1.
+==================  ===========================================================
 
-            Return the int value of the stat <name>.
-
-        set(<name>, value)
-
-            Sets the value of the stat <name>. The value will be treated as an unsigned integer.
-
-
-        incr(<name>)
-
-            Increments the value of the stat <name> by 1.
-
-So now, let's add the brim.stats.Stats WSGI app to our configuration so we'll be able to get a report on the server stats; we'll also set up two workers to show the separate worker stats::
+So now, let's add the :py:class:`brim.wsgi_stats.WSGIStats` WSGI app to our configuration so we'll be able to get a report on the server stats; we'll also set up two workers to show the separate worker stats::
 
     [tcp]
+    port = 8903
     call = mypackage.mymodule.HelloWorld
     message = Hello, hello!
     workers = 2
 
     [wsgi]
+    port = 8901
     apps = stats
-    port = 81
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
 
-Let's try it out::
+Let's try it out (note that the 0 values aren't actually included in the stats output -- it is assumed to be 0 if missing for brevity -- but they're included here for better understanding)::
 
-    $ sudo brimd restart
-    $ nc -q 2 127.0.0.1 80
+    $ brimd restart
+    $ nc -q 2 127.0.0.1 8903
     Hello, hello!
-    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "tcp": {
             "0": {
     ...
-                "tcp.connections": 1, 
-                "tcp.last_called": 1330399433
+                "connections": 1, 
+                "last_called": 1330399433
     ...
             "1": {
     ...
-                "tcp.connections": 0, 
-                "tcp.last_called": 0
+                "connections": 0, 
+                "last_called": 0
     ...
-            "tcp.connections": 1, 
-            "tcp.last_called": 1330399433
+            "connections": 1, 
+            "last_called": 1330399433
     ...
-    $ nc -q 2 127.0.0.1 80
+    $ nc -q 2 127.0.0.1 8903
     Hello, hello!
-    $ nc -q 2 127.0.0.1 80
+    $ nc -q 2 127.0.0.1 8903
     Hello, hello!
-    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "tcp": {
             "0": {
     ...
-                "tcp.connections": 3, 
-                "tcp.last_called": 1330399486
+                "connections": 3, 
+                "last_called": 1330399486
     ...
             "1": {
     ...
-                "tcp.connections": 0, 
-                "tcp.last_called": 0
+                "connections": 0, 
+                "last_called": 0
     ...
-            "tcp.connections": 3, 
-            "tcp.last_called": 1330399486
+            "connections": 3, 
+            "last_called": 1330399486
     ...
 
 With very low load, a single worker often gets all the requests. You might try a simple for loop to try to generate some load::
 
-    $ for x in {1..1234}; do nc 127.0.0.1 80; done > /dev/null
-    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+    $ for x in {1..1234}; do nc 127.0.0.1 8903; done > /dev/null
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "tcp": {
             "0": {
     ...
-                "tcp.connections": 692, 
-                "tcp.last_called": 1330399723
+                "connections": 692, 
+                "last_called": 1330399723
     ...
             "1": {
     ...
-                "tcp.connections": 545, 
-                "tcp.last_called": 1330399723
+                "connections": 545, 
+                "last_called": 1330399723
     ...
-            "tcp.connections": 1237, 
-            "tcp.last_called": 1330399723
+            "connections": 1237, 
+            "last_called": 1330399723
     ...
 
 
@@ -881,26 +812,27 @@ Developing brimd UDP socket applications is also very simple::
         def __call__(self, subserver, stats, sock, datagram, ip, port):
             sock.sendto('Hello World!\n', (ip, port))
 
-You'd probably want a lot of error checking in your call, but this works for now. So let's set up an /etc/brimd.conf to run this application::
+You'd probably want a lot of error checking in your call, but this works for now. So let's set up an ~/.brimd.conf to run this application::
 
     [udp]
+    port = 8905
     call = mypackage.mymodule.HelloWorld
 
 We can then start the server and access the new app::
 
-    $ sudo brimd restart
-    $ echo 'test' | nc -u -q 2 127.0.0.1 80
+    $ brimd restart
+    $ echo 'test' | nc -u -q 2 127.0.0.1 8905
     Hello World!
 
-The ``__call__`` method is called for each incoming datagram with the subserver, stats, datagram, socket, ip, and port of the datagram. The subserver is the brim.server.UDPSubserver that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just received datagram. The datagram is the payload of the UDP packet received.
+The ``__call__`` method is called for each incoming datagram with the subserver, stats, datagram, socket, ip, and port of the datagram. The subserver is the :py:class:`brim.server.UDPSubserver` that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just received datagram. The datagram is the payload of the UDP packet received.
 
-The ``__init__`` takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of brim.conf.Conf.
+The ``__init__`` takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of :py:class:`brim.conf.Conf`.
 
 The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.
 
-The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's ``__init__`` method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.
+The conf, while by default is the full server :py:class:`brim.conf.Conf` instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's ``__init__`` method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.
 
-To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist::
+To pre-parse the configuration, you just add a class method of parse_conf that takes the :py:class:`brim.conf.Conf` instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist::
 
     class HelloWorld(object):
 
@@ -922,7 +854,7 @@ To pre-parse the configuration, you just add a class method of parse_conf that t
 
 Now, let's restart the server without yet updating the config and see what happens::
 
-    $ sudo brimd restart
+    $ brimd restart
     [udp] you must configure a message to serve.
 
 It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, ``parse_conf`` is called in the main process and ``__init__`` is called in each subprocess.
@@ -930,13 +862,14 @@ It's important to note that this early config parsing is done in the main server
 Now, let's update our configuration::
 
     [udp]
+    port = 8905
     call = mypackage.mymodule.HelloWorld
     message = Hello, hello!
 
 And now try using our app again::
 
-    $ sudo brimd restart
-    $ echo 'test' | nc -u -q 2 127.0.0.1 80
+    $ brimd restart
+    $ echo 'test' | nc -u -q 2 127.0.0.1 8905
     Hello, hello!
 
 To continue our example, let's add stats to our application. We'll record the last time we were called::
@@ -967,51 +900,52 @@ To continue our example, let's add stats to our application. We'll record the la
         @classmethod
         def stats_conf(cls, name, conf):
             # This is the new class method to configure additional stats, it
-            # returns a list of names of stats to allow. Since UDP doesn't
-            # support multiple workers, there's no need for the stat types like
-            # WSGI and TCP applications.
-            return ['last_called']
+            # returns a list of (stat_name, stat_type) tuples.
+            return [('last_called', 'max')]
 
-You can see that we configure the stats with the new stats_conf class method. The method returns a list of names of stats to enable.
+You can see that we configure the stats with the new stats_conf class method. The method returns a list of (stat_name, stat_type) pairs. stat_name is the str name of the stat and stat_type is one of the following:
+
+======  =======================================================================
+worker  Indicates a worker only stat. No overall stat will be reported.
+sum     Indicates an overall stat should be reported that is a sum of the stat from all workers.
+min     Indicates an overall stat should be reported that is the smallest value of the stat from all workers.
+max     Indicates an overall stat should be reported that is the largest value of the stat from all workers.
+======  =======================================================================
 
 When handling actual requests, we can access the stats via the passed stats object, which supports the following methods:
 
-        get(<name>)
+==================  ===========================================================
+get(<name>)         Return the int value of the stat <name>.
+set(<name>, value)  Sets the value of the stat <name>. The value will be treated as an unsigned integer.
+incr(<name>)        Increments the value of the stat <name> by 1.
+==================  ===========================================================
 
-            Return the int value of the stat <name>.
-
-        set(<name>, value)
-
-            Sets the value of the stat <name>. The value will be treated as an unsigned integer.
-
-
-        incr(<name>)
-
-            Increments the value of the stat <name> by 1.
-
-So now, let's add the brim.stats.Stats WSGI app to our configuration so we'll be able to get a report on the server stats::
+So now, let's add the brim.wsgi_stats.WSGIStats WSGI app to our configuration so we'll be able to get a report on the server stats::
 
     [udp]
+    port = 8905
     call = mypackage.mymodule.HelloWorld
     message = Hello, hello!
 
     [wsgi]
+    port = 8901
     apps = stats
-    port = 81
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
 
 Let's try it out::
 
-    $ sudo brimd restart
-    $ echo 'test' | nc -u -q 2 127.0.0.1 80
+    $ brimd restart
+    $ echo 'test' | nc -u -q 2 127.0.0.1 8905
     Hello, hello!
-    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "udp": {
     ...
-            "last_called": 1330401361, 
+            "0": {
+    ...
+                "last_called": 1330401361, 
     ...
 
 
@@ -1035,7 +969,7 @@ Daemons for brimd are simply background processes you'd like brimd to ensure are
                 subserver.logger.info('sample log line %s' % line)
                 sleep(60)
 
-So let's set up an /etc/brimd.conf to run this daemon::
+So let's set up an ~/.brimd.conf to run this daemon::
 
     [daemons]
     daemons = helloworld
@@ -1045,20 +979,20 @@ So let's set up an /etc/brimd.conf to run this daemon::
 
 We can then start the server and monitor syslog to see the lines logged::
 
-    $ sudo brimd restart
+    $ brimd restart
     $ sudo tail -F /var/log/syslog
     Feb 27 20:16:08 lucid brimdaemons sample log line 1
     ...
 
-The ``__call__`` method is called to start the daemon subprocess with the subserver and stats object to use. The subserver is the brim.server.DaemonsSubserver that started the subprocess; usually you just use the logger attribute of this class. The stats will be explained a bit further down.
+The ``__call__`` method is called to start the daemon subprocess with the subserver and stats object to use. The subserver is the :py:class:`brim.server.DaemonsSubserver` that started the subprocess; usually you just use the logger attribute of this class. The stats will be explained a bit further down.
 
-The ``__init__`` takes the name of the daemon as configured in the brimd.conf file, and the full brimd configuration object as an instance of brim.conf.Conf.
+The ``__init__`` takes the name of the daemon as configured in the brimd.conf file, and the full brimd configuration object as an instance of :py:class:`brim.conf.Conf`.
 
 The name lets you know which part of the conf to access for any daemon-specific configuration, though you can always stray outside just that section if needed.
 
-The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your daemon's ``__init__`` method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your daemon to try to keep it running.
+The conf, while by default is the full server :py:class:`brim.conf.Conf` instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your daemon's ``__init__`` method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your daemon to try to keep it running.
 
-To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist::
+To pre-parse the configuration, you just add a class method of parse_conf that takes the :py:class:`brim.conf.Conf` instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist::
 
     from time import sleep
 
@@ -1087,7 +1021,7 @@ To pre-parse the configuration, you just add a class method of parse_conf that t
 
 Now, let's restart the server without yet updating the config and see what happens::
 
-    $ sudo brimd restart
+    $ brimd restart
     [helloworld] you must configure a message to log.
 
 It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, ``parse_conf`` is called in the main process and ``__init__`` is called in each subprocess.
@@ -1103,7 +1037,7 @@ Now, let's update our configuration::
 
 And now try running our daemon again::
 
-    $ sudo brimd restart
+    $ brimd restart
     $ sudo tail -F /var/log/syslog
     Feb 27 20:17:11 lucid brimdaemons Hello, hello! 1
     ...
@@ -1140,29 +1074,27 @@ To continue our example, let's add stats to our daemon. We'll record the last ti
         @classmethod
         def stats_conf(cls, name, conf):
             # This is the new class method to configure additional stats, it
-            # returns a list of names of stats to allow. Since daemons don't
-            # have multiple workers, there's no need for the stat types like
-            # WSGI and TCP applications.
-            return ['last_logged']
+            # returns a list of (stat_name, stat_type) tuples.
+            return [('last_logged', 'daemon')]
 
-You can see that we configure the stats with the new stats_conf class method. The method returns a list of names of stats to enable.
+You can see that we configure the stats with the new stats_conf class method. The method returns a list of (stat_name, stat_type) pairs. stat_name is the str name of the stat and stat_type is one of the following:
 
-When handling actual requests, we can access the stats via the passed stats object, which supports the following methods:
+======  =======================================================================
+daemon  Indicates a daemon only stat. No overall stat will be reported.
+sum     Indicates an overall stat should be reported that is a sum of the stat from all daemons.
+min     Indicates an overall stat should be reported that is the smallest value of the stat from all daemons.
+max     Indicates an overall stat should be reported that is the largest value of the stat from all daemons.
+======  =======================================================================
 
-        get(<name>)
+We can access the stats via the passed stats object, which supports the following methods:
 
-            Return the int value of the stat <name>.
+==================  ===========================================================
+get(<name>)         Return the int value of the stat <name>.
+set(<name>, value)  Sets the value of the stat <name>. The value will be treated as an unsigned integer.
+incr(<name>)        Increments the value of the stat <name> by 1.
+==================  ===========================================================
 
-        set(<name>, value)
-
-            Sets the value of the stat <name>. The value will be treated as an unsigned integer.
-
-
-        incr(<name>)
-
-            Increments the value of the stat <name> by 1.
-
-So now, let's add the brim.stats.Stats WSGI app to our configuration so we'll be able to get a report on the server stats::
+So now, let's add the :py:class:`brim.wsgi_stats.WSGIStats` WSGI app to our configuration so we'll be able to get a report on the server stats::
 
     [daemons]
     daemons = helloworld
@@ -1172,36 +1104,23 @@ So now, let's add the brim.stats.Stats WSGI app to our configuration so we'll be
     message = Hello, hello!
 
     [wsgi]
+    port = 8901
     apps = stats
-    port = 81
 
     [stats]
-    call = brim.stats.Stats
+    call = brim.wsgi_stats.WSGIStats
 
 Let's try it out::
 
-    $ sudo brimd restart
+    $ brimd restart
     $ sudo tail -F /var/log/syslog
     Feb 27 20:18:33 lucid brimdaemons Hello, hello! 1
     ...
-    $ curl -s http://127.0.0.1:81/stats | python -mjson.tool
+    $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
     ...
         "daemons": {
-            "last_logged": 1330402713, 
     ...
-
-
-Code-Generated Documentation
-============================
-
-.. toctree::
-    :maxdepth: 2
-
-    brim
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+            "helloworld" {
+    ...
+                "last_logged": 1330402713, 
+    ...

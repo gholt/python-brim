@@ -1,20 +1,22 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Tests for brim.log."""
+"""Copyright and License.
 
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from logging.handlers import SysLogHandler
 from logging import DEBUG, getLogger, INFO, StreamHandler
-from StringIO import StringIO
 from sys import stdout
 from unittest import main, TestCase
 
@@ -42,26 +44,27 @@ class TestLogAdapter(TestCase):
     def test_process(self):
         a = log._LogAdapter(None, 'testserver')
         a.txn = 'abc'
-        self.assertEquals(a.process('test', {}), (
-            'test', {'extra': {'txn': 'abc', 'server': 'testserver'}}))
+        self.assertEqual(
+            a.process('test', {}),
+            ('test', {'extra': {'txn': 'abc', 'server': 'testserver'}}))
 
     def test_effective_level(self):
         a = log._LogAdapter(FakeLogger(), 'testserver')
-        self.assertEquals(a.getEffectiveLevel(), DEBUG)
+        self.assertEqual(a.getEffectiveLevel(), DEBUG)
 
     def test_exception(self):
         logger = FakeLogger()
         a = log._LogAdapter(logger, 'testserver')
         a.exception('testexc')
-        self.assertEquals(logger.error_calls, [(
+        self.assertEqual(logger.error_calls, [(
             ("testexc None ['None']",),
             {'extra': {'txn': None, 'server': 'testserver'}})])
         try:
             raise Exception('blah')
         except Exception:
             a.exception('testexc2')
-        self.assertEquals(len(logger.error_calls), 2)
-        self.assertEquals(
+        self.assertEqual(len(logger.error_calls), 2)
+        self.assertEqual(
             logger.error_calls[-1][1],
             {'extra': {'txn': None, 'server': 'testserver'}})
         self.assertTrue(logger.error_calls[-1][0][0].startswith(
@@ -75,7 +78,7 @@ class TestLogAdapter(TestCase):
         logger = FakeLogger()
         a = log._LogAdapter(logger, 'testserver')
         a.notice('testnotice')
-        self.assertEquals(logger.log_calls, [(
+        self.assertEqual(logger.log_calls, [(
             log.NOTICE, 'testnotice', (),
             {'extra': {'txn': None, 'server': 'testserver'}})])
 
@@ -97,14 +100,15 @@ class TestLogFormatter(TestCase):
 
     def test_format(self):
         f = log._LogFormatter()
-        self.assertEquals(f.format(FakeRecord()),
-                          'testserver recordmessage\ntestexc txn:def')
+        self.assertEqual(
+            f.format(FakeRecord()),
+            'testserver recordmessage\ntestexc txn:def')
 
 
 class TestSysloggableExcInfo(TestCase):
 
     def test_sysloggable_excinfo(self):
-        self.assertEquals(log.sysloggable_excinfo(), "None ['None']")
+        self.assertEqual(log.sysloggable_excinfo(), "None ['None']")
         try:
             raise Exception('test')
         except:
@@ -118,16 +122,16 @@ class TestSysloggableExcInfo(TestCase):
         try:
             raise KeyboardInterrupt()
         except KeyboardInterrupt:
-            self.assertEquals(log.sysloggable_excinfo(), 'KeyboardInterrupt')
+            self.assertEqual(log.sysloggable_excinfo(), 'KeyboardInterrupt')
 
 
 class TestGetLogger(TestCase):
 
     def test_get_logger(self):
         logger = log.get_logger('route', 'name', 'DEBUG', 'LOG_LOCAL0', False)
-        self.assertEquals(logger.logger, getLogger('route'))
-        self.assertEquals(logger.server, 'name')
-        self.assertEquals(logger.getEffectiveLevel(), DEBUG)
+        self.assertEqual(logger.logger, getLogger('route'))
+        self.assertEqual(logger.server, 'name')
+        self.assertEqual(logger.getEffectiveLevel(), DEBUG)
         found = False
         for handler in logger.logger.handlers:
             if isinstance(handler, SysLogHandler):
@@ -137,9 +141,9 @@ class TestGetLogger(TestCase):
         self.assertTrue(handler.facility, SysLogHandler.LOG_LOCAL0)
 
         logger = log.get_logger('route', 'name2', 'INFO', 'LOG_LOCAL1', False)
-        self.assertEquals(logger.logger, getLogger('route'))
-        self.assertEquals(logger.server, 'name2')
-        self.assertEquals(logger.getEffectiveLevel(), INFO)
+        self.assertEqual(logger.logger, getLogger('route'))
+        self.assertEqual(logger.server, 'name2')
+        self.assertEqual(logger.getEffectiveLevel(), INFO)
         found = False
         for handler in logger.logger.handlers:
             if isinstance(handler, SysLogHandler):
@@ -150,9 +154,9 @@ class TestGetLogger(TestCase):
 
     def test_get_console_logger(self):
         logger = log.get_logger('route', 'name', 'DEBUG', 'LOG_LOCAL0', True)
-        self.assertEquals(logger.logger, getLogger('route'))
-        self.assertEquals(logger.server, 'name')
-        self.assertEquals(logger.getEffectiveLevel(), DEBUG)
+        self.assertEqual(logger.logger, getLogger('route'))
+        self.assertEqual(logger.server, 'name')
+        self.assertEqual(logger.getEffectiveLevel(), DEBUG)
         found = False
         for handler in logger.logger.handlers:
             if isinstance(handler, StreamHandler):

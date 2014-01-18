@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+find . -name '*.py[co]' -exec rm {} \;
+rm -rf doc/build/*
+flake8
+./test_unit
+./setup.py build_sphinx

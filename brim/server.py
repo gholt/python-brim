@@ -1,49 +1,52 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""The main module that implements the Brim.Net Core Server.
 
+Normally you don't directly use this module but instead configure and
+run brimd.
+
+See :ref:`brimd.conf-sample <brimdconfsample>` for configuration
+options.
 """
-The main module that implements the Brim.Net Core Server. Normally
-you don't directly use this module but instead configure and run
-brimd.
+"""Copyright and License.
 
-See etc/brimd.conf-sample for configuration options.
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
 
-from ctypes import c_uint, c_ulong, sizeof as ctypes_sizeof
-from errno import EBADF, EINVAL, ENOENT, ESRCH
+from ctypes import c_ulong, sizeof as ctypes_sizeof
+from errno import EINVAL, ENOENT, ESRCH
 from inspect import getargspec
 from itertools import chain
 from mmap import mmap
 from optparse import OptionParser
-from os import fork, environ, kill, unlink
-from signal import signal, SIGHUP, SIGTERM
+from os import fork, kill, unlink
+from os.path import expanduser
+from signal import SIGHUP, SIGTERM
 from socket import error as socket_error
 from sys import argv as sys_argv, stdin as sys_stdin, stdout as sys_stdout, \
     stderr as sys_stderr
 from time import gmtime, strftime, time
-from traceback import format_exception
 from urllib import unquote, unquote_plus
 from uuid import uuid4
 
-from brim.conf import read_conf, TRUE_VALUES
+from brim.conf import read_conf
 from brim.service import capture_exceptions_stdout_stderr, droppriv, \
     get_listening_tcp_socket, get_listening_udp_socket, sustain_workers
 from eventlet import GreenPool, sleep, wsgi
 from eventlet.greenio import shutdown_safe
 from eventlet.hubs import use_hub
 
-import brim
+from brim import __version__
 from brim.log import get_logger, sysloggable_excinfo
 
 try:
@@ -52,40 +55,34 @@ except ImportError:
     setproctitle = None
 
 
-#: The list of default conf files to use when none are specified.
 DEFAULT_CONF_FILES = ['/etc/brimd.conf', '~/.brimd.conf']
-#: The status code logged for requests terminated early by the client
-#: (499).
+"""The list of default conf files to use when none are specified."""
 HTTP_CLIENT_DISCONNECT = 499
-#: The number of seconds to wait for a PID to disappear after sending
-#: an appropriate signal.
+"""The status code for requests terminated early by the client (499)."""
 PID_WAIT_TIME = 15
+"""The seconds to wait for a PID to disappear after signaling."""
 
 
 def _send_pid_sig(pid_file, sig, expect_exit=False, pid_override=None):
-    """
-    Utility method for sending a signal to an existing brimd
-    process as found in the pid file.
+    """Utility method for using a pid_file and sending a signal.
 
     :param sig: The signal to send, such as signal.SIGHUP.
-    :param expect_exit: Set True if the existing process is
-                        expected to exit after the signal and
-                        this method will wait PID_WAIT_TIME for
-                        that to happen or raise an Exception.
-                        Default: False.
-    :param pid_override: Set to a pid and this method will not
-                         attempt to read the pid from the pid
-                         file.
-    :returns: (success, pid) where success is True if the signal
-              was sent without error and pid is that of the
-              process that the signal was sent to.
+    :param expect_exit: Set True if the existing process is expected to
+        exit after the signal and this method will wait
+        :py:attr`PID_WAIT_TIME` for that to happen or raise an
+        OSError. Default: False.
+    :param pid_override: Set to a pid and this method will not attempt
+        to read the pid from the pid_file.
+    :returns: (success, pid) where success is True if the signal was
+        sent without error and pid is that of the process that the
+        signal was sent to.
     """
     pid = pid_override
     if not pid:
         try:
             with open(pid_file) as open_pid_file:
                 pid = int(open_pid_file.read().strip())
-        except IOError, err:
+        except IOError as err:
             if err.errno != ENOENT:
                 raise
         except ValueError:
@@ -99,23 +96,23 @@ def _send_pid_sig(pid_file, sig, expect_exit=False, pid_override=None):
                 while True:
                     try:
                         kill(pid, 0)
-                    except OSError, err:
+                    except OSError as err:
                         if err.errno == ESRCH:
                             break
                         raise
                     if time() >= wait_until:
-                        raise Exception(
+                        raise OSError(
                             '%s did not exit after %s seconds.' %
                             (pid, PID_WAIT_TIME))
                     sleep(1)
                 if not pid_override:
                     try:
                         unlink(pid_file)
-                    except OSError, err:
+                    except OSError as err:
                         if err.errno != ENOENT:
                             raise
             return (True, pid)
-        except OSError, err:
+        except OSError as err:
             if err.errno == ESRCH:
                 return (False, pid)
             else:
@@ -136,15 +133,15 @@ def _log_quote_chars(value):
 
 
 class _BucketStats(object):
-    """
-    This is used to track server stats by allocating a shared memory
-    mmap. Each daemon or worker writes to just its own areas and
-    apps like brim.stats.Stats can read and report on all of
+    """Used to track server stats by allocating a shared memory mmap.
+
+    Each daemon or worker writes to just its own areas and apps like
+    :py:class:`brim.wsgi_stats.WSGIStats` can read and report on all of
     them.
 
-    stats_conf is a dict whose keys are the stat names and whose
-    values are the stat types. The types are used to interpret how to
-    rollup the bucket stats into overall stats. Types are:
+    stats_conf is a dict whose keys are the stat names and whose values
+    are the stat types. The types are used to interpret how to rollup
+    the bucket stats into overall stats. Types are:
 
     * worker: Not rolled up; used for within a bucket only.
     * sum: All bucket values for the stat will be added together and
@@ -162,8 +159,8 @@ class _BucketStats(object):
         if self.bucket_count:
             self._stats = [{} for x in xrange(self.bucket_count)]
             c_ulong_size = ctypes_sizeof(c_ulong)
-            self._mmap = \
-                mmap(-1, self.bucket_count * len(stats_conf) * c_ulong_size)
+            self._mmap = mmap(
+                -1, self.bucket_count * len(stats_conf) * c_ulong_size)
             offset = 0
             for bucket_id in xrange(self.bucket_count):
                 for name in stats_conf:
@@ -192,12 +189,12 @@ class _BucketStats(object):
 
 
 class _Stats(object):
-    """
+    """Tracks a single bucket_id's stats.
+
     Similar to _BucketStats except that it's bound to just one
-    bucket_id, representing a daemon or worker. For daemons and
-    non-WSGI apps, this is passed directly in the ``__call__`` call.
-    For WSGI workers, this is passed with each request in
-    env['brim.stats'].
+    bucket_id, representing a daemon or worker. For daemons and non-WSGI
+    apps, this is passed directly in the ``__call__`` call. For WSGI
+    workers, this is passed with each request in ``env['brim.stats']``.
     """
 
     def __init__(self, bucket_stats, bucket_id):
@@ -215,20 +212,14 @@ class _Stats(object):
 
 
 class _EventletWSGINullLogger():
-    """
-    Simple class to throw away anything Eventlet's WSGI layer tries
-    to log.
-    """
+    """Throws away anything Eventlet's WSGI layer tries to log."""
 
     def write(self, *args):
         pass
 
 
 class _WsgiInput(object):
-    """
-    A wrapper used around WSGI env['wsgi.input'] to track the number
-    of bytes received for later logging.
-    """
+    """Tracks the number of bytes received."""
 
     def __init__(self, env, iter_chunk_size):
         self.env = env
@@ -285,10 +276,7 @@ class _WsgiInput(object):
 
 
 class _WsgiOutput(object):
-    """
-    A wrapper used around WSGI body iterables to track the number of
-    bytes sent for later logging.
-    """
+    """Tracks the number of bytes sent."""
 
     def __init__(self, body, env):
         self.body = iter(body)
@@ -304,41 +292,46 @@ class _WsgiOutput(object):
 
 
 class Subserver(object):
-    """
-    Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc.
-    [udp], [udp2], etc., and [daemons] config section to hold the
-    attributes specific to that subconfig.
+    """Base class for brimd subservers (wsgi, tcp, udp, daemons).
 
-    :param server: The parent brim.server.Server.
+    Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc. [udp],
+    [udp2], etc., and [daemons] config section to hold the attributes
+    specific to that subconfig.
+
+    :param server: The parent :py:class:`brim.server.Server`.
     :param name: The name of the subserver ('wsgi', 'tcp', 'udp',
-                 'daemons', etc.)
+        'daemons', etc.)
     """
 
     def __init__(self, server, name):
-        #: The parent brim.server.Server of this subserver.
         self.server = server
-        #: The logger in use by this subserver. WSGI apps can also access this
-        #: via ``env['brim.logger']``.
+        """The parent :py:class:`brim.server.Server` of this subserver."""
         self.logger = None
-        #: The json.dumps compatible function configured. WSGI apps can also
-        #: access this via ``env['brim.json_dumps']``.
+        """The logger in use by this subserver.
+
+        WSGI apps can also access this via ``env['brim.logger']``.
+        """
         self.json_dumps = None
-        #: The json.loads compatible function configured. WSGI apps can also
-        #: access this via ``env['brim.json_loads']``.
+        """The json.dumps compatible function configured.
+
+        WSGI apps can also access this via ``env['brim.json_dumps']``.
+        """
         self.json_loads = None
+        """The json.loads compatible function configured.
+
+        WSGI apps can also access this via ``env['brim.json_loads']``.
+        """
         self.name = name
         self.worker_count = 1
         self.worker_names = ['0']
         self.stats_conf = {'start_time': 'worker'}
 
     def _parse_conf(self, conf):
-        """
-        Translates the brim.conf.Conf configuration into instance
-        attributes for use later. This ensures we have a good
-        configuration before we try starting the server.
+        """Translates the conf into instance attributes.
 
-        :param conf: The brim.conf.Conf instance for the overall
-                     server configuration.
+        Translates the :py:class:`brim.conf.Conf` configuration into
+        instance attributes for use later. This ensures we have a good
+        configuration before we try starting the server.
         """
         self.log_name = conf.get(
             self.name, 'log_name',
@@ -393,32 +386,31 @@ class Subserver(object):
                 (self.json_loads, self.name))
 
     def _privileged_start(self):
-        """
-        Called just before dropping privileges and calling _start.
+        """Called just before dropping privileges and calling _start.
+
         Should be used to bind to privileged ports and anything else
         that might need greater privileges.
         """
         pass
 
     def _start(self, bucket_stats):
-        """
-        This is the last method run by the main brimd server process.
+        """This is the last method run by the main brimd server process.
 
-        :param bucket_stats: The _BucketStats instance for use by
-                             this subserver.
+        :param bucket_stats: The :py:class:`_BucketStats` instance for
+            use by this subserver.
         """
         self.bucket_stats = bucket_stats
 
 
 class IPSubserver(Subserver):
-    """
-    Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc.
-    [udp], [udp2], etc. config section to hold the attributes
-    specific to that subconfig.
+    """Base class for "raw" IP based subservers.
 
-    :param server: The parent brim.server.Server.
-    :param name: The name of the subserver ('wsgi', 'tcp', 'udp',
-                 etc.)
+    Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc. [udp],
+    [udp2], etc. config section to hold the attributes specific to that
+    subconfig.
+
+    :param server: The parent :py:class:`brim.server.Server`.
+    :param name: The name of the subserver ('wsgi', 'tcp', 'udp', etc.)
     """
 
     def __init__(self, server, name):
@@ -427,20 +419,20 @@ class IPSubserver(Subserver):
     def _parse_conf(self, conf):
         Subserver._parse_conf(self, conf)
         self.ip = conf.get(self.name, 'ip', conf.get('brim', 'ip', '*'))
-        self.port = \
-            conf.get_int(self.name, 'port', conf.get_int('brim', 'port', 80))
+        self.port = conf.get_int(
+            self.name, 'port', conf.get_int('brim', 'port', 80))
         if self.server.no_daemon:
             self.worker_count = 0
             self.worker_names = ['0']
         else:
             self.worker_count = conf.get_int(
                 self.name, 'workers', conf.get_int('brim', 'workers', 1))
-            self.worker_names = \
-                [str(i) for i in xrange(self.worker_count or 1)]
-        self.certfile = \
-            conf.get(self.name, 'certfile', conf.get('brim', 'certfile'))
-        self.keyfile = \
-            conf.get(self.name, 'keyfile', conf.get('brim', 'keyfile'))
+            self.worker_names = [
+                str(i) for i in xrange(self.worker_count or 1)]
+        self.certfile = conf.get_path(
+            self.name, 'certfile', conf.get_path('brim', 'certfile'))
+        self.keyfile = conf.get_path(
+            self.name, 'keyfile', conf.get_path('brim', 'keyfile'))
         self.client_timeout = conf.get_int(
             self.name, 'client_timeout',
             conf.get_int('brim', 'client_timeout', 60))
@@ -458,8 +450,8 @@ class IPSubserver(Subserver):
         if eventlet_hub and '.' in eventlet_hub:
             pkg, mod = eventlet_hub.rsplit('.', 1)
             try:
-                self.eventlet_hub = \
-                    getattr(__import__(pkg, fromlist=[mod]), mod)
+                self.eventlet_hub = getattr(
+                    __import__(pkg, fromlist=[mod]), mod)
             except (AttributeError, ImportError):
                 pass
         elif eventlet_hub:
@@ -478,14 +470,17 @@ class IPSubserver(Subserver):
 
 
 class WSGISubserver(IPSubserver):
-    """
-    Created for each [wsgi], [wsgi2], [wsgi3] config section to hold the
-    attributes specific to that subconfig. Few WSGI apps need to
-    access this directly, but some like brim.stats.Stats do.
+    """Subserver for WSGI.
 
-    :param server: The parent brim.server.Server.
+    Created for each [wsgi], [wsgi2], [wsgi3] config section to hold the
+    attributes specific to that subconfig. Few WSGI apps need to access
+    this directly, but some like :py:class:`brim.wsgi_stats.WSGIStats`
+    do. From a WSGI app, you can gain access to the handling
+    WSGISubserver through ``env['brim']``.
+
+    :param server: The parent :py:class:`brim.server.Server`.
     :param name: The name of the subserver ('wsgi', 'wsgi2', 'wsgi3',
-                 etc.)
+        etc.)
     """
 
     def __init__(self, server, name):
@@ -507,8 +502,8 @@ class WSGISubserver(IPSubserver):
             self.name, 'count_status_codes',
             conf.get('brim', 'count_status_codes', '404 408 499 501'))
         try:
-            self.count_status_codes = \
-                [int(c) for c in self.count_status_codes.split()]
+            self.count_status_codes = [
+                int(c) for c in self.count_status_codes.split()]
         except ValueError:
             raise Exception('Invalid [%s] count_status_codes %r.' %
                             (self.name, self.count_status_codes))
@@ -543,8 +538,8 @@ class WSGISubserver(IPSubserver):
                         'Would not be able to instantiate %r for app [%s]. '
                         'Incorrect number of args, %s, should be 4 (self, '
                         'name, conf, next_app).' % (call, app_name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'Probably not a class.'
                 raise Exception(
                     'Would not be able to instantiate %r for app [%s]. %s' %
@@ -556,8 +551,8 @@ class WSGISubserver(IPSubserver):
                         'Would not be able to use %r for app [%s]. Incorrect '
                         'number of __call__ args, %s, should be 3 (self, env, '
                         'start_response).' % (call, app_name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'Probably no __call__ method.'
                 raise Exception(
                     'Would not be able to use %r for app [%s]. %s' %
@@ -570,8 +565,8 @@ class WSGISubserver(IPSubserver):
                             'Cannot use %r for app [%s]. Incorrect number of '
                             'parse_conf args, %s, should be 3 (cls, name, '
                             'conf).' % (call, app_name, args))
-                except TypeError, err:
-                    if str(err) == 'arg is not a Python function':
+                except TypeError as err:
+                    if str(err).endswith(' is not a Python function'):
                         err = 'parse_conf probably not a method.'
                     raise Exception('Cannot use %r for app [%s]. %s' %
                                     (call, app_name, err))
@@ -586,13 +581,13 @@ class WSGISubserver(IPSubserver):
                             'Cannot use %r for app [%s]. Incorrect number of '
                             'stats_conf args, %s, should be 3 (cls, name, '
                             'conf).' % (call, app_name, args))
-                except TypeError, err:
-                    if str(err) == 'arg is not a Python function':
+                except TypeError as err:
+                    if str(err).endswith(' is not a Python function'):
                         err = 'stats_conf probably not a method.'
                     raise Exception('Cannot use %r for app [%s]. %s' %
                                     (call, app_name, err))
-                for stat_name, stat_type in \
-                        app_class.stats_conf(app_name, app_conf):
+                for stat_name, stat_type in app_class.stats_conf(
+                        app_name, app_conf):
                     self.stats_conf[stat_name] = stat_type
             self.apps.append((app_name, app_class, app_conf))
 
@@ -602,7 +597,7 @@ class WSGISubserver(IPSubserver):
                 self.ip, self.port, backlog=self.backlog,
                 retry=self.listen_retry, certfile=self.certfile,
                 keyfile=self.keyfile, style='eventlet')
-        except socket_error, err:
+        except socket_error as err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
 
@@ -621,21 +616,21 @@ class WSGISubserver(IPSubserver):
             self.stats_conf['status_%d_count' % code] = 'sum'
         wsgi.HttpProtocol.default_request_version = 'HTTP/1.0'
         wsgi.HttpProtocol.log_request = lambda *a: None
-        wsgi.HttpProtocol.log_message = \
-            lambda s, f, *a: self.logger.error('WSGI ERROR: ' + f % a)
+        wsgi.HttpProtocol.log_message = lambda s, f, *a: self.logger.error(
+            'WSGI ERROR: ' + f % a)
         wsgi.WRITE_TIMEOUT = self.client_timeout
-        sustain_workers(self.worker_count, self._wsgi_worker,
-                        logger=self.logger)
+        sustain_workers(
+            self.worker_count, self._wsgi_worker, logger=self.logger)
         if self.worker_id == -1:
             shutdown_safe(self.sock)
             self.sock.close()
 
     def _wsgi_worker(self, worker_id):
-        """
-        This method is called for each WSGI worker subprocess spawned
-        and it simply constructs all the configured WSGI applications
-        and then begins sending incoming requests to them (via
-        Eventlet WSGI layer and our _wsgi_entry below).
+        """Called for each WSGI worker spawned.
+
+        Simply constructs all the configured WSGI applications and then
+        begins sending incoming requests to them (via the Eventlet WSGI
+        layer and our _wsgi_entry below).
         """
         if setproctitle:
             if not self.server.no_daemon:
@@ -652,17 +647,17 @@ class WSGISubserver(IPSubserver):
             wsgi.server(self.sock, self._wsgi_entry, _EventletWSGINullLogger(),
                         minimum_chunk_size=self.wsgi_output_iter_chunk_size,
                         custom_pool=pool)
-        except socket_error, err:
+        except socket_error as err:
             if err.errno != EINVAL:
                 raise
         pool.waitall()
 
     def _wsgi_entry(self, env, start_response=None, next_app=None):
-        """
-        Called by Eventlet's WSGI layer or get_response to handle
-        incoming requests. This wraps the request handling to add
-        additional WSGI env values, count the bytes transmitted and
-        received, and log the request/response once it has completed.
+        """Called by Eventlet's WSGI layer or get_response.
+
+        This wraps the request handling to add additional WSGI env
+        values, count the bytes transmitted and received, and log the
+        request/response once it has completed.
 
         Note that you must read at least once from the response before
         env['brim._start_response'] will be set.
@@ -683,18 +678,19 @@ class WSGISubserver(IPSubserver):
             self.logger.txn = env['brim.txn']
             env['brim._bytes_in'] = 0
             env['brim._bytes_out'] = 0
-            env['wsgi.input'] = \
-                _WsgiInput(env, self.wsgi_input_iter_chunk_size)
-            env.setdefault('brim.additional_request_log_info', [])
+            env['wsgi.input'] = _WsgiInput(
+                env, self.wsgi_input_iter_chunk_size)
+            env.setdefault('brim.log_info', [])
             env.setdefault('brim.json_dumps', self.json_dumps)
             env.setdefault('brim.json_loads', self.json_loads)
             body = _WsgiOutput(
                 (next_app or self.first_app)(env, _start_response), env)
-        except Exception, err:
+        except Exception:
             self.logger.exception('WSGI EXCEPTION:')
-            _start_response('500 Internal Server Error',
-                            [('Content-Length', '0')])
-            body = []
+            status_text = '500 Internal Server Error'
+            _start_response(status_text, [
+                ('Content-Length', str(len(status_text) + 1))])
+            body = [status_text + '\n']
         try:
             for chunk in body:
                 yield chunk
@@ -704,18 +700,19 @@ class WSGISubserver(IPSubserver):
             self._log_request(env)
 
     def __call__(self, env, start_response):
-        """
-        The default WSGI application that simply responds with 404
-        Not Found.
-        """
-        start_response('404 Not Found', [('Content-Length', '0')])
-        return []
+        """Default WSGI application that responds with 404 Not Found."""
+        status_text = '404 Not Found'
+        start_response(
+            status_text, [
+                ('Content-Length', str(len(status_text) + 1)),
+                ('Content-Type', 'text/plain')])
+        return [status_text + '\n']
 
     def _log_request(self, env):
-        """
-        After each request has completed, this method is called
-        and we log the request/response details at the NOTICE log
-        level.
+        """Logs the request indicated in then given env.
+
+        After each request has completed, this method is called and we
+        log the request/response details at the NOTICE log level.
         """
         try:
             stats = _Stats(self.bucket_stats, self.worker_id)
@@ -723,7 +720,7 @@ class WSGISubserver(IPSubserver):
             _start_response_value = env.get('brim._start_response')
             if not _start_response_value:
                 status = '%s Disconnect before first read' % \
-                         HTTP_CLIENT_DISCONNECT
+                    HTTP_CLIENT_DISCONNECT
                 headers = {}
                 exc_info = None
             else:
@@ -777,7 +774,7 @@ class WSGISubserver(IPSubserver):
                          env.get('brim._client_disconnect') and 'disconnect',
                          env.get('brim.authenticated_user'),
                          env.get('brim.wsgi_source')]
-            additional_info = env.get('brim.additional_request_log_info')
+            additional_info = env.get('brim.log_info')
             if additional_info:
                 log_items.extend(additional_info)
             if headers:
@@ -790,39 +787,84 @@ class WSGISubserver(IPSubserver):
             self.logger.txn = None
 
     def _capture_exception(self, *excinfo):
-        """
-        Used by capture_exceptions_stdout_stderr to catch any
-        completely uncaught exceptions and redirect them to the
-        logger.
-        """
         self.logger.error('UNCAUGHT EXCEPTION: wid:%03d %s' %
                           (self.worker_id, sysloggable_excinfo(*excinfo)))
 
     def _capture_stdout(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard output and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.info('STDOUT: wid:%03d %s' %
                                  (self.worker_id, line))
 
     def _capture_stderr(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard error and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.error('STDERR: wid:%03d %s' %
                                   (self.worker_id, line))
 
-    def clone_env(self, env, wsgi_input=None):
+    def clone_env(self, env):
+        """Returns a new WSGI environment dictionary.
+
+        This can be useful when wanting to issue an additional request
+        through get_response. For example::
+
+            ...
+            def __call__(self, env, start_response):
+                newenv = env['brim'].clone_env(env)
+                newenv['REQUEST_METHOD'] = 'HEAD'
+                newenv['PATH_INFO'] = '/new/path'
+                newenv['wsgi.input'] = StringIO()
+                status_line, headers_iteritems, excinfo, content_iter = \\
+                    newenv['brim'].get_response(newenv)
+                ...
+
+        The values copied are:
+
+        ==================  ============================================
+        brim                The :py:class:`Subserver` handling the
+                            request.
+        brim.json_dumps     The json.dumps compatible function
+                            configured.
+        brim.json_loads     The json.loads compatible function
+                            configured.
+        brim.logger         The logger configured.
+        brim.stats          The stats object for tracking worker stats.
+                            See the :ref:`overall package documentation
+                            <Overview>` for more information.
+        brim.txn            The transaction id for the request. You
+                            should generally not change this as keeping
+                            the same txn for the main request and all
+                            its subrequests is useful when debugging.
+        SERVER_NAME         Standard WSGI value.
+        SERVER_PORT         Standard WSGI value.
+        SERVER_PROTOCOL     Standard WSGI value.
+        ==================  ============================================
+
+        Additional values created are:
+
+        ==================  ============================================
+        HTTP_REFERER        This is set to the REQUEST_PATH from the
+                            original env.
+        HTTP_USER_AGENT     This is set to ``'clone_env'``. It is
+                            recommended to change this to something
+                            referring to your application for easier
+                            debugging later.
+        ==================  ============================================
         """
-        Returns a new WSGI environment dictionary with values copied
-        from the given WSGI environment. This can be useful when
-        wanting to issue an additional request through get_response.
+        newenv = {}
+        for key in ('brim', 'brim.json_dumps', 'brim.json_loads',
+                    'brim.logger', 'brim.stats', 'brim.txn',
+                    'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL'):
+            if key in env:
+                newenv[key] = env[key]
+        newenv['HTTP_REFERER'] = env['REQUEST_PATH']
+        newenv['HTTP_USER_AGENT'] = 'clone_env'
+        return newenv
+
+    def get_response(self, env, next_app=None):
+        """Performs a WSGI request.
+
+        This is useful for WSGI apps that wish to perform subrequests.
         For example::
 
             ...
@@ -832,67 +874,41 @@ class WSGISubserver(IPSubserver):
                 newenv['PATH_INFO'] = '/new/path'
                 newenv['wsgi.input'] = StringIO()
                 status_line, headers_iteritems, excinfo, content_iter = \\
-                    env['brim'].get_response(newenv)
-                ...
-        """
-        newenv = {}
-        for key in ('brim', 'brim.json_dumps', 'brim.json_loads',
-                    'brim.logger', 'brim.stats', 'brim.txn', 'HTTP_REFERER',
-                    'HTTP_USER_AGENT', 'HTTP_X_AUTH_TOKEN',
-                    'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_X_FORWARDED_FOR',
-                    'REMOTE_ADDR', 'REMOTE_USER', 'REQUEST_METHOD',
-                    'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL'):
-            if key in env:
-                newenv[key] = env[key]
-        return newenv
-
-    def get_response(self, env, next_app=None):
-        """
-        Performs a WSGI request using the WSGI environment given and
-        returns the response. This is useful for WSGI apps that wish
-        to perform subrequests. For example::
-
-            ...
-            def __call__(self, env, start_response):
-                newenv = env['brim'].clone_env(env)
-                newenv['REQUEST_METHOD'] = 'HEAD'
-                newenv['PATH_INFO'] = '/new/path'
-                newenv['wsgi.input'] = StringIO()
-                status_line, headers_iteritems, excinfo, content_iter = \\
-                    env['brim'].get_response(newenv)
+                    newenv['brim'].get_response(newenv)
                 ...
 
-        You can also specify a different WSGI pipeline to travel
-        through with next_app. For example, auth middleware might
-        want its subrequests to only travel from the next app in its
-        pipeline onward.
+        By default, the request goes to the front of the configured WSGI
+        pipeline; however, you can also specify a different WSGI
+        pipeline to travel through with the next_app arg. For example,
+        auth middleware might want its subrequests to only travel from
+        the next app in its pipeline onward.
 
         :param env: The WSGI environment of the request.
-        :param next_app: Optional; indicates the next WSGI app to
-                         send the request through rather than the
-                         entire WSGI pipeline.
+        :param next_app: Optional; indicates the next WSGI app to send
+            the request through rather than the entire WSGI pipeline.
         :returns: The response as (status_line, headers_iteritems,
-                  excinfo, content_iter).
+            excinfo, content_iter).
         """
         content_iter = iter(self._wsgi_entry(env, next_app=next_app))
-        first_chunk = None
         try:
             first_chunk = content_iter.next()
-            content_iter = chain([first_chunk], content_iter)
         except StopIteration:
             content_iter = iter([])
+        else:
+            # TODO: Swift uses a CloseableChain and we probably do too.
+            content_iter = chain([first_chunk], content_iter)
         status_line, headers_iteritems, excinfo = env['brim._start_response']
         return status_line, headers_iteritems, excinfo, content_iter
 
 
 class TCPSubserver(IPSubserver):
-    """
+    """Subserver for TCP.
+
     Created for each [tcp], [tcp2], [tcp3] config section to hold the
     attributes specific to that subconfig.
 
-    :param server: The parent brim.server.Server.
-    :param name: The name of the subserver ('tcp', 'tcp2', 'tcp3',
-                 etc.)
+    :param server: The parent :py:class:`brim.server.Server`.
+    :param name: The name of the subserver ('tcp', 'tcp2', 'tcp3', etc.)
     """
 
     def __init__(self, server, name):
@@ -922,8 +938,8 @@ class TCPSubserver(IPSubserver):
                     'Would not be able to instantiate %r for [%s]. Incorrect '
                     'number of args, %s, should be 3 (self, name, '
                     'parsed_conf).' % (call, self.name, args))
-        except TypeError, err:
-            if str(err) == 'arg is not a Python function':
+        except TypeError as err:
+            if str(err).endswith(' is not a Python function'):
                 err = 'Probably not a class.'
             raise Exception(
                 'Would not be able to instantiate %r for [%s]. %s' %
@@ -935,8 +951,8 @@ class TCPSubserver(IPSubserver):
                     'Would not be able to use %r for [%s]. Incorrect number '
                     'of __call__ args, %s, should be 6 (self, subserver, '
                     'stats, sock, ip, port).' % (call, self.name, args))
-        except TypeError, err:
-            if str(err) == 'arg is not a Python function':
+        except TypeError as err:
+            if str(err).endswith(' is not a Python function'):
                 err = 'Probably no __call__ method.'
             raise Exception('Would not be able to use %r for [%s]. %s' %
                             (call, self.name, err))
@@ -948,8 +964,8 @@ class TCPSubserver(IPSubserver):
                         'Cannot use %r for [%s]. Incorrect number of '
                         'parse_conf args, %s, should be 3 (cls, name, conf).' %
                         (call, self.name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'parse_conf probably not a method.'
                 raise Exception('Cannot use %r for [%s]. %s' %
                                 (call, self.name, err))
@@ -964,13 +980,13 @@ class TCPSubserver(IPSubserver):
                         'Cannot use %r for [%s]. Incorrect number of '
                         'stats_conf args, %s, should be 3 (cls, name, conf).' %
                         (call, self.name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'stats_conf probably not a method.'
                 raise Exception('Cannot use %r for [%s]. %s' %
                                 (call, self.name, err))
-            for stat_name, stat_type in \
-                    self.handler.stats_conf(self.name, self.handler_conf):
+            for stat_name, stat_type in self.handler.stats_conf(
+                    self.name, self.handler_conf):
                 self.stats_conf[stat_name] = stat_type
 
     def _privileged_start(self):
@@ -979,7 +995,7 @@ class TCPSubserver(IPSubserver):
                 self.ip, self.port, backlog=self.backlog,
                 retry=self.listen_retry, certfile=self.certfile,
                 keyfile=self.keyfile, style='eventlet')
-        except socket_error, err:
+        except socket_error as err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
 
@@ -992,20 +1008,22 @@ class TCPSubserver(IPSubserver):
                 stdout_func=self._capture_stdout,
                 stderr_func=self._capture_stderr)
         self.start_time = int(time())
-        self.logger = get_logger(self.name, self.log_name, self.log_level,
-                                 self.log_facility, self.server.no_daemon)
+        self.logger = get_logger(
+            self.name, self.log_name, self.log_level, self.log_facility,
+            self.server.no_daemon)
         self.handler = self.handler(self.name, self.handler_conf)
-        sustain_workers(self.worker_count, self._tcp_worker,
-                        logger=self.logger)
+        sustain_workers(
+            self.worker_count, self._tcp_worker, logger=self.logger)
         if self.worker_id == -1:
             shutdown_safe(self.sock)
             self.sock.close()
 
     def _tcp_worker(self, worker_id):
-        """
-        This method is called for each TCP worker subprocess spawned
-        and it simply constructs the configured handler and then
-        begins sending incoming connections to it.
+        """Handle running a TCP worker.
+
+        This method is called for each TCP worker subprocess spawned and
+        it simply constructs the configured handler and then begins
+        sending incoming connections to it.
         """
         if setproctitle:
             if not self.server.no_daemon:
@@ -1021,35 +1039,22 @@ class TCPSubserver(IPSubserver):
                 sock, (ip, port) = self.sock.accept()
                 stats.incr('connection_count')
                 pool.spawn_n(self.handler, self, stats, sock, ip, port)
-        except socket_error, err:
+        except socket_error as err:
             if err.errno != EINVAL:
                 raise
         pool.waitall()
 
     def _capture_exception(self, *excinfo):
-        """
-        Used by capture_exceptions_stdout_stderr to catch any
-        completely uncaught exceptions and redirect them to the
-        logger.
-        """
         self.logger.error('UNCAUGHT EXCEPTION: tid:%03d %s' %
                           (self.worker_id, sysloggable_excinfo(*excinfo)))
 
     def _capture_stdout(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard output and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.info('STDOUT: tid:%03d %s' %
                                  (self.worker_id, line))
 
     def _capture_stderr(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard error and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.error('STDERR: tid:%03d %s' %
@@ -1057,23 +1062,21 @@ class TCPSubserver(IPSubserver):
 
 
 class UDPSubserver(IPSubserver):
-    """
+    """Subserver for UDP.
+
     Created for each [udp], [udp2], [udp3] config section to hold the
     attributes specific to that subconfig.
 
-    :param server: The parent brim.server.Server.
-    :param name: The name of the subserver ('udp', 'udp2', 'udp3',
-                 etc.)
+    :param server: The parent :py:class:`brim.server.Server`.
+    :param name: The name of the subserver ('udp', 'udp2', 'udp3', etc.)
     """
 
     def __init__(self, server, name):
         IPSubserver.__init__(self, server, name)
-        self.stats_conf.update({'datagram_count': 'worker'})
+        self.stats_conf.update({'datagram_count': 'sum'})
 
     def _parse_conf(self, conf):
         IPSubserver._parse_conf(self, conf)
-        self.worker_count = 1
-        self.worker_names = ['0']
         self.max_datagram_size = conf.get_int(
             self.name, 'max_datagram_size',
             conf.get_int('brim', 'max_datagram_size', 65536))
@@ -1098,8 +1101,8 @@ class UDPSubserver(IPSubserver):
                     'Would not be able to instantiate %r for [%s]. Incorrect '
                     'number of args, %s, should be 3 (self, name, '
                     'parsed_conf).' % (call, self.name, args))
-        except TypeError, err:
-            if str(err) == 'arg is not a Python function':
+        except TypeError as err:
+            if str(err).endswith(' is not a Python function'):
                 err = 'Probably not a class.'
             raise Exception(
                 'Would not be able to instantiate %r for [%s]. %s' %
@@ -1112,8 +1115,8 @@ class UDPSubserver(IPSubserver):
                     'of __call__ args, %s, should be 7 (self, subserver, '
                     'stats, sock, datagram, ip, port).' %
                     (call, self.name, args))
-        except TypeError, err:
-            if str(err) == 'arg is not a Python function':
+        except TypeError as err:
+            if str(err).endswith(' is not a Python function'):
                 err = 'Probably no __call__ method.'
             raise Exception('Would not be able to use %r for [%s]. %s' %
                             (call, self.name, err))
@@ -1125,8 +1128,8 @@ class UDPSubserver(IPSubserver):
                         'Cannot use %r for [%s]. Incorrect number of '
                         'parse_conf args, %s, should be 3 (cls, name, conf).' %
                         (call, self.name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'parse_conf probably not a method.'
                 raise Exception(
                     'Cannot use %r for [%s]. %s' % (call, self.name, err))
@@ -1141,76 +1144,81 @@ class UDPSubserver(IPSubserver):
                         'Cannot use %r for [%s]. Incorrect number of '
                         'stats_conf args, %s, should be 3 (cls, name, conf).' %
                         (call, self.name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'stats_conf probably not a method.'
                 raise Exception('Cannot use %r for [%s]. %s' %
                                 (call, self.name, err))
-            for stat_name in self.handler.stats_conf(self.name,
-                                                     self.handler_conf):
-                self.stats_conf[stat_name] = 'worker'
+            for stat_name, stat_type in self.handler.stats_conf(
+                    self.name, self.handler_conf):
+                self.stats_conf[stat_name] = stat_type
 
     def _privileged_start(self):
         try:
             self.sock = get_listening_udp_socket(
                 self.ip, self.port, retry=self.listen_retry, style='eventlet')
-        except socket_error, err:
+        except socket_error as err:
                 raise Exception(
                     'Could not bind to %s:%s: %s' % (self.ip, self.port, err))
 
     def _start(self, bucket_stats):
         IPSubserver._start(self, bucket_stats)
-        self.worker_id = 0
+        self.worker_id = -1
         if not self.server.output:
             capture_exceptions_stdout_stderr(
                 exceptions=self._capture_exception,
                 stdout_func=self._capture_stdout,
                 stderr_func=self._capture_stderr)
         self.start_time = int(time())
-        self.logger = get_logger(self.name, self.log_name, self.log_level,
-                                 self.log_facility, self.server.no_daemon)
+        self.logger = get_logger(
+            self.name, self.log_name, self.log_level, self.log_facility,
+            self.server.no_daemon)
         self.handler = self.handler(self.name, self.handler_conf)
-        self.bucket_stats.set(self.worker_id, 'start_time', self.start_time)
+        sustain_workers(
+            self.worker_count, self._udp_worker, logger=self.logger)
+        if self.worker_id == -1:
+            shutdown_safe(self.sock)
+            self.sock.close()
+
+    def _udp_worker(self, worker_id):
+        """Handle running a UDP worker.
+
+        This method is called for each UDP worker subprocess spawned and
+        it simply constructs the configured handler and then begins
+        sending incoming datagrams to it.
+        """
+        if setproctitle:
+            if not self.server.no_daemon:
+                setproctitle('%d:%s:brimd' % (worker_id, self.name))
+        self.worker_id = worker_id
+        self.bucket_stats.set(self.worker_id, 'start_time', time())
         if not self.server.no_daemon:
             use_hub(self.eventlet_hub)
         stats = _Stats(self.bucket_stats, self.worker_id)
         pool = GreenPool(size=self.concurrent_per_worker)
         try:
             while True:
-                datagram, (ip, port) = \
-                    self.sock.recvfrom(self.max_datagram_size)
+                datagram, (ip, port) = self.sock.recvfrom(
+                    self.max_datagram_size)
                 stats.incr('datagram_count')
-                pool.spawn_n(self.handler, self, stats, self.sock, datagram,
-                             ip, port)
-        except socket_error, err:
+                pool.spawn_n(
+                    self.handler, self, stats, self.sock, datagram, ip, port)
+        except socket_error as err:
             if err.errno != EINVAL:
                 raise
         pool.waitall()
 
     def _capture_exception(self, *excinfo):
-        """
-        Used by capture_exceptions_stdout_stderr to catch any
-        completely uncaught exceptions and redirect them to the
-        logger.
-        """
         self.logger.error('UNCAUGHT EXCEPTION: uid:%03d %s' %
                           (self.worker_id, sysloggable_excinfo(*excinfo)))
 
     def _capture_stdout(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard output and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.info('STDOUT: uid:%03d %s' %
                                  (self.worker_id, line))
 
     def _capture_stderr(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard error and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.error('STDERR: uid:%03d %s' %
@@ -1218,11 +1226,12 @@ class UDPSubserver(IPSubserver):
 
 
 class DaemonsSubserver(Subserver):
-    """
+    """Subserver for daemons.
+
     Created for a [daemons] config section to hold the attributes
     specific to that subconfig.
 
-    :param server: The parent brim.server.Server.
+    :param server: The parent :py:class:`brim.server.Server`.
     """
 
     def __init__(self, server, name='daemons'):
@@ -1256,8 +1265,8 @@ class DaemonsSubserver(Subserver):
                         'Would not be able to instantiate %r for daemon [%s]. '
                         'Incorrect number of args, %s, should be 3 (self, '
                         'name, conf).' % (call, daemon_name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'Probably not a class.'
                 raise Exception(
                     'Would not be able to instantiate %r for daemon [%s]. %s' %
@@ -1270,8 +1279,8 @@ class DaemonsSubserver(Subserver):
                         'Incorrect number of __call__ args, %s, should be 3 '
                         '(self, subserver, stats).' %
                         (call, daemon_name, args))
-            except TypeError, err:
-                if str(err) == 'arg is not a Python function':
+            except TypeError as err:
+                if str(err).endswith(' is not a Python function'):
                     err = 'Probably no __call__ method.'
                 raise Exception(
                     'Would not be able to use %r for daemon [%s]. %s' %
@@ -1284,8 +1293,8 @@ class DaemonsSubserver(Subserver):
                             'Cannot use %r for daemon [%s]. Incorrect number '
                             'of parse_conf args, %s, should be 3 (cls, name, '
                             'conf).' % (call, daemon_name, args))
-                except TypeError, err:
-                    if str(err) == 'arg is not a Python function':
+                except TypeError as err:
+                    if str(err).endswith(' is not a Python function'):
                         err = 'parse_conf probably not a method.'
                     raise Exception('Cannot use %r for daemon [%s]. %s' %
                                     (call, daemon_name, err))
@@ -1300,14 +1309,14 @@ class DaemonsSubserver(Subserver):
                             'Cannot use %r for daemon [%s]. Incorrect number '
                             'of stats_conf args, %s, should be 3 (cls, name, '
                             'conf).' % (call, daemon_name, args))
-                except TypeError, err:
-                    if str(err) == 'arg is not a Python function':
+                except TypeError as err:
+                    if str(err).endswith(' is not a Python function'):
                         err = 'stats_conf probably not a method.'
                     raise Exception('Cannot use %r for daemon [%s]. %s' %
                                     (call, daemon_name, err))
-                for stat_name in \
-                        daemon_class.stats_conf(daemon_name, daemon_conf):
-                    self.stats_conf[stat_name] = 'worker'
+                for stat_name, stat_type in daemon_class.stats_conf(
+                        daemon_name, daemon_conf):
+                    self.stats_conf[stat_name] = stat_type
             self.daemons.append((daemon_name, daemon_class, daemon_conf))
         self.worker_count = len(self.daemons)
         self.worker_names = [d[0] for d in self.daemons]
@@ -1329,14 +1338,16 @@ class DaemonsSubserver(Subserver):
                         logger=self.logger)
 
     def _daemon(self, worker_id):
-        """
-        This method is called for each daemon subprocess spawned and
-        it simply constructs and starts the corresponding daemon.
+        """Handle running a daemon.
+
+        This method is called for each daemon subprocess spawned and it
+        simply constructs and starts the corresponding daemon.
         """
         name, cls, conf = self.daemons[worker_id]
         if setproctitle:
             setproctitle('%s:%s:brimd' % (name, self.name))
         self.worker_id = worker_id
+        self.bucket_stats.set(worker_id, 'start_time', time())
         stats = _Stats(self.bucket_stats, worker_id)
         stats.set('start_time', time())
         daemon = cls(name, conf)
@@ -1344,29 +1355,16 @@ class DaemonsSubserver(Subserver):
         return daemon  # Really done just for unit testing
 
     def _capture_exception(self, *excinfo):
-        """
-        Used by capture_exceptions_stdout_stderr to catch any
-        completely uncaught exceptions and redirect them to the
-        logger.
-        """
         self.logger.error('UNCAUGHT EXCEPTION: did:%03d %s' %
                           (self.worker_id, sysloggable_excinfo(*excinfo)))
 
     def _capture_stdout(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard output and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.info('STDOUT: did:%03d %s' %
                                  (self.worker_id, line))
 
     def _capture_stderr(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard error and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.error('STDERR: did:%03d %s' %
@@ -1374,18 +1372,18 @@ class DaemonsSubserver(Subserver):
 
 
 class Server(object):
-    """
-    The main class for the Brim.Net Core Server launched by the brimd
-    script. Few daemons or apps need to access this directly.
+    """The main entry point for the Brim.Net Core Server, brimd.
+
+    Few daemons or apps need to access this directly.
 
     :param args: Command line arguments for the server, without the
-                 process name. Defaults to sys.argv[1:]
+        process name. Defaults to sys.argv[1:]
     :param stdin: The file-like object to treat as standard input.
-                  Defaults to sys.stdin.
+        Defaults to sys.stdin.
     :param stdout: The file-like object to treat as standard output.
-                   Defaults to sys.stdout.
+        Defaults to sys.stdout.
     :param stderr: The file-like object to treat as standard error.
-                   Defaults to sys.stderr.
+        Defaults to sys.stderr.
     """
 
     def __init__(self, args=None, stdin=None, stdout=None, stderr=None):
@@ -1405,13 +1403,13 @@ class Server(object):
         self.error_stack_trace = False
 
     def main(self):
-        """
-        Performs the brimd actions (start, stop, restart, shutdown,
-        etc.) determined by the command line arguments given in the
-        constructor. Usage can be read from ``brimd --help``.
+        """Performs the brimd actions (start, stop, shutdown, etc.).
+
+        The action is determined by the command line arguments given in
+        the constructor. Usage can be read from ``brimd --help``.
 
         :returns: An integer exit code suitable for returning with
-                  sys.exit.
+            sys.exit.
         """
         try:
             conf = self._parse_args()
@@ -1420,7 +1418,7 @@ class Server(object):
             self._parse_conf(conf)
             self._start()
             return 0
-        except Exception, err:
+        except Exception as err:
             if self.error_stack_trace:
                 raise
             self.stderr.write('%s\n' % err)
@@ -1428,13 +1426,11 @@ class Server(object):
             return 1
 
     def _parse_args(self):
-        """
-        This is where the translation and initial reaction to the
-        command line is done.
+        """Translates args and possibly returns a configuration to act on.
 
         :returns: None if no further action is necessary or a
-                  brim.conf.Conf instance if the server should be
-                  started.
+            :py:class:`brim.conf.Conf` instance if the server should be
+            started.
         """
         parser = OptionParser(
             add_help_option=False, usage="""
@@ -1462,7 +1458,7 @@ Command (defaults to 'no-daemon'):
                         and output will go to stdout and stderr. Note that only
                         core apps will be started and no daemons. This can
                         be useful for debugging.
-            """.strip() % brim.version)
+            """.strip() % __version__)
         parser.add_option(
             '-?', '-h', '--help', dest='help', action='store_true',
             default=False, help='Outputs this help information.')
@@ -1474,10 +1470,12 @@ Command (defaults to 'no-daemon'):
                  'more than once and the conf files will each be read in '
                  'order.')
         parser.add_option(
-            '-p', '--pid-file', dest='pid_file', default='/var/run/brimd.pid',
+            '-p', '--pid-file', dest='pid_file',
             metavar='PATH',
             help='The path to the file to store the PID of the running main '
-                 'brimd process.')
+                 'brimd process. Use a single dash - to indicate no pid_file '
+                 'should be used. Defaults to whatever is specified in the '
+                 'conf files or /var/run/brimd.pid')
         parser.add_option(
             '-o', '--output', dest='output', action='store_true',
             default=False,
@@ -1505,7 +1503,7 @@ Command (defaults to 'no-daemon'):
         if len(args) > 1:
             raise Exception('Too many commands given; only one allowed.')
         if options.version:
-            print >>self.stdout, 'Brim.Net Core Server', brim.version
+            print >>self.stdout, 'Brim.Net Core Server', __version__
             return 0
         if not options.conf_files:
             options.conf_files = DEFAULT_CONF_FILES
@@ -1514,19 +1512,37 @@ Command (defaults to 'no-daemon'):
         self.no_daemon = command == 'no-daemon'
         self.output = options.output or self.no_daemon
         self.error_stack_trace = options.error_stack_trace
-        if command == 'start':
-            success, pid = _send_pid_sig(self.pid_file, 0)
-            if success:
-                print >>self.stdout, '%s already running' % pid
+        conf = read_conf(options.conf_files)
+        if not conf.files:
+            raise Exception('No configuration found.')
+        if not self.pid_file:
+            self.pid_file = conf.get_path('brim', 'pid_file')
+        if self.pid_file != '-' and not command == 'no-daemon':
+            # Fail early if we won't be able to read/write the pid_file
+            if self.pid_file:
+                open(self.pid_file, 'a').close()
             else:
-                conf = read_conf(options.conf_files)
-                if not conf.files:
-                    raise Exception('No configuration found.')
-                return conf
+                self.pid_file = '/var/run/brimd.pid'
+                try:
+                    open(self.pid_file, 'a').close()
+                except IOError:
+                    self.pid_file = expanduser('~/.brimd.pid')
+                    open(self.pid_file, 'a').close()
+        result = None
+        if command == 'start':
+            if self.pid_file == '-':
+                result = conf
+            else:
+                success, pid = _send_pid_sig(self.pid_file, 0)
+                if success:
+                    self.stdout.write('%s already running\n' % pid)
+                    self.stdout.flush()
+                else:
+                    result = conf
         elif command in ('restart', 'reload', 'force-reload'):
-            conf = read_conf(options.conf_files)
-            if not conf.files:
-                raise Exception('No configuration found.')
+            if self.pid_file == '-':
+                raise Exception(
+                    'pid_file not in use so %s cannot be used.' % command)
             success, pid = _send_pid_sig(self.pid_file, 0)
             # If brimd is already running, we fork a child to shut it down
             # after a second so we, as the new brimd, can grab the port.
@@ -1534,38 +1550,41 @@ Command (defaults to 'no-daemon'):
                 sleep(1)
                 _send_pid_sig(self.pid_file, SIGHUP, expect_exit=True,
                               pid_override=pid)
-                return None
             else:
-                return conf
+                result = conf
         elif command == 'shutdown':
+            if self.pid_file == '-':
+                raise Exception(
+                    'pid_file not in use so %s cannot be used.' % command)
             _send_pid_sig(self.pid_file, SIGHUP, expect_exit=True)
         elif command == 'stop':
+            if self.pid_file == '-':
+                raise Exception(
+                    'pid_file not in use so %s cannot be used.' % command)
             _send_pid_sig(self.pid_file, SIGTERM, expect_exit=True)
         elif command == 'status':
+            if self.pid_file == '-':
+                raise Exception(
+                    'pid_file not in use so %s cannot be used.' % command)
             success, pid = _send_pid_sig(self.pid_file, 0)
             if success:
-                print >>self.stdout, '%s is running' % pid
+                self.stdout.write('%s is running\n' % pid)
             elif pid:
-                print >>self.stdout, '%s is not running' % pid
+                self.stdout.write('%s is not running\n' % pid)
             else:
-                print >>self.stdout, 'not running'
+                self.stdout.write('not running\n')
+            self.stdout.flush()
         elif command == 'no-daemon':
-            conf = read_conf(options.conf_files)
-            if not conf.files:
-                raise Exception('No configuration found.')
             return conf
         else:
             raise Exception('Unknown command %r.' % command)
-        return None
+        return result
 
     def _parse_conf(self, conf):
-        """
-        Translates the brim.conf.Conf configuration into instance
-        attributes for use later. This ensures we have a good
-        configuration before we try starting the server.
+        """Translates the :py:class:`brim.conf.Conf` configuration.
 
-        :param conf: The brim.conf.Conf instance for the overall
-                     server configuration.
+        This method is responsible for ensuring we have a good
+        configuration before we try starting the server.
         """
 
         def _conf_error(section, option, value, conversion_type, err):
@@ -1601,11 +1620,11 @@ Command (defaults to 'no-daemon'):
                             (self.log_facility,))
 
         for key in conf.store.keys():
-            if key == 'wsgi' or key.startswith('wsgi') and key[4:].isdigit():
+            if key == 'wsgi' or key.startswith('wsgi#'):
                 self.subservers.append(WSGISubserver(self, key))
-            elif key == 'tcp' or key.startswith('tcp') and key[3:].isdigit():
+            elif key == 'tcp' or key.startswith('tcp#'):
                 self.subservers.append(TCPSubserver(self, key))
-            elif key == 'udp' or key.startswith('udp') and key[3:].isdigit():
+            elif key == 'udp' or key.startswith('udp#'):
                 self.subservers.append(UDPSubserver(self, key))
             elif key == 'daemons' and not self.no_daemon:
                 self.subservers.append(DaemonsSubserver(self))
@@ -1613,12 +1632,12 @@ Command (defaults to 'no-daemon'):
             subserver._parse_conf(conf)
 
     def _start(self):
-        """
-        This is the last method run by the main brimd server process.
-        It calls the subservers' ``_privileged_start`` methods (to
-        bind the listening sockets, for example), drops privileges,
-        daemonizes if enabled (and updates the pid file), configures
-        a default logger, and then calls the subservers' ``_start``
+        """This is the last method run by the main brimd server process.
+
+        It calls the subservers' ``_privileged_start`` methods (to bind
+        the listening sockets, for example), drops privileges,
+        daemonizes if enabled (and updates the pid file), configures a
+        default logger, and then calls the subservers' ``_start``
         methods.
         """
         if not self.subservers:
@@ -1669,28 +1688,20 @@ Command (defaults to 'no-daemon'):
         return subserver._start(self.bucket_stats[index])
 
     def _capture_exception(self, *excinfo):
-        """
-        Used by capture_exceptions_stdout_stderr to catch any
-        completely uncaught exceptions and redirect them to the
-        logger.
-        """
         self.logger.error(
             'UNCAUGHT EXCEPTION: main %s' % (sysloggable_excinfo(*excinfo),))
 
     def _capture_stdout(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard output and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.info('STDOUT: main %s' % (line,))
 
     def _capture_stderr(self, value):
-        """
-        Used by capture_exceptions_stdout_stderr to catch anything
-        sent to standard error and redirect it to the logger.
-        """
         for line in value.split('\n'):
             if line:
                 self.logger.error('STDERR: main %s' % (line,))
+
+
+def main():
+    """brimd script entry point."""
+    return Server().main()

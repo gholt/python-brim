@@ -1,16 +1,6 @@
-brim (0.2.0)
+CHANGELOG
+#########
 
-    * Still prerelease.
+No official releases made yet.
 
-    * Refactored to a true set of Subservers, adding the possibility of
-      straight TCP and UDP socket servers.
-
-brim (0.1.0)
-
-    * Still prerelease.
-
-    * Folded brimwsgi in.
-
-brim (0.0.0)
-
-    * Initial prerelease.
+Latest development release is at http://gholt.github.io/brim/dev/

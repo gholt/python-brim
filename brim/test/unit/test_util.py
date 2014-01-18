@@ -1,17 +1,20 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Tests for brim.util."""
+"""Copyright and License.
 
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from unittest import main, TestCase
 
 from brim import util
@@ -57,10 +60,10 @@ class TestLockPath(TestCase):
         with util.lock_path('test', 15):
             inwith = True
         self.assertTrue(inwith)
-        self.assertEquals(self.os_open_calls, [('test', 0)])
-        self.assertEquals(self.flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)])
-        self.assertEquals(self.sleep_calls, [])
-        self.assertEquals(self.os_close_calls, [(1,)])
+        self.assertEqual(self.os_open_calls, [('test', 0)])
+        self.assertEqual(self.flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)])
+        self.assertEqual(self.sleep_calls, [])
+        self.assertEqual(self.os_close_calls, [(1,)])
 
     def test_lock_path_time_delay(self):
         flock_calls = []
@@ -77,10 +80,10 @@ class TestLockPath(TestCase):
         with util.lock_path('test', 15):
             inwith = True
         self.assertTrue(inwith)
-        self.assertEquals(self.os_open_calls, [('test', 0)])
-        self.assertEquals(flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)] * 2)
-        self.assertEquals(self.sleep_calls, [(0.01,)])
-        self.assertEquals(self.os_close_calls, [(1,)])
+        self.assertEqual(self.os_open_calls, [('test', 0)])
+        self.assertEqual(flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)] * 2)
+        self.assertEqual(self.sleep_calls, [(0.01,)])
+        self.assertEqual(self.os_close_calls, [(1,)])
 
     def test_lock_path_timeout(self):
         flock_calls = []
@@ -96,15 +99,15 @@ class TestLockPath(TestCase):
         try:
             with util.lock_path('test', 15):
                 inwith = True
-        except Exception, err:
+        except Exception as err:
             exc = err
         self.assertFalse(inwith)
         self.assertTrue(isinstance(exc, util.LockPathTimeout))
-        self.assertEquals(str(exc), "Timeout 15s trying to lock 'test'.")
-        self.assertEquals(self.os_open_calls, [('test', 0)])
-        self.assertEquals(flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)] * 15)
-        self.assertEquals(self.sleep_calls, [(0.01,)] * 15)
-        self.assertEquals(self.os_close_calls, [(1,)])
+        self.assertEqual(str(exc), "Timeout 15s trying to lock 'test'.")
+        self.assertEqual(self.os_open_calls, [('test', 0)])
+        self.assertEqual(flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)] * 15)
+        self.assertEqual(self.sleep_calls, [(0.01,)] * 15)
+        self.assertEqual(self.os_close_calls, [(1,)])
 
     def test_lock_path_other_exception(self):
         flock_calls = []
@@ -118,15 +121,15 @@ class TestLockPath(TestCase):
         try:
             with util.lock_path('test', 15):
                 inwith = True
-        except Exception, err:
+        except Exception as err:
             exc = err
         self.assertFalse(inwith)
         self.assertTrue(isinstance(exc, IOError))
-        self.assertEquals(str(exc), 'testing')
-        self.assertEquals(self.os_open_calls, [('test', 0)])
-        self.assertEquals(flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)])
-        self.assertEquals(self.sleep_calls, [])
-        self.assertEquals(self.os_close_calls, [(1,)])
+        self.assertEqual(str(exc), 'testing')
+        self.assertEqual(self.os_open_calls, [('test', 0)])
+        self.assertEqual(flock_calls, [(1, util.LOCK_EX | util.LOCK_NB)])
+        self.assertEqual(self.sleep_calls, [])
+        self.assertEqual(self.os_close_calls, [(1,)])
 
 
 class TestMakeDirs(TestCase):
@@ -150,8 +153,8 @@ class TestMakeDirs(TestCase):
 
     def test_make_dirs(self):
         util.make_dirs('test')
-        self.assertEquals(self.exists_calls, [('test',)])
-        self.assertEquals(self.makedirs_calls, [('test', 0777)])
+        self.assertEqual(self.exists_calls, [('test',)])
+        self.assertEqual(self.makedirs_calls, [('test', 0777)])
 
     def test_make_dirs_exists(self):
         exists_calls = []
@@ -162,8 +165,8 @@ class TestMakeDirs(TestCase):
 
         util.exists = _exists
         util.make_dirs('test')
-        self.assertEquals(exists_calls, [('test',)])
-        self.assertEquals(self.makedirs_calls, [])
+        self.assertEqual(exists_calls, [('test',)])
+        self.assertEqual(self.makedirs_calls, [])
 
     def test_make_dirs_did_not_exist_but_then_did(self):
         makedirs_calls = []
@@ -176,8 +179,8 @@ class TestMakeDirs(TestCase):
 
         util.makedirs = _makedirs
         util.make_dirs('test')
-        self.assertEquals(self.exists_calls, [('test',)])
-        self.assertEquals(makedirs_calls, [('test', 0777)])
+        self.assertEqual(self.exists_calls, [('test',)])
+        self.assertEqual(makedirs_calls, [('test', 0777)])
 
     def test_make_dirs_other_error(self):
         makedirs_calls = []
@@ -190,11 +193,11 @@ class TestMakeDirs(TestCase):
         exc = None
         try:
             util.make_dirs('test')
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
-        self.assertEquals(self.exists_calls, [('test',)])
-        self.assertEquals(makedirs_calls, [('test', 0777)])
+        self.assertEqual(str(exc), 'testing')
+        self.assertEqual(self.exists_calls, [('test',)])
+        self.assertEqual(makedirs_calls, [('test', 0777)])
 
 
 class TestUnlink(TestCase):
@@ -209,7 +212,7 @@ class TestUnlink(TestCase):
 
     def test_unlink(self):
         util.unlink('test')
-        self.assertEquals(self.os_unlink_calls, [('test',)])
+        self.assertEqual(self.os_unlink_calls, [('test',)])
 
     def test_unlink_already_gone(self):
         os_unlink_calls = []
@@ -222,7 +225,7 @@ class TestUnlink(TestCase):
 
         util.os_unlink = _os_unlink
         util.unlink('test')
-        self.assertEquals(os_unlink_calls, [('test',)])
+        self.assertEqual(os_unlink_calls, [('test',)])
 
     def test_unlink_other_error(self):
         os_unlink_calls = []
@@ -235,10 +238,10 @@ class TestUnlink(TestCase):
         exc = None
         try:
             util.unlink('test')
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
-        self.assertEquals(os_unlink_calls, [('test',)])
+        self.assertEqual(str(exc), 'testing')
+        self.assertEqual(os_unlink_calls, [('test',)])
 
 
 if __name__ == '__main__':

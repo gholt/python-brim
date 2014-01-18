@@ -7,6 +7,9 @@
 #   The local group to run as. Default: <default-group-of-user>
 # umask = <mask>
 #   The umask to run with. Default: 0022
+# pid_file = <path>
+#   The file to use to store the process id of brimd serving this conf.
+#   Default: /var/run/brimd.pid or ~/.brimd.pid
 #
 #   The following are also available in [wsgi], [tcp], [udp], and [daemon]
 #   sections as well as this section (which will define the defaults for the
@@ -58,7 +61,10 @@
 # eventlet_hub = <name or module>
 #   The Eventlet coroutine hub to use. Default: Eventlet's default
 
-[wsgi]
+[wsgi#name]
+#   The #name part may be omitted to use the default 'wsgi' name or included to
+#   separate it from other wsgi configs. In this way you can run multiple wsgi
+#   servers on distinct ports with the same brimd instance.
 # apps = <name> [<name>] ...
 #   The names of the WSGI apps to configure. Each <name> should have a
 #   corresponding [name] section elsewhere in the configuration. See the
@@ -66,7 +72,7 @@
 # log_headers = <boolean>
 #   Whether all headers should be sent to the request log or not. Default: no
 # count_status_codes = <code> [<code>] ...
-#   The list of HTTP status codes to track. See brim.stats for a WSGI app
+#   The list of HTTP status codes to track. See brim.wsgi_stats for a WSGI app
 #   that reports server stats. Each code listed here will be tracked indepently
 #   of the 2xx, 3xx, 4xx, and 5xx tracking. The default is 404 408 499 501. 404
 #   Not Found, 408 Request Timeout, and 499 Disconnect are usually tracked
@@ -80,27 +86,26 @@
 # wsgi_output_iter_chunk_size = <bytes>
 #   The number of bytes read per chunk when using Transfer-encoding: Chunked and
 #   iterating out a response. Useful to decrease for long polling, short message
-#   connections such as HTML5 Server-Sent Events. Technically in violation of the
-#   WSGI spec but supported by Eventlet. Default: 4096
+#   connections such as HTML5 Server-Sent Events. Technically in violation of
+#   the WSGI spec but supported by Eventlet. Default: 4096
 
-[wsgi2]
-#   You can have multiple sets of WSGI apps configured by adding additional
-#   [wsgi2], [wsgi3], etc. sections, mostly useful to have a separate sets of
-#   apps listening on different ips or ports.
-
-[tcp]
+[tcp#name]
+#   The #name part may be omitted to use the default 'tcp' name or included to
+#   separate it from other tcp configs. In this way you can run multiple tcp
+#   servers on distinct ports with the same brimd instance.
 call = <package.module.Class>
 #   Set to the Python class that will handle the incoming connections.
 #   Additional options are described in the above [brim] section. The Python
 #   handler class may have options of its own as well.
+#
+# For the brim.tcp_echo.TCPEcho class:
 # chunk_read = <bytes>
 #   The maximum number of bytes to read before echoing it back. Default: 65536
 
-[tcp2]
-#   You can have multiple sets of TCP socket handlers configured by adding
-#   additional [tcp2], [tcp3], etc. sections.
-
-[udp]
+[udp#name]
+#   The #name part may be omitted to use the default 'udp' name or included to
+#   separate it from other udp configs. In this way you can run multiple udp
+#   servers on distinct ports with the same brimd instance.
 call = <package.module.Class>
 #   Set to the Python class that will handle the incoming datagrams.
 #   Additional options are described in the above [brim] section. The Python
@@ -108,29 +113,16 @@ call = <package.module.Class>
 # max_datagram_size = <bytes>
 #   The maximum sized UDP datagram to receive. Default: 65536
 
-[udp2]
-#   You can have multiple sets of UDP socket handlers configured by adding
-#   additional [udp2], [udp3], etc. sections.
-
 [daemons]
 # daemons = <name> [<name>] ...
 #   The name of daemons to configure. Each <name> should have a corresponding
 #   [name] section elsewhere in the configuration. See the example
-#   [sample_daemon] below. Daemons are subprocesses for background tasks; an
-#   example is the replicator in brimkvs.
+#   [daemon_sample] below. Daemons are subprocesses for background tasks.
 
 
-[stats]
-#   Reports the brimd server stats as a JSON reponse. The stats contain basic
-#   things like the server start time and request counts.
-call = brim.stats.Stats
-#   Each application needs at least this call value set to the Python class
-#   that will handle the application's requests.
-# path = <path>
-#   The request path to match and serve; any other paths will be passed on to
-#   the next WSGI app in the chain. This can serve as a basic restriction to
-#   accessing the stats by setting it to a hard to guess value.
-#   Default: /stats
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# WSGI Apps Available In The Brim.Net Core Package
+#
 
 [wsgi_echo]
 #   A simple WSGI application that just echoes the request body back in the
@@ -146,11 +138,77 @@ call = brim.wsgi_echo.WSGIEcho
 #   The maximum bytes to echo; any additional bytes will be ignored.
 #   Default: 65536
 
-[sample_daemon]
+[wsgi_stats]
+#   Reports the brimd server stats as a JSON reponse. The stats contain basic
+#   things like the server start time and request counts.
+call = brim.wsgi_stats.WSGIStats
+#   Each application needs at least this call value set to the Python class
+#   that will handle the application's requests.
+# path = <path>
+#   The request path to match and serve; any other paths will be passed on to
+#   the next WSGI app in the chain. This can serve as a basic restriction to
+#   accessing the stats by setting it to a hard to guess value.
+#   Default: /stats
+
+[wsgi_basic_auth]
+#   A WSGI application that offers Basic Auth capabilities.
+#   WARNING: This is HTTP Basic Auth, so the password will be transmitted in
+#   the clear. You definitely should be using SSL when using Basic Auth.
+call = brim.wsgi_basic_auth.WSGIBasicAuth
+# auth_path = <path>
+#   The local file path to the auth details. This file should be plain text,
+#   one user per line, with each line a user name followed by whitespace and
+#   then the bcrypt password entry for the user. You can obtain the bcrypt
+#   password entry with the following:
+#       $ python -c '
+#       > import bcrypt
+#       > print bcrypt.hashpw("secret", bcrypt.gensalt())'
+#   The file will automatically be reloaded if changed within five minutes.
+
+[wsgi_fs]
+#   A WSGI application that simply serves up any files under a
+#   specified location on the file system.
+call = brim.wsgi_fs.WSGIFS
+# path = <path>
+#   The request path to match and serve; any paths that do not begin with this
+#   value will be passed on to the next WSGI app in the chain. Default: /
+# serve_path = <path>
+#   The local file path containing files to serve.
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# TCP Apps Available In The Brim.Net Core Package
+#
+
+[tcp_echo]
+#   An application that just echoes any incoming data back. This is a good
+#   starting point for other TCP applications. See the source for what's
+#   implemented and why.
+call = brim.tcp_echo.TCPEcho
+# chunk_read = <bytes>
+#   The maximum number of bytes to read before echoing it back. Default: 65536
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# UDP Apps Available In The Brim.Net Core Package
+#
+
+[udp_echo]
+#   An application that just echoes any incoming data back. This is a good
+#   starting point for other UDP applications. See the source for what's
+#   implemented and why.
+call = brim.udp_echo.UDP
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Daemons Available In The Brim.Net Core Package
+#
+
+[daemon_sample]
 #   A simple daemon that just logs a status line every so often. This can be a
 #   good starting point for other daemons. See the source for what's
 #   implemented and why.
-call = brim.sample_daemon.SampleDaemon
+call = brim.daemon_sample.DaemonSample
 #   Each daemon needs at least this call value set to the Python class that
 #   will be launched by the server.
 # interval = <seconds>

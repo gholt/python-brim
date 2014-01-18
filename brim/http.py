@@ -1,44 +1,46 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Utilities for working with HTTP.
 
-"""
-Contains utility classes for responding to WSGI requests. This isn't
-WebOb http://www.webob.org/ but sometimes it's enough and you should
-be able to upgrade easily to WebOb once you do need it.
+This isn't WebOb http://www.webob.org/ or Werkzeug
+http://werkzeug.pocoo.org but often it's enough and you should be able
+to upgrade easily to an alternative once you do need it.
 
-Much like webob.exc there are classes for standard HTTP responses,
-such as HTTPNotFound for 404. Continuing with webob.exc similarities,
-these classes are all subclasses of HTTPException and therefore can
-be raised and caught as well as used as WSGI apps. The 2xx classes
-are all subclasses of HTTPOk, 3xx subclasses of HTTPRedirection, 4xx
-subclasses of HTTPClientError, and 5xx subclasses of HTTPServerError.
-HTTPClientError and HTTPServerError also both subclass HTTPError,
-like webob.exc.
+There are classes for standard HTTP responses, such as
+:py:class:`HTTPNotFound` for 404. These classes are all subclasses of
+:py:class:`HTTPException` and therefore can be raised and caught as well
+as used as WSGI apps. The 2xx classes are all subclasses of
+:py:class:`HTTPOk` (aka :py:class:`HTTPSuccess`), 3xx subclasses of
+:py:class:`HTTPRedirection`, 4xx subclasses of
+:py:class:`HTTPClientError`, and 5xx subclasses of
+:py:class:`HTTPServerError`. :py:class:`HTTPClientError` and
+:py:class:`HTTPServerError` also both subclass :py:class:`HTTPError`.
 
 Instead of a Request object, this package just provides some simpler
-classes and functions, like QueryParser and get_header_int, and some
-replacement functions like quote (it's Unicode-safe by using UTF8).
+classes and functions, like :py:class:`QueryParser` and
+:py:func:`get_header_int`, and some replacement functions like
+:py:func:`quote` (it's Unicode-safe by using UTF8).
 """
+"""Copyright and License.
 
-from urllib import quote as urllib_quote
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+from urllib import quote as _quote
 from urlparse import parse_qs
 
 from brim.conf import FALSE_VALUES, TRUE_VALUES
 
 
-#: Translates an HTTP status code to an English status reason string,
-#: such as CODE2NAME[201] = 'Created'.
 CODE2NAME = {100: 'Continue',
              101: 'Switching Protocols',
              102: 'Processing',
@@ -91,39 +93,51 @@ CODE2NAME = {100: 'Continue',
              507: 'Insufficient Storage',
              508: 'Loop Detected',
              510: 'Not Extended'}
+"""Translates an HTTP status code to an English reason string."""
 
 
 class HTTPException(Exception):
-    """
-    Root class of all brim.http response classes.
+    """Root class of all brim.http response classes.
 
-    :param body: The body of the response. If the body has a length
-                 (as determined by len(body)) and the headers don't
-                 have a content-length or transfer-encoding, the
-                 content-length will be set the body's length.
+    If the body is None and the headers don't have a content-length or
+    transfer-encoding the body is set to a reasonable default for the
+    status code.
+
+    If the body has a length (as determined by
+    ``hasattr(body, '__len__')``) and the headers don't have a
+    content-length or transfer-encoding, the content-length is set to
+    the body's length.
+
+    If the headers have no content-type, text/plain is used by default.
+
+    :param body: The body of the response.
     :param headers: A dict of the headers to include in the response.
     :param code: The HTTP response code to give; defaults to 500.
     """
 
     def __init__(self, body=None, headers=None, code=500):
-        Exception.__init__(
-            self,
-            '%s %s %s' % (code, CODE2NAME.get(code, 'Status'), body or '-'))
-        self.code = code
-        self.body = body or ''
-        if not headers:
+        if headers:
+            headers = dict((n.lower(), v) for n, v in headers.iteritems())
+        else:
             headers = {}
-        self.headers = {}
-        for k, v in headers.iteritems():
-            self.headers[k.lower()] = v
+        status_text = CODE2NAME.get(code, 'Status')
+        if body is None and 'content-length' not in headers and \
+                'transfer-encoding' not in headers:
+            body = '%s %s\n' % (code, status_text)
+            headers['content-type'] = 'text/plain'
+        Exception.__init__(self, '%s %s %s' % (code, status_text, body))
+        self.code = code
+        self.body = body
+        self.headers = headers
         if 'content-length' not in self.headers and \
                 'transfer-encoding' not in self.headers and \
                 hasattr(self.body, '__len__'):
-            self.headers['content-length'] = len(self.body)
+            self.headers['content-length'] = str(len(self.body))
         if 'content-type' not in self.headers:
             self.headers['content-type'] = 'text/plain'
 
     def __call__(self, env, start_response):
+        """WSGI callable."""
         code = self.code
         if self.code == 200:
             try:
@@ -131,9 +145,14 @@ class HTTPException(Exception):
                     code = 204
             except:
                 pass
+        for name, value in self.headers.iteritems():
+            if not isinstance(value, basestring):
+                self.headers[name] = value = str(value)
+            if isinstance(value, unicode):
+                self.headers[name] = value.encode('utf8')
         start_response(
             '%s %s' % (code, CODE2NAME.get(code, 'Status')),
-            [(k.title(), str(v)) for k, v in self.headers.iteritems()])
+            [(k.title(), v) for k, v in self.headers.iteritems()])
         if env['REQUEST_METHOD'] == 'HEAD':
             return []
         return [self.body]
@@ -479,40 +498,31 @@ class HTTPNotExtended(HTTPServerError):
 
 
 class QueryParser(object):
-    """
-    Parses an HTTP query string and provides convenient retrieval
-    methods for parameter values.
+    """Provides convenient retrieval methods for query parameter values.
 
-    :param query_string: The HTTP query string, such as in a WSGI
-                         env['QUERY_STRING']. If using something
-                         other than WSGI's QUERY_STRING, be sure you
-                         do **not** include the question mark that
-                         separates the path?query string or it will
-                         be translated as the first character of the
-                         first parameter.
+    :param query_string: The HTTP query string, such as in WSGI's
+        ``env['QUERY_STRING']``. If using something other than WSGI's
+        QUERY_STRING, be sure to **not** include the question mark that
+        separates the path?query string as it would be translated as the
+        first character of the first parameter.
     """
 
     def __init__(self, query_string=None):
-        self.query = parse_qs(query_string or '', keep_blank_values=True)
+        self.query = parse_qs(
+            query_string or '', keep_blank_values=True)
 
     def get(self, name, default=None, last_only=True):
-        """
-        Returns the value of the query parameter, or the default
-        value if the parameter does not exist. If the default is None
-        and the parameter does not exist, an HTTPBadRequest with an
-        explanatory message is raised, indicating a required
-        parameter.
+        """Returns the value of the query parameter.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist. If not specified, the parameter will
-                        be considered required, and HTTPBadRequest
-                        will be raised if the parameter is missing.
-        :param last_only: If True (the default), only the last value
-                          of the parameter will be returned if the
-                          parameter is specified multiple times. If
-                          False, all values will be returned in a
-                          list (even if there is only one value).
+            exist. If default is None, the parameter is considered
+            required and :py:class:`HTTPBadRequest` is raised if the
+            parameter is missing.
+        :param last_only: If True (the default), only the last value of
+            the parameter is returned if the parameter is specified
+            multiple times. If False, all values are returned in a list
+            (even if there is only one value).
         """
         v = self.query.get(name)
         if v is None:
@@ -525,27 +535,21 @@ class QueryParser(object):
         return v
 
     def get_bool(self, name, default=None):
-        """
-        Returns the boolean value of the query parameter, or the
-        default value if the parameter does not exist. If the default
-        is None and the parameter does not exist, an HTTPBadRequest
-        with an explanatory message is raised, indicating a required
-        parameter.
+        """Returns the boolean value of the query parameter.
 
-        If the parameter is included in the query string, but has no
-        value (such as ?param), then ``not default`` will be
-        returned.
+        The parameter value is checked against known
+        :py:data:`brim.conf.TRUE_VALUES` and
+        :py:data:`brim.conf.FALSE_VALUES` for translation and raises
+        :py:class:`HTTPBadRequest` if the value cannot be translated.
 
-        Otherwise, the parameter value will be checked against known
-        TRUE_VALUES and FALSE_VALUES for translation, or
-        HTTPBadRequest will be raised if the value cannot be
-        translated.
+        If the parameter is included in the query string but has no
+        value then the value of ``not default`` is returned.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist. If not specified, the parameter will
-                        be considered required, and HTTPBadRequest
-                        will be raised if the parameter is missing.
+            exist. If default is None, the parameter is considered
+            required and :py:class:`HTTPBadRequest` is raised if the
+            parameter is missing.
         """
         v = self.get(name, default)
         if isinstance(v, bool):
@@ -553,116 +557,137 @@ class QueryParser(object):
         # Parameter included with no value, means invert the default.
         if not v:
             return not default
-        if v.lower() in FALSE_VALUES:
+        vl = v.lower()
+        if vl in FALSE_VALUES:
             return False
-        if v.lower() in TRUE_VALUES:
+        if vl in TRUE_VALUES:
             return True
         raise HTTPBadRequest(
             'Query parameter %r value %r not boolean.\n' % (name, v))
 
     def get_int(self, name, default=None):
-        """
-        Returns the int value of the query parameter, or the default
-        value if the parameter does not exist. If the default is None
-        and the parameter does not exist, an HTTPBadRequest with an
-        explanatory message is raised, indicating a required
-        parameter.
+        """Returns the int value of the query parameter.
+
+        If the value cannot be translated to an int, raises
+        :py:class:`HTTPBadRequest`.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist or has no value. If not specified, the
-                        parameter will be considered required, and
-                        HTTPBadRequest will be raised if the
-                        parameter is missing.
+            exist or has no value. If default is None, the parameter is
+            be considered required and :py:class:`HTTPBadRequest` is
+            raised if the parameter is missing.
         """
         v = self.get(name, default)
         try:
             return int(v)
-        except ValueError, err:
+        except ValueError:
             raise HTTPBadRequest(
                 'Query parameter %r value %r not int.\n' % (name, v))
 
     def get_float(self, name, default=None):
-        """
-        Returns the float value of the query parameter, or the
-        default value if the parameter does not exist. If the default
-        is None and the parameter does not exist, an HTTPBadRequest
-        with an explanatory message is raised, indicating a required
-        parameter.
+        """Returns the float value of the query parameter.
+
+        If the value cannot be translated to a float, raises
+        :py:class:`HTTPBadRequest`.
 
         :param name: The name of the query parameter to retrieve.
         :param default: The default value if the parameter does not
-                        exist or has no value. If not specified, the
-                        parameter will be considered required, and
-                        HTTPBadRequest will be raised if the
-                        parameter is missing.
+            exist or has no value. If default is None, the parameter is
+            be considered required and :py:class:`HTTPBadRequest` is
+            raised if the parameter is missing.
         """
         v = self.get(name, default)
         try:
             return float(v)
-        except ValueError, err:
+        except ValueError:
             raise HTTPBadRequest(
                 'Query parameter %r value %r not float.\n' % (name, v))
 
 
 def get_header(env, name, default=None):
-    """
-    Returns the value of an HTTP header.
+    """Returns the value of an HTTP header.
 
-    :param env: Standard WSGI env to read from.
+    :param env: The standard WSGI env to read from.
     :param name: The name of the header to retrieve.
-    :param default: If specified, the default value will be used if
-                    the header cannot be found. If not specified, the
-                    header value will be considered required, and
-                    HTTPBadRequest will be raised if the header is
-                    missing.
-    :returns: The value of the header, or raises HTTPBadRequest
-              if the header is missing and required.
+    :param default: If specified, the default value if the header cannot
+        be found. If default is None, the header value is considered
+        required and :py:class:`HTTPBadRequest` is raised if the header
+        is missing.
     """
     env_name = 'HTTP_' + name.upper().replace('-', '_')
     if env_name not in env:
         if default is not None:
             return default
         else:
-            raise HTTPBadRequest(
-                'Requires %s header.\n' % name.title())
+            raise HTTPBadRequest('Requires %s header.\n' % name.title())
     return env[env_name]
 
 
-def get_header_int(env, name, default=None):
-    """
-    Returns the int value of an HTTP header.
+def get_header_bool(env, name, default=None):
+    """Returns the boolean value of an HTTP header.
 
-    :param env: Standard WSGI env to read from.
+    The header value is checked against known
+    :py:data:`brim.conf.TRUE_VALUES` and
+    :py:data:`brim.conf.FALSE_VALUES` for translation and raises
+    :py:class:`HTTPBadRequest` if the value cannot be translated.
+
+    :param env: The standard WSGI env to read from.
     :param name: The name of the header to retrieve.
-    :param default: If specified, the default value will be used if
-                    the header cannot be found. If not specified, the
-                    header value will be considered required, and
-                    HTTPBadRequest will be raised if the header is
-                    missing.
-    :returns: The int value of the header, or raises HTTPBadRequest
-              if the header can't be translated to an integer or if
-              the header is missing and required.
+    :param default: If specified, the default value if the header cannot
+        be found. If default is None, the header value is considered
+        required and HTTPBadRequest is raised if the header is missing.
     """
-    env_name = 'HTTP_' + name.upper().replace('-', '_')
-    if env_name not in env:
-        if default is not None:
-            return default
-        else:
-            raise HTTPBadRequest(
-                'Requires %s header.\n' % name.title())
+    v = get_header(env, name, default)
+    if isinstance(v, bool):
+        return v
+    vl = v.lower()
+    if vl in FALSE_VALUES:
+        return False
+    if vl in TRUE_VALUES:
+        return True
+    raise HTTPBadRequest('Invalid %s header %r.\n' % (name.title(), v))
+
+
+def get_header_int(env, name, default=None):
+    """Returns the int value of an HTTP header.
+
+    If the value cannot be translated to an int, raises
+    :py:class:`HTTPBadRequest`.
+
+    :param env: The standard WSGI env to read from.
+    :param name: The name of the header to retrieve.
+    :param default: If specified, the default value if the header cannot
+        be found. If default is None, the header value is considered
+        required and HTTPBadRequest is raised if the header is missing.
+    """
+    v = get_header(env, name, default)
     try:
-        return int(env[env_name])
+        return int(v)
     except ValueError:
-        raise HTTPBadRequest(
-            'Invalid %s header %r.\n' % (name.title(), env[env_name]))
+        raise HTTPBadRequest('Invalid %s header %r.\n' % (name.title(), v))
+
+
+def get_header_float(env, name, default=None):
+    """Returns the float value of an HTTP header.
+
+    If the value cannot be translated to a float, raises
+    :py:class:`HTTPBadRequest`.
+
+    :param env: The standard WSGI env to read from.
+    :param name: The name of the header to retrieve.
+    :param default: If specified, the default value if the header cannot
+        be found. If default is None, the header value is considered
+        required and HTTPBadRequest is raised if the header is missing.
+    """
+    v = get_header(env, name, default)
+    try:
+        return float(v)
+    except ValueError:
+        raise HTTPBadRequest('Invalid %s header %r.\n' % (name.title(), v))
 
 
 def quote(value, safe='/'):
-    """
-    Patched version of urllib.quote that encodes UTF8 strings before
-    quoting.
-    """
+    """Patched version of urllib.quote that UTF8 encodes unicode."""
     if isinstance(value, unicode):
         value = value.encode('utf8')
-    return urllib_quote(value, safe)
+    return _quote(value, safe)

@@ -1,17 +1,20 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Tests for brim.wsgi_echo."""
+"""Copyright and License.
 
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from StringIO import StringIO
 from unittest import main, TestCase
 
@@ -54,70 +57,64 @@ class TestWSGIEcho(TestCase):
                     'wsgi.input': StringIO('testbody')}
         self.parsed_conf = {'path': '/testpath', 'max_echo': 10}
 
-    def test_init_attrs(self):
-        e = wsgi_echo.WSGIEcho('test', {}, None)
-        self.assertEquals(getattr(e, 'testattr', None), None)
-        e = wsgi_echo.WSGIEcho('test', {'testattr': 1}, None)
-        self.assertEquals(getattr(e, 'testattr', None), 1)
-
     def test_call_ignores_non_path(self):
         self.env['PATH_INFO'] = '/'
         wsgi_echo.WSGIEcho('test', self.parsed_conf,
                            self.next_app)(self.env, self.start_response)
-        self.assertEquals(self.next_app_calls,
-                          [(self.env, self.start_response)])
-        self.assertEquals(self.start_response_calls,
-                          [('204 No Content', ('Content-Length', '0'))])
+        self.assertEqual(
+            self.next_app_calls, [(self.env, self.start_response)])
+        self.assertEqual(self.start_response_calls, [
+            ('204 No Content', ('Content-Length', '0'))])
 
     def test_call_non_path_no_stat_incr(self):
         self.env['PATH_INFO'] = '/'
-        wsgi_echo.WSGIEcho('test', self.parsed_conf,
-                           self.next_app)(self.env, self.start_response)
-        self.assertEquals(self.env['brim.stats'].get('test.requests'), 0)
+        wsgi_echo.WSGIEcho('test', self.parsed_conf, self.next_app)(
+            self.env, self.start_response)
+        self.assertEqual(self.env['brim.stats'].get('test.requests'), 0)
 
     def test_call_stat_incr(self):
-        wsgi_echo.WSGIEcho('test', self.parsed_conf,
-                           self.next_app)(self.env, self.start_response)
-        self.assertEquals(self.env['brim.stats'].get('test.requests'), 1)
+        wsgi_echo.WSGIEcho('test', self.parsed_conf, self.next_app)(
+            self.env, self.start_response)
+        self.assertEqual(self.env['brim.stats'].get('test.requests'), 1)
 
     def test_call_echo(self):
         body = ''.join(wsgi_echo.WSGIEcho(
-            'test', self.parsed_conf, self.next_app)(
-                self.env, self.start_response))
-        self.assertEquals(self.start_response_calls,
-                          [('200 OK', [('Content-Length', '8')])])
-        self.assertEquals(body, 'testbody')
+            'test', self.parsed_conf,
+            self.next_app)(self.env, self.start_response))
+        self.assertEqual(self.start_response_calls, [
+            ('200 OK', [('Content-Length', '8')])])
+        self.assertEqual(body, 'testbody')
 
     def test_call_echo_capped(self):
         self.env['wsgi.input'] = StringIO('1234567890123')
         body = ''.join(wsgi_echo.WSGIEcho(
-            'test', self.parsed_conf, self.next_app)(
-                self.env, self.start_response))
-        self.assertEquals(self.start_response_calls,
-                          [('200 OK', [('Content-Length', '10')])])
-        self.assertEquals(body, '1234567890')
+            'test', self.parsed_conf,
+            self.next_app)(self.env, self.start_response))
+        self.assertEqual(self.start_response_calls, [
+            ('200 OK', [('Content-Length', '10')])])
+        self.assertEqual(body, '1234567890')
 
     def test_call_echo_exception_on_read(self):
         del self.env['wsgi.input']
         body = ''.join(wsgi_echo.WSGIEcho(
-            'test', self.parsed_conf, self.next_app)(
-                self.env, self.start_response))
-        self.assertEquals(self.start_response_calls,
-                          [('200 OK', [('Content-Length', '0')])])
-        self.assertEquals(body, '')
+            'test', self.parsed_conf,
+            self.next_app)(self.env, self.start_response))
+        self.assertEqual(self.start_response_calls, [
+            ('200 OK', [('Content-Length', '0')])])
+        self.assertEqual(body, '')
 
     def test_parse_conf(self):
         c = wsgi_echo.WSGIEcho.parse_conf('test', Conf({}))
-        self.assertEquals(c, {'path': '/echo', 'max_echo': 65536})
+        self.assertEqual(c, {'path': '/echo', 'max_echo': 65536})
         c = wsgi_echo.WSGIEcho.parse_conf(
             'test', Conf({'test': {'path': '/blah', 'max_echo': 1}}))
-        self.assertEquals(c, {'path': '/blah', 'max_echo': 1})
+        self.assertEqual(c, {'path': '/blah', 'max_echo': 1})
         c = wsgi_echo.WSGIEcho.parse_conf(
             'test', Conf({'test2': {'path': '/blah', 'max_echo': 1}}))
-        self.assertEquals(c, {'path': '/echo', 'max_echo': 65536})
+        self.assertEqual(c, {'path': '/echo', 'max_echo': 65536})
 
     def test_stats_conf(self):
-        self.assertEquals(wsgi_echo.WSGIEcho.stats_conf(
+        self.assertEqual(wsgi_echo.WSGIEcho.stats_conf(
             'test', self.parsed_conf), [('test.requests', 'sum')])
 
 

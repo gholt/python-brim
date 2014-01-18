@@ -1,36 +1,38 @@
-# Copyright 2012 Gregory Holt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Tests for brim.server."""
+"""Copyright and License.
 
+Copyright 2012-2014 Gregory Holt
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from contextlib import contextmanager
 from pickle import dumps as pickle_dumps, loads as pickle_loads
 from json import dumps as json_dumps, loads as json_loads
 from StringIO import StringIO
-from socket import error as socket_error
 from sys import exc_info
-from time import mktime, strptime, time
 from unittest import main, TestCase
 from uuid import uuid4
 
-from brim import server, version
+from mock import mock_open, patch
+
+from brim import server, __version__
 from brim.conf import Conf
-from brim.service import get_listening_tcp_socket
 
 
 class TestLogQuote(TestCase):
 
     def test_log_quote(self):
-        self.assertEquals(
+        self.assertEqual(
             server._log_quote(''.join(chr(c) for c in xrange(256))),
             '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F'
             '%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F'
@@ -51,17 +53,17 @@ class TestStats(TestCase):
 
     def test_bucket_stats(self):
         bs = server._BucketStats(['testbucket'], {'test': 'worker'})
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
         bs.set(0, 'test', 123)
-        self.assertEquals(bs.get(0, 'test'), 123)
+        self.assertEqual(bs.get(0, 'test'), 123)
         bs.incr(0, 'test')
-        self.assertEquals(bs.get(0, 'test'), 124)
+        self.assertEqual(bs.get(0, 'test'), 124)
 
-        self.assertEquals(bs.get(0, 'test2'), 0)
+        self.assertEqual(bs.get(0, 'test2'), 0)
         bs.set(0, 'test2', 123)
-        self.assertEquals(bs.get(0, 'test2'), 0)
+        self.assertEqual(bs.get(0, 'test2'), 0)
         bs.incr(0, 'test2')
-        self.assertEquals(bs.get(0, 'test2'), 0)
+        self.assertEqual(bs.get(0, 'test2'), 0)
 
         self.assertRaises(IndexError, bs.get, 1, 'test')
         self.assertRaises(IndexError, bs.set, 1, 'test', 123)
@@ -69,33 +71,33 @@ class TestStats(TestCase):
 
     def test_null_bucket_stats(self):
         bs = server._BucketStats([], {})
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
         bs.set(0, 'test', 123)
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
         bs.incr(0, 'test')
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
 
         bs = server._BucketStats([], {'test': 'worker'})
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
         bs.set(0, 'test', 123)
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
         bs.incr(0, 'test')
-        self.assertEquals(bs.get(0, 'test'), 0)
+        self.assertEqual(bs.get(0, 'test'), 0)
 
     def test_stats(self):
         bs = server._BucketStats(['testbucket'], ['test'])
         s = server._Stats(bs, 0)
-        self.assertEquals(s.get('test'), 0)
+        self.assertEqual(s.get('test'), 0)
         s.set('test', 123)
-        self.assertEquals(s.get('test'), 123)
+        self.assertEqual(s.get('test'), 123)
         s.incr('test')
-        self.assertEquals(s.get('test'), 124)
+        self.assertEqual(s.get('test'), 124)
 
-        self.assertEquals(s.get('test2'), 0)
+        self.assertEqual(s.get('test2'), 0)
         s.set('test2', 123)
-        self.assertEquals(s.get('test2'), 0)
+        self.assertEqual(s.get('test2'), 0)
         s.incr('test2')
-        self.assertEquals(s.get('test2'), 0)
+        self.assertEqual(s.get('test2'), 0)
 
         s = server._Stats(bs, 1)
         self.assertRaises(IndexError, s.get, 'test')
@@ -117,16 +119,16 @@ class TestWsgiInput(TestCase):
         self.inp = server._WsgiInput(self.env, 3)
 
     def test_sets_as_self(self):
-        self.assertEquals(self.env['wsgi.input'], self.inp)
+        self.assertEqual(self.env['wsgi.input'], self.inp)
 
     def test_close(self):
         self.inp.close()
         exc = None
         try:
             self.inp.read()
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err), 'I/O operation on closed file')
+        self.assertEqual(str(exc), 'I/O operation on closed file')
 
     def test_flush(self):
         self.inp.flush()
@@ -135,43 +137,43 @@ class TestWsgiInput(TestCase):
         exc = None
         try:
             self.inp.fileno()
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err),
-                          "StringIO instance has no attribute 'fileno'")
+        self.assertEqual(
+            str(exc), "StringIO instance has no attribute 'fileno'")
 
     def test_iterator(self):
-        self.assertEquals([c for c in self.inp], ['123', '456', '789', '0'])
-        self.assertEquals(self.env['brim._bytes_in'], 10)
+        self.assertEqual([c for c in self.inp], ['123', '456', '789', '0'])
+        self.assertEqual(self.env['brim._bytes_in'], 10)
 
     def test_read(self):
-        self.assertEquals(self.inp.read(4), '1234')
-        self.assertEquals(self.env['brim._bytes_in'], 4)
-        self.assertEquals(self.inp.read(), '567890')
-        self.assertEquals(self.env['brim._bytes_in'], 10)
+        self.assertEqual(self.inp.read(4), '1234')
+        self.assertEqual(self.env['brim._bytes_in'], 4)
+        self.assertEqual(self.inp.read(), '567890')
+        self.assertEqual(self.env['brim._bytes_in'], 10)
 
     def test_readline(self):
         self.sio = StringIO('1234567890\nabcdefghij\nklmnopqrst')
         self.env = {'wsgi.input': self.sio, 'brim._bytes_in': 0}
         self.inp = server._WsgiInput(self.env, 3)
-        self.assertEquals(self.inp.readline(), '1234567890\n')
-        self.assertEquals(self.env['brim._bytes_in'], 11)
-        self.assertEquals(self.inp.readline(2), 'ab')
-        self.assertEquals(self.env['brim._bytes_in'], 13)
-        self.assertEquals(self.inp.readline(20), 'cdefghij\n')
-        self.assertEquals(self.env['brim._bytes_in'], 22)
-        self.assertEquals(self.inp.readline(), 'klmnopqrst')
-        self.assertEquals(self.env['brim._bytes_in'], 32)
+        self.assertEqual(self.inp.readline(), '1234567890\n')
+        self.assertEqual(self.env['brim._bytes_in'], 11)
+        self.assertEqual(self.inp.readline(2), 'ab')
+        self.assertEqual(self.env['brim._bytes_in'], 13)
+        self.assertEqual(self.inp.readline(20), 'cdefghij\n')
+        self.assertEqual(self.env['brim._bytes_in'], 22)
+        self.assertEqual(self.inp.readline(), 'klmnopqrst')
+        self.assertEqual(self.env['brim._bytes_in'], 32)
 
     def test_readlines(self):
         self.sio = StringIO('1234567890\nabcdefghij\nklmnopqrst\nuvwxyz')
         self.env = {'wsgi.input': self.sio, 'brim._bytes_in': 0}
         self.inp = server._WsgiInput(self.env, 3)
-        self.assertEquals(self.inp.readlines(15),
-                          ['1234567890\n', 'abcdefghij\n'])
-        self.assertEquals(self.env['brim._bytes_in'], 22)
-        self.assertEquals(self.inp.readlines(), ['klmnopqrst\n', 'uvwxyz'])
-        self.assertEquals(self.env['brim._bytes_in'], 39)
+        self.assertEqual(
+            self.inp.readlines(15), ['1234567890\n', 'abcdefghij\n'])
+        self.assertEqual(self.env['brim._bytes_in'], 22)
+        self.assertEqual(self.inp.readlines(), ['klmnopqrst\n', 'uvwxyz'])
+        self.assertEqual(self.env['brim._bytes_in'], 39)
 
 
 class TestWsgiOutput(TestCase):
@@ -179,9 +181,9 @@ class TestWsgiOutput(TestCase):
     def test_wsgi_output(self):
         env = {'brim._bytes_out': 0}
         o = server._WsgiOutput(['123', '456', '78', '90'], env)
-        self.assertEquals(o.next(), '123')
-        self.assertEquals(env['brim._bytes_out'], 3)
-        self.assertEquals([c for c in o], ['456', '78', '90'])
+        self.assertEqual(o.next(), '123')
+        self.assertEqual(env['brim._bytes_out'], 3)
+        self.assertEqual([c for c in o], ['456', '78', '90'])
 
 
 class TestSendPidSig(TestCase):
@@ -238,7 +240,7 @@ class TestSendPidSig(TestCase):
             raise exc
 
         server.open = _open
-        self.assertEquals(server._send_pid_sig('some.pid', 0), (False, 0))
+        self.assertEqual(server._send_pid_sig('some.pid', 0), (False, 0))
 
     def test_open_exception(self):
 
@@ -250,13 +252,13 @@ class TestSendPidSig(TestCase):
         exc = None
         try:
             server._send_pid_sig('some.pid', 0)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
+        self.assertEqual(str(exc), 'testing')
 
     def test_pid_file_no_int(self):
         self.open_retval[0] = StringIO('')
-        self.assertEquals(server._send_pid_sig('some.pid', 0), (False, 0))
+        self.assertEqual(server._send_pid_sig('some.pid', 0), (False, 0))
 
     def test_kill_inactive_pid(self):
 
@@ -267,7 +269,7 @@ class TestSendPidSig(TestCase):
 
         server.kill = _kill
         self.open_retval[0] = StringIO('12345')
-        self.assertEquals(server._send_pid_sig('some.pid', 0), (False, 12345))
+        self.assertEqual(server._send_pid_sig('some.pid', 0), (False, 12345))
 
     def test_kill_exception(self):
 
@@ -279,28 +281,28 @@ class TestSendPidSig(TestCase):
         exc = None
         try:
             server._send_pid_sig('some.pid', 0)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
+        self.assertEqual(str(exc), 'testing')
 
     def test_kill_worked(self):
         self.open_retval[0] = StringIO('12345')
-        self.assertEquals(server._send_pid_sig('some.pid', 0), (True, 12345))
+        self.assertEqual(server._send_pid_sig('some.pid', 0), (True, 12345))
 
     def test_kill_expect_exit_timeout(self):
         self.open_retval[0] = StringIO('12345')
         exc = None
         try:
             server._send_pid_sig('some.pid', 0, expect_exit=True)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             '12345 did not exit after %s seconds.' % server.PID_WAIT_TIME)
-        self.assertEquals(self.time_calls, [()] * (server.PID_WAIT_TIME + 1))
-        self.assertEquals(self.sleep_calls,
-                          [(1,)] * (server.PID_WAIT_TIME - 1))
-        self.assertEquals(self.unlink_calls, [])
+        self.assertEqual(self.time_calls, [()] * (server.PID_WAIT_TIME + 1))
+        self.assertEqual(
+            self.sleep_calls, [(1,)] * (server.PID_WAIT_TIME - 1))
+        self.assertEqual(self.unlink_calls, [])
 
     def test_kill_expect_exit_worked(self):
         kill_calls = []
@@ -315,9 +317,9 @@ class TestSendPidSig(TestCase):
         server.kill = _kill
         self.open_retval[0] = StringIO('12345')
         server._send_pid_sig('some.pid', 0, expect_exit=True)
-        self.assertEquals(self.time_calls, [()] * 3)
-        self.assertEquals(self.sleep_calls, [(1,)] * 2)
-        self.assertEquals(self.unlink_calls, [('some.pid',)])
+        self.assertEqual(self.time_calls, [()] * 3)
+        self.assertEqual(self.sleep_calls, [(1,)] * 2)
+        self.assertEqual(self.unlink_calls, [('some.pid',)])
 
     def test_kill_expect_exit_kill_exception(self):
         kill_calls = []
@@ -332,12 +334,12 @@ class TestSendPidSig(TestCase):
         exc = None
         try:
             server._send_pid_sig('some.pid', 0, expect_exit=True)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
-        self.assertEquals(self.time_calls, [()] * 3)
-        self.assertEquals(self.sleep_calls, [(1,)] * 2)
-        self.assertEquals(self.unlink_calls, [])
+        self.assertEqual(str(exc), 'testing')
+        self.assertEqual(self.time_calls, [()] * 3)
+        self.assertEqual(self.sleep_calls, [(1,)] * 2)
+        self.assertEqual(self.unlink_calls, [])
 
     def test_kill_expect_exit_unlink_not_found(self):
         kill_calls = []
@@ -359,10 +361,10 @@ class TestSendPidSig(TestCase):
         server.kill = _kill
         server.unlink = _unlink
         self.open_retval[0] = StringIO('12345')
-        self.assertEquals(server._send_pid_sig('some.pid', 0,
-                                               expect_exit=True),
-                          (True, 12345))
-        self.assertEquals(unlink_calls, [('some.pid',)])
+        self.assertEqual(
+            server._send_pid_sig('some.pid', 0, expect_exit=True),
+            (True, 12345))
+        self.assertEqual(unlink_calls, [('some.pid',)])
 
     def test_kill_expect_exit_unlink_exception(self):
         kill_calls = []
@@ -383,9 +385,9 @@ class TestSendPidSig(TestCase):
         exc = None
         try:
             server._send_pid_sig('some.pid', 0, expect_exit=True)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), 'testing')
+        self.assertEqual(str(exc), 'testing')
 
 
 class FakeServer(object):
@@ -405,21 +407,21 @@ class TestSubserver(TestCase):
     def test_init(self):
         s = FakeServer()
         ss = self._class(s, 'test')
-        self.assertEquals(ss.server, s)
-        self.assertEquals(ss.name, 'test')
-        self.assertEquals(ss.worker_count, 1)
-        self.assertEquals(ss.worker_names, ['0'])
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.server, s)
+        self.assertEqual(ss.name, 'test')
+        self.assertEqual(ss.worker_count, 1)
+        self.assertEqual(ss.worker_names, ['0'])
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
         return ss
 
     def test_parse_conf_defaults(self):
         ss = self._class(FakeServer(), 'test')
         ss._parse_conf(Conf(self._get_default_confd()))
-        self.assertEquals(ss.log_name, 'brimtest')
-        self.assertEquals(ss.log_level, 'INFO')
-        self.assertEquals(ss.log_facility, 'LOG_LOCAL0')
-        self.assertEquals(ss.json_dumps, json_dumps)
-        self.assertEquals(ss.json_loads, json_loads)
+        self.assertEqual(ss.log_name, 'brimtest')
+        self.assertEqual(ss.log_level, 'INFO')
+        self.assertEqual(ss.log_facility, 'LOG_LOCAL0')
+        self.assertEqual(ss.json_dumps, json_dumps)
+        self.assertEqual(ss.json_loads, json_loads)
         return ss
 
     def test_parse_conf_log_name(self):
@@ -427,20 +429,20 @@ class TestSubserver(TestCase):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['log_name'] = 'name'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_name, 'nametest')
+        self.assertEqual(ss.log_name, 'nametest')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['log_name'] = 'name'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_name, 'name')
+        self.assertEqual(ss.log_name, 'name')
 
     def test_parse_conf_log_level(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['log_level'] = 'DEBUG'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_level, 'DEBUG')
+        self.assertEqual(ss.log_level, 'DEBUG')
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -448,15 +450,15 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['log_level'] = 'invalid'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err), "Invalid [test] log_level 'INVALID'.")
+        self.assertEqual(str(exc), "Invalid [test] log_level 'INVALID'.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['log_level'] = 'DEBUG'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_level, 'DEBUG')
+        self.assertEqual(ss.log_level, 'DEBUG')
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -464,22 +466,22 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['log_level'] = 'invalid'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err), "Invalid [test] log_level 'INVALID'.")
+        self.assertEqual(str(exc), "Invalid [test] log_level 'INVALID'.")
 
     def test_parse_conf_log_facility(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['log_facility'] = 'LOG_LOCAL1'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_facility, 'LOG_LOCAL1')
+        self.assertEqual(ss.log_facility, 'LOG_LOCAL1')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['log_facility'] = 'LOCAL2'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_facility, 'LOG_LOCAL2')
+        self.assertEqual(ss.log_facility, 'LOG_LOCAL2')
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -487,22 +489,22 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['log_facility'] = 'invalid'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err),
-                          "Invalid [test] log_facility 'LOG_INVALID'.")
+        self.assertEqual(
+            str(exc), "Invalid [test] log_facility 'LOG_INVALID'.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['log_facility'] = 'LOG_LOCAL1'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_facility, 'LOG_LOCAL1')
+        self.assertEqual(ss.log_facility, 'LOG_LOCAL1')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['log_facility'] = 'LOCAL2'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_facility, 'LOG_LOCAL2')
+        self.assertEqual(ss.log_facility, 'LOG_LOCAL2')
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -510,17 +512,17 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['log_facility'] = 'invalid'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err),
-                          "Invalid [test] log_facility 'LOG_INVALID'.")
+        self.assertEqual(
+            str(exc), "Invalid [test] log_facility 'LOG_INVALID'.")
 
     def test_parse_conf_json_dumps(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['json_dumps'] = 'pickle.dumps'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.json_dumps, pickle_dumps)
+        self.assertEqual(ss.json_dumps, pickle_dumps)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -528,9 +530,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['json_dumps'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [test] json_dumps value 'abc'.")
+        self.assertEqual(str(exc), "Invalid [test] json_dumps value 'abc'.")
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -538,9 +540,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['json_dumps'] = 'pickle.blah'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load function 'pickle.blah' for [test] json_dumps.")
 
@@ -548,7 +550,7 @@ class TestSubserver(TestCase):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['json_dumps'] = 'pickle.dumps'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.json_dumps, pickle_dumps)
+        self.assertEqual(ss.json_dumps, pickle_dumps)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -556,9 +558,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['json_dumps'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [test] json_dumps value 'abc'.")
+        self.assertEqual(str(exc), "Invalid [test] json_dumps value 'abc'.")
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -566,9 +568,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['json_dumps'] = 'pickle.blah'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load function 'pickle.blah' for [test] json_dumps.")
 
@@ -577,7 +579,7 @@ class TestSubserver(TestCase):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['json_loads'] = 'pickle.loads'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.json_loads, pickle_loads)
+        self.assertEqual(ss.json_loads, pickle_loads)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -585,9 +587,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['json_loads'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [test] json_loads value 'abc'.")
+        self.assertEqual(str(exc), "Invalid [test] json_loads value 'abc'.")
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -595,9 +597,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['json_loads'] = 'pickle.blah'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load function 'pickle.blah' for [test] json_loads.")
 
@@ -605,7 +607,7 @@ class TestSubserver(TestCase):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['json_loads'] = 'pickle.loads'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.json_loads, pickle_loads)
+        self.assertEqual(ss.json_loads, pickle_loads)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -613,9 +615,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['json_loads'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [test] json_loads value 'abc'.")
+        self.assertEqual(str(exc), "Invalid [test] json_loads value 'abc'.")
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -623,9 +625,9 @@ class TestSubserver(TestCase):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['json_loads'] = 'pickle.blah'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load function 'pickle.blah' for [test] json_loads.")
 
@@ -647,37 +649,31 @@ class TestSubserver(TestCase):
         if func_before_start:
             func_before_start(ss)
         ss._start(bucket_stats)
-        self.assertEquals(ss.bucket_stats, bucket_stats)
+        self.assertEqual(ss.bucket_stats, bucket_stats)
         return ss
 
 
 class TestIPSubserver(TestSubserver):
 
     _class = server.IPSubserver
-    _override_workers = None
 
     def test_parse_conf_defaults(self):
         ss = TestSubserver.test_parse_conf_defaults(self)
-        self.assertEquals(ss.ip, '*')
-        self.assertEquals(ss.port, 80)
-        self.assertEquals(ss.certfile, None)
-        self.assertEquals(ss.keyfile, None)
-        self.assertEquals(ss.client_timeout, 60)
-        self.assertEquals(ss.concurrent_per_worker, 1024)
-        self.assertEquals(ss.backlog, 4096)
-        self.assertEquals(ss.listen_retry, 30)
-        self.assertEquals(ss.eventlet_hub, None)
+        self.assertEqual(ss.ip, '*')
+        self.assertEqual(ss.port, 80)
+        self.assertEqual(ss.certfile, None)
+        self.assertEqual(ss.keyfile, None)
+        self.assertEqual(ss.client_timeout, 60)
+        self.assertEqual(ss.concurrent_per_worker, 1024)
+        self.assertEqual(ss.backlog, 4096)
+        self.assertEqual(ss.listen_retry, 30)
+        self.assertEqual(ss.eventlet_hub, None)
 
         ss.server.no_daemon = True
         ss = self._class(ss.server, 'test')
         ss._parse_conf(Conf(self._get_default_confd()))
-        if self._override_workers is None:
-            self.assertEquals(ss.worker_count, 0)
-            self.assertEquals(ss.worker_names, ['0'])
-        else:
-            self.assertEquals(ss.worker_count, self._override_workers)
-            self.assertEquals(ss.worker_names,
-                              [str(x) for x in xrange(self._override_workers)])
+        self.assertEqual(ss.worker_count, 0)
+        self.assertEqual(ss.worker_names, ['0'])
         return ss
 
     def test_parse_conf_ip(self):
@@ -685,20 +681,20 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['ip'] = '1.2.3.4'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.ip, '1.2.3.4')
+        self.assertEqual(ss.ip, '1.2.3.4')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['ip'] = '1.2.3.4'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.ip, '1.2.3.4')
+        self.assertEqual(ss.ip, '1.2.3.4')
 
     def test_parse_conf_port(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['port'] = '1234'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.port, 1234)
+        self.assertEqual(ss.port, 1234)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -706,16 +702,18 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['port'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] port of "
-                                    "'abc' cannot be converted to int.")
+        self.assertEqual(
+            str(exc),
+            "Configuration value [brim] port of 'abc' cannot be converted to "
+            "int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['port'] = '1234'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.port, 1234)
+        self.assertEqual(ss.port, 1234)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -723,43 +721,45 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['port'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] port of "
-                                    "'abc' cannot be converted to int.")
+        self.assertEqual(
+            str(exc),
+            "Configuration value [test] port of 'abc' cannot be converted to "
+            "int.")
 
     def test_parse_conf_certfile(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['certfile'] = 'file'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.certfile, 'file')
+        self.assertEqual(ss.certfile, 'file')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['certfile'] = 'file'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.certfile, 'file')
+        self.assertEqual(ss.certfile, 'file')
 
     def test_parse_conf_keyfile(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['keyfile'] = 'file'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.keyfile, 'file')
+        self.assertEqual(ss.keyfile, 'file')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['keyfile'] = 'file'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.keyfile, 'file')
+        self.assertEqual(ss.keyfile, 'file')
 
     def test_parse_conf_client_timeout(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['client_timeout'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.client_timeout, 123)
+        self.assertEqual(ss.client_timeout, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -767,9 +767,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['client_timeout'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] client_timeout of 'abc' cannot be "
             "converted to int.")
@@ -778,7 +778,7 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['client_timeout'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.client_timeout, 123)
+        self.assertEqual(ss.client_timeout, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -786,9 +786,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['client_timeout'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] client_timeout of 'abc' cannot be "
             "converted to int.")
@@ -798,7 +798,7 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['concurrent_per_worker'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.concurrent_per_worker, 123)
+        self.assertEqual(ss.concurrent_per_worker, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -806,9 +806,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['concurrent_per_worker'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] concurrent_per_worker of 'abc' cannot "
             "be converted to int.")
@@ -817,7 +817,7 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['concurrent_per_worker'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.concurrent_per_worker, 123)
+        self.assertEqual(ss.concurrent_per_worker, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -825,9 +825,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['concurrent_per_worker'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] concurrent_per_worker of 'abc' cannot "
             "be converted to int.")
@@ -837,7 +837,7 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['backlog'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.backlog, 123)
+        self.assertEqual(ss.backlog, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -845,16 +845,18 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['backlog'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] backlog "
-                                    "of 'abc' cannot be converted to int.")
+        self.assertEqual(
+            str(exc),
+            "Configuration value [brim] backlog of 'abc' cannot be converted "
+            "to int.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['backlog'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.backlog, 123)
+        self.assertEqual(ss.backlog, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -862,17 +864,19 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['backlog'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [test] backlog "
-                                    "of 'abc' cannot be converted to int.")
+        self.assertEqual(
+            str(exc),
+            "Configuration value [test] backlog of 'abc' cannot be converted "
+            "to int.")
 
     def test_parse_conf_listen_retry(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['listen_retry'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.listen_retry, 123)
+        self.assertEqual(ss.listen_retry, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -880,9 +884,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['listen_retry'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] listen_retry of 'abc' cannot be "
             "converted to int.")
@@ -891,7 +895,7 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['listen_retry'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.listen_retry, 123)
+        self.assertEqual(ss.listen_retry, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -899,9 +903,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['listen_retry'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] listen_retry of 'abc' cannot be "
             "converted to int.")
@@ -911,19 +915,19 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['eventlet_hub'] = 'epolls'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
+        self.assertEqual(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['eventlet_hub'] = 'epolls'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
+        self.assertEqual(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['eventlet_hub'] = 'eventlet.hubs.epolls'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
+        self.assertEqual(ss.eventlet_hub.__name__, 'eventlet.hubs.epolls')
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
@@ -931,9 +935,9 @@ class TestIPSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), "Could not load [test] eventlet_hub 'invalid'.")
 
         ss = self._class(FakeServer(), 'test')
@@ -942,9 +946,9 @@ class TestIPSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), "Could not load [test] eventlet_hub 'invalid.module'.")
 
     def test_parse_conf_workers(self):
@@ -952,25 +956,15 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['workers'] = '2'
         ss._parse_conf(Conf(confd))
-        if self._override_workers is None:
-            self.assertEquals(ss.worker_count, 2)
-            self.assertEquals(ss.worker_names, ['0', '1'])
-        else:
-            self.assertEquals(ss.worker_count, self._override_workers)
-            self.assertEquals(ss.worker_names,
-                              [str(x) for x in xrange(self._override_workers)])
+        self.assertEqual(ss.worker_count, 2)
+        self.assertEqual(ss.worker_names, ['0', '1'])
 
         ss = self._class(FakeServer(no_daemon=True), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['workers'] = '2'
         ss._parse_conf(Conf(confd))
-        if self._override_workers is None:
-            self.assertEquals(ss.worker_count, 0)
-            self.assertEquals(ss.worker_names, ['0'])
-        else:
-            self.assertEquals(ss.worker_count, self._override_workers)
-            self.assertEquals(ss.worker_names,
-                              [str(x) for x in xrange(self._override_workers)])
+        self.assertEqual(ss.worker_count, 0)
+        self.assertEqual(ss.worker_names, ['0'])
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -978,9 +972,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['workers'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] workers of 'abc' cannot be converted "
             "to int.")
@@ -989,25 +983,15 @@ class TestIPSubserver(TestSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {}).update({'workers': '2'})
         ss._parse_conf(Conf(confd))
-        if self._override_workers is None:
-            self.assertEquals(ss.worker_count, 2)
-            self.assertEquals(ss.worker_names, ['0', '1'])
-        else:
-            self.assertEquals(ss.worker_count, self._override_workers)
-            self.assertEquals(ss.worker_names,
-                              [str(x) for x in xrange(self._override_workers)])
+        self.assertEqual(ss.worker_count, 2)
+        self.assertEqual(ss.worker_names, ['0', '1'])
 
         ss = self._class(FakeServer(no_daemon=True), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {}).update({'workers': '2'})
         ss._parse_conf(Conf(confd))
-        if self._override_workers is None:
-            self.assertEquals(ss.worker_count, 0)
-            self.assertEquals(ss.worker_names, ['0'])
-        else:
-            self.assertEquals(ss.worker_count, self._override_workers)
-            self.assertEquals(ss.worker_names,
-                              [str(x) for x in xrange(self._override_workers)])
+        self.assertEqual(ss.worker_count, 0)
+        self.assertEqual(ss.worker_names, ['0'])
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1015,9 +999,9 @@ class TestIPSubserver(TestSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['workers'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] workers of 'abc' cannot be converted "
             "to int.")
@@ -1174,26 +1158,26 @@ class TestWSGISubserver(TestIPSubserver):
 
     def test_init(self):
         ss = TestIPSubserver.test_init(self)
-        self.assertEquals(ss.stats_conf.get('request_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_2xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_3xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_4xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_5xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('request_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_2xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_3xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_4xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_5xx_count'), 'sum')
 
     def test_parse_conf_defaults(self):
         ss = TestIPSubserver.test_parse_conf_defaults(self)
-        self.assertEquals(ss.log_auth_tokens, False)
-        self.assertEquals(ss.log_headers, False)
-        self.assertEquals(ss.count_status_codes, [404, 408, 499, 501])
-        self.assertEquals(ss.wsgi_input_iter_chunk_size, 4096)
-        self.assertEquals(ss.apps, [])
+        self.assertEqual(ss.log_auth_tokens, False)
+        self.assertEqual(ss.log_headers, False)
+        self.assertEqual(ss.count_status_codes, [404, 408, 499, 501])
+        self.assertEqual(ss.wsgi_input_iter_chunk_size, 4096)
+        self.assertEqual(ss.apps, [])
 
     def test_parse_conf_log_auth_tokens(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['log_auth_tokens'] = 'yes'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_auth_tokens, True)
+        self.assertEqual(ss.log_auth_tokens, True)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1201,9 +1185,9 @@ class TestWSGISubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['log_auth_tokens'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] log_auth_tokens of 'abc' cannot be "
             "converted to boolean.")
@@ -1212,7 +1196,7 @@ class TestWSGISubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['log_auth_tokens'] = 'yes'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_auth_tokens, True)
+        self.assertEqual(ss.log_auth_tokens, True)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1220,9 +1204,9 @@ class TestWSGISubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['log_auth_tokens'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] log_auth_tokens of 'abc' cannot be "
             "converted to boolean.")
@@ -1232,7 +1216,7 @@ class TestWSGISubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['log_headers'] = 'yes'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_headers, True)
+        self.assertEqual(ss.log_headers, True)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1240,9 +1224,9 @@ class TestWSGISubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['log_headers'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] log_headers of 'abc' cannot be "
             "converted to boolean.")
@@ -1251,7 +1235,7 @@ class TestWSGISubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['log_headers'] = 'yes'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.log_headers, True)
+        self.assertEqual(ss.log_headers, True)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1259,9 +1243,9 @@ class TestWSGISubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['log_headers'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] log_headers of 'abc' cannot be "
             "converted to boolean.")
@@ -1271,48 +1255,48 @@ class TestWSGISubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['count_status_codes'] = '1'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.count_status_codes, [1])
+        self.assertEqual(ss.count_status_codes, [1])
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['count_status_codes'] = '1 2 345'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.count_status_codes, [1, 2, 345])
+        self.assertEqual(ss.count_status_codes, [1, 2, 345])
         exc = None
         try:
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['count_status_codes'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [test] count_status_codes 'abc'.")
+        self.assertEqual(str(exc), "Invalid [test] count_status_codes 'abc'.")
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['count_status_codes'] = '1'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.count_status_codes, [1])
+        self.assertEqual(ss.count_status_codes, [1])
 
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('test', {})['count_status_codes'] = '1 2 345'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.count_status_codes, [1, 2, 345])
+        self.assertEqual(ss.count_status_codes, [1, 2, 345])
         exc = None
         try:
             confd = self._get_default_confd()
             confd.setdefault('test', {})['count_status_codes'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid [test] count_status_codes 'abc'.")
+        self.assertEqual(str(exc), "Invalid [test] count_status_codes 'abc'.")
 
     def test_parse_conf_wsgi_input_iter_chunk_size(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['wsgi_input_iter_chunk_size'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.wsgi_input_iter_chunk_size, 123)
+        self.assertEqual(ss.wsgi_input_iter_chunk_size, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1320,9 +1304,9 @@ class TestWSGISubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['wsgi_input_iter_chunk_size'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] wsgi_input_iter_chunk_size of 'abc' "
             "cannot be converted to int.")
@@ -1331,7 +1315,7 @@ class TestWSGISubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['wsgi_input_iter_chunk_size'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.wsgi_input_iter_chunk_size, 123)
+        self.assertEqual(ss.wsgi_input_iter_chunk_size, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -1339,9 +1323,9 @@ class TestWSGISubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['wsgi_input_iter_chunk_size'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] wsgi_input_iter_chunk_size of 'abc' "
             "cannot be converted to int.")
@@ -1354,13 +1338,13 @@ class TestWSGISubserver(TestIPSubserver):
         confd.setdefault('two', {})['call'] = 'brim.wsgi_echo.WSGIEcho'
         conf = Conf(confd)
         ss._parse_conf(conf)
-        self.assertEquals(len(ss.apps), 2)
-        self.assertEquals(ss.apps[0][0], 'one')
-        self.assertEquals(ss.apps[1][0], 'two')
-        self.assertEquals(ss.apps[0][1].__name__, 'WSGIEcho')
-        self.assertEquals(ss.apps[1][1].__name__, 'WSGIEcho')
-        self.assertEquals(ss.apps[0][2], ss.apps[0][1].parse_conf('one', conf))
-        self.assertEquals(ss.apps[1][2], ss.apps[1][1].parse_conf('two', conf))
+        self.assertEqual(len(ss.apps), 2)
+        self.assertEqual(ss.apps[0][0], 'one')
+        self.assertEqual(ss.apps[1][0], 'two')
+        self.assertEqual(ss.apps[0][1].__name__, 'WSGIEcho')
+        self.assertEqual(ss.apps[1][1].__name__, 'WSGIEcho')
+        self.assertEqual(ss.apps[0][2], ss.apps[0][1].parse_conf('one', conf))
+        self.assertEqual(ss.apps[1][2], ss.apps[1][1].parse_conf('two', conf))
 
     def test_configure_wsgi_apps_conf_no_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -1370,10 +1354,10 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "App [one] not configured with 'call' option.")
+        self.assertEqual(
+            str(exc), "App [one] not configured with 'call' option.")
 
     def test_configure_wsgi_apps_conf_invalid_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -1383,9 +1367,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Invalid call value 'brim_wsgi_echo_WSGIEcho' for app [one].")
 
@@ -1397,9 +1381,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load class 'brim.wsgi_echo.sgi_cho' for app [one].")
 
@@ -1411,9 +1395,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate 'brim.server._send_pid_sig' for "
             "app [one]. Probably not a class.")
@@ -1427,9 +1411,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate "
             "'brim.test.unit.test_server.AppWithInvalidInit' for app "
@@ -1445,9 +1429,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.AppWithInvalidCall' for app "
@@ -1463,9 +1447,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.AppWithNoCall' for app "
@@ -1480,9 +1464,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.AppWithInvalidParseConf1' "
             "for app [one]. Incorrect number of parse_conf args, 1, should be "
@@ -1497,9 +1481,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.AppWithInvalidParseConf2' "
             "for app [one]. parse_conf probably not a method.")
@@ -1512,7 +1496,7 @@ class TestWSGISubserver(TestIPSubserver):
             'brim.test.unit.test_server.AppWithNoParseConf'
         conf = Conf(confd)
         ss._parse_conf(conf)
-        self.assertEquals(ss.apps[0][2], conf)
+        self.assertEqual(ss.apps[0][2], conf)
 
     def test_configure_wsgi_apps_with_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -1521,7 +1505,7 @@ class TestWSGISubserver(TestIPSubserver):
         confd.setdefault('one', {})['call'] = \
             'brim.test.unit.test_server.AppWithParseConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.apps[0][2], {'ok': True})
+        self.assertEqual(ss.apps[0][2], {'ok': True})
 
     def test_configure_wsgi_apps_invalid_stats_conf1(self):
         ss = self._class(FakeServer(), 'test')
@@ -1532,9 +1516,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.AppWithInvalidStatsConf1' "
             "for app [one]. Incorrect number of stats_conf args, 1, should be "
@@ -1549,9 +1533,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.AppWithInvalidStatsConf2' "
             "for app [one]. stats_conf probably not a method.")
@@ -1563,12 +1547,12 @@ class TestWSGISubserver(TestIPSubserver):
         confd.setdefault('one', {})['call'] = \
             'brim.test.unit.test_server.AppWithNoStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('request_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_2xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_3xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_4xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_5xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('request_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_2xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_3xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_4xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_5xx_count'), 'sum')
 
     def test_configure_wsgi_apps_with_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -1577,13 +1561,13 @@ class TestWSGISubserver(TestIPSubserver):
         confd.setdefault('one', {})['call'] = \
             'brim.test.unit.test_server.AppWithStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('request_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_2xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_3xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_4xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('status_5xx_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('ok'), 'sum')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('request_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_2xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_3xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_4xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('status_5xx_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('ok'), 'sum')
 
     def test_privileged_start(self):
         ss = self._class(FakeServer(), 'test')
@@ -1591,9 +1575,9 @@ class TestWSGISubserver(TestIPSubserver):
         exc = None
         try:
             ss._privileged_start()
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), 'Could not bind to *:80: [Errno 13] Permission denied')
 
         ss = self._class(FakeServer(), 'test')
@@ -1617,8 +1601,8 @@ class TestWSGISubserver(TestIPSubserver):
             ss._privileged_start()
         finally:
             server.get_listening_tcp_socket = get_listening_tcp_socket_orig
-        self.assertEquals(ss.sock, 'sock')
-        self.assertEquals(get_listening_tcp_socket_calls, [(('*', 80), {
+        self.assertEqual(ss.sock, 'sock')
+        self.assertEqual(get_listening_tcp_socket_calls, [(('*', 80), {
             'keyfile': None, 'style': 'eventlet', 'retry': 30,
             'certfile': None, 'backlog': 4096})])
 
@@ -1675,36 +1659,36 @@ class TestWSGISubserver(TestIPSubserver):
             server.shutdown_safe = shutdown_safe_orig
 
         if output:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [(
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [(
                 (),
                 {'exceptions': ss._capture_exception,
                  'stdout_func': ss._capture_stdout,
                  'stderr_func': ss._capture_stderr})])
-        self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(
+        self.assertEqual(time_calls, [()])
+        self.assertEqual(get_logger_calls, [(
             ss.name, ss.log_name, ss.log_level, ss.log_facility,
             ss.server.no_daemon)])
-        self.assertEquals(sustain_workers_calls, [((1, ss._wsgi_worker),
-                                                   {'logger': fake_logger})])
-        self.assertEquals(shutdown_safe_calls, [(ss.sock,)])
-        self.assertEquals(ss.worker_id, -1)
-        self.assertEquals(ss.start_time, 1)
-        self.assertEquals(ss.logger, fake_logger)
+        self.assertEqual(sustain_workers_calls, [
+            ((1, ss._wsgi_worker), {'logger': fake_logger})])
+        self.assertEqual(shutdown_safe_calls, [(ss.sock,)])
+        self.assertEqual(ss.worker_id, -1)
+        self.assertEqual(ss.start_time, 1)
+        self.assertEqual(ss.logger, fake_logger)
         for code in ss.count_status_codes:
             key = 'status_%d_count' % code
-            self.assertEquals(
+            self.assertEqual(
                 ss.stats_conf.get(key), 'sum',
                 'key %r value %r != %r' % (key, ss.stats_conf.get(key), 'sum'))
-        self.assertEquals(fake_wsgi.HttpProtocol.default_request_version,
-                          'HTTP/1.0')
-        self.assertEquals(fake_wsgi.HttpProtocol.log_request('blah'), None)
-        self.assertEquals(fake_logger.error_calls, [])
+        self.assertEqual(
+            fake_wsgi.HttpProtocol.default_request_version, 'HTTP/1.0')
+        self.assertEqual(fake_wsgi.HttpProtocol.log_request('blah'), None)
+        self.assertEqual(fake_logger.error_calls, [])
         fake_wsgi.HttpProtocol.log_message(None, 'test message')
-        self.assertEquals(fake_logger.error_calls,
-                          [('WSGI ERROR: test message',)])
-        self.assertEquals(fake_wsgi.WRITE_TIMEOUT, ss.client_timeout)
+        self.assertEqual(
+            fake_logger.error_calls, [('WSGI ERROR: test message',)])
+        self.assertEqual(fake_wsgi.WRITE_TIMEOUT, ss.client_timeout)
 
     def test_start_with_output(self):
         self.test_start(output=True)
@@ -1769,7 +1753,7 @@ class TestWSGISubserver(TestIPSubserver):
             bs = server._BucketStats(['0'], {'start_time': 'worker'})
             ss._start(bs)
             ss._wsgi_worker(0)
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             server.setproctitle = setproctitle_orig
@@ -1779,42 +1763,42 @@ class TestWSGISubserver(TestIPSubserver):
             server.time = time_orig
 
         if no_setproctitle or no_daemon:
-            self.assertEquals(setproctitle_calls, [])
+            self.assertEqual(setproctitle_calls, [])
         else:
-            self.assertEquals(setproctitle_calls, [('0:test:brimd',)])
-        self.assertEquals(ss.worker_id, 0)
-        self.assertEquals(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
+            self.assertEqual(setproctitle_calls, [('0:test:brimd',)])
+        self.assertEqual(ss.worker_id, 0)
+        self.assertEqual(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
         if no_daemon:
-            self.assertEquals(use_hub_calls, [])
+            self.assertEqual(use_hub_calls, [])
         else:
-            self.assertEquals(use_hub_calls, [(None,)])
+            self.assertEqual(use_hub_calls, [(None,)])
         if with_apps:
-            self.assertEquals(ss.first_app.__class__.__name__, 'WSGIEcho')
-            self.assertEquals(ss.first_app.name, 'one')
-            self.assertEquals(ss.first_app.next_app.name, 'two')
-            self.assertEquals(ss.first_app.next_app.next_app, ss)
+            self.assertEqual(ss.first_app.__class__.__name__, 'WSGIEcho')
+            self.assertEqual(ss.first_app.name, 'one')
+            self.assertEqual(ss.first_app.next_app.name, 'two')
+            self.assertEqual(ss.first_app.next_app.next_app, ss)
         else:
-            self.assertEquals(ss.first_app, ss)
-        self.assertEquals(len(server_calls), 1)
-        self.assertEquals(len(server_calls[0]), 2)
-        self.assertEquals(len(server_calls[0][0]), 3)
+            self.assertEqual(ss.first_app, ss)
+        self.assertEqual(len(server_calls), 1)
+        self.assertEqual(len(server_calls[0]), 2)
+        self.assertEqual(len(server_calls[0][0]), 3)
         null_logger = server_calls[0][0][2]
-        self.assertEquals(null_logger.__class__.__name__,
-                          '_EventletWSGINullLogger')
+        self.assertEqual(
+            null_logger.__class__.__name__, '_EventletWSGINullLogger')
         pool = server_calls[0][1]['custom_pool']
-        self.assertEquals(pool.size, ss.concurrent_per_worker)
-        self.assertEquals(server_calls, [(
+        self.assertEqual(pool.size, ss.concurrent_per_worker)
+        self.assertEqual(server_calls, [(
             (ss.sock, ss._wsgi_entry, null_logger),
             {'minimum_chunk_size': 4096,
              'custom_pool': pool})])
         if raises == 'socket einval':
-            self.assertEquals(exc, None)
+            self.assertEqual(exc, None)
         elif raises == 'socket other':
-            self.assertEquals(str(exc), 'test socket other')
+            self.assertEqual(str(exc), 'test socket other')
         elif raises == 'other':
-            self.assertEquals(str(exc), 'test other')
+            self.assertEqual(str(exc), 'test other')
         else:
-            self.assertEquals(exc, None)
+            self.assertEqual(exc, None)
 
     def test_wsgi_worker_no_setproctitle(self):
         self.test_wsgi_worker(no_setproctitle=True)
@@ -1907,79 +1891,84 @@ class TestWSGISubserver(TestIPSubserver):
             server.uuid4 = uuid4_orig
             server.time = time_orig
 
-        self.assertEquals(env.get('brim'), ss)
-        self.assertEquals(env.get('brim.start'), 1)
-        self.assertEquals(env.get('brim.stats').bucket_stats, ss.bucket_stats)
-        self.assertEquals(env.get('brim.stats').bucket_id, ss.worker_id)
-        self.assertEquals(env.get('brim.logger'), ss.logger)
+        self.assertEqual(env.get('brim'), ss)
+        self.assertEqual(env.get('brim.start'), 1)
+        self.assertEqual(env.get('brim.stats').bucket_stats, ss.bucket_stats)
+        self.assertEqual(env.get('brim.stats').bucket_id, ss.worker_id)
+        self.assertEqual(env.get('brim.logger'), ss.logger)
         if with_txn:
-            self.assertEquals(env.get('brim.txn'), with_txn)
+            self.assertEqual(env.get('brim.txn'), with_txn)
         else:
-            self.assertEquals(env.get('brim.txn'), uuid4_instance.hex)
+            self.assertEqual(env.get('brim.txn'), uuid4_instance.hex)
         if with_app:
-            self.assertEquals(env.get('brim._bytes_in'), 10)
-            self.assertEquals(env.get('brim._bytes_out'), 10)
+            self.assertEqual(env.get('brim._bytes_in'), 10)
+            self.assertEqual(env.get('brim._bytes_out'), 10)
         else:
-            self.assertEquals(env.get('brim._bytes_in'), 0)
+            self.assertEqual(env.get('brim._bytes_in'), 0)
             if raises == 'body':
-                self.assertEquals(env.get('brim._bytes_out'), 7)
+                self.assertEqual(env.get('brim._bytes_out'), 7)
+            elif raises == 'start':
+                self.assertEqual(env.get('brim._bytes_out'), 0)
             else:
-                self.assertEquals(env.get('brim._bytes_out'), 0)
+                self.assertEqual(env.get('brim._bytes_out'), 14)
         wi = env.get('wsgi.input')
-        self.assertEquals(wi.__class__.__name__, '_WsgiInput')
-        self.assertEquals(wi.env, env)
-        self.assertEquals(wi.iter_chunk_size, ss.wsgi_input_iter_chunk_size)
-        self.assertEquals(env.get('brim.additional_request_log_info'), [])
-        self.assertEquals(env.get('brim.json_dumps'), ss.json_dumps)
-        self.assertEquals(env.get('brim.json_loads'), ss.json_loads)
+        self.assertEqual(wi.__class__.__name__, '_WsgiInput')
+        self.assertEqual(wi.env, env)
+        self.assertEqual(wi.iter_chunk_size, ss.wsgi_input_iter_chunk_size)
+        self.assertEqual(env.get('brim.log_info'), [])
+        self.assertEqual(env.get('brim.json_dumps'), ss.json_dumps)
+        self.assertEqual(env.get('brim.json_loads'), ss.json_loads)
         if raises:
             if raises == 'start':
-                self.assertEquals(
+                self.assertEqual(
                     env.get('brim._start_response'),
-                    ('500 Internal Server Error', [('Content-Length', '0')],
+                    ('500 Internal Server Error', [('Content-Length', '26')],
                      None))
-                self.assertEquals(content, '')
+                self.assertEqual(content, '500 Internal Server Error\n')
             else:
-                self.assertEquals(
+                self.assertEqual(
                     env.get('brim._start_response'),
                     ('200 OK', [('Content-Length', '10')], None))
-                self.assertEquals(content, 'partial')
-            self.assertEquals(ss.logger.debug_calls, [])
-            self.assertEquals(ss.logger.info_calls, [])
-            self.assertEquals(ss.logger.notice_calls, [])
-            self.assertEquals(ss.logger.error_calls, [])
-            self.assertEquals(len(ss.logger.exception_calls), 1)
-            self.assertEquals(len(ss.logger.exception_calls[0]), 2)
-            self.assertEquals(ss.logger.exception_calls[0][0],
-                              ('WSGI EXCEPTION:',))
-            self.assertEquals(len(ss.logger.exception_calls[0][1]), 3)
+                self.assertEqual(content, 'partial')
+            self.assertEqual(ss.logger.debug_calls, [])
+            self.assertEqual(ss.logger.info_calls, [])
+            self.assertEqual(ss.logger.notice_calls, [])
+            self.assertEqual(ss.logger.error_calls, [])
+            self.assertEqual(len(ss.logger.exception_calls), 1)
+            self.assertEqual(len(ss.logger.exception_calls[0]), 2)
+            self.assertEqual(
+                ss.logger.exception_calls[0][0], ('WSGI EXCEPTION:',))
+            self.assertEqual(len(ss.logger.exception_calls[0][1]), 3)
             if raises == 'start':
-                self.assertEquals(str(ss.logger.exception_calls[0][1][1]),
-                                  "'str' object is not callable")
+                self.assertEqual(
+                    str(ss.logger.exception_calls[0][1][1]),
+                    "'str' object is not callable")
             else:
-                self.assertEquals(str(ss.logger.exception_calls[0][1][1]),
-                                  'body exception')
+                self.assertEqual(
+                    str(ss.logger.exception_calls[0][1][1]), 'body exception')
         elif with_app:
-            self.assertEquals(
+            self.assertEqual(
                 env.get('brim._start_response'),
                 ('200 OK', [('Content-Length', '10')], None))
-            self.assertEquals(content, 'test value')
-            self.assertEquals(ss.logger.debug_calls, [])
-            self.assertEquals(ss.logger.info_calls, [])
-            self.assertEquals(ss.logger.notice_calls, [])
-            self.assertEquals(ss.logger.error_calls, [])
-            self.assertEquals(ss.logger.exception_calls, [])
+            self.assertEqual(content, 'test value')
+            self.assertEqual(ss.logger.debug_calls, [])
+            self.assertEqual(ss.logger.info_calls, [])
+            self.assertEqual(ss.logger.notice_calls, [])
+            self.assertEqual(ss.logger.error_calls, [])
+            self.assertEqual(ss.logger.exception_calls, [])
         else:
-            self.assertEquals(
-                env.get('brim._start_response'),
-                ('404 Not Found', [('Content-Length', '0')], None))
-            self.assertEquals(content, '')
-            self.assertEquals(ss.logger.debug_calls, [])
-            self.assertEquals(ss.logger.info_calls, [])
-            self.assertEquals(ss.logger.notice_calls, [])
-            self.assertEquals(ss.logger.error_calls, [])
-            self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(log_request_calls, [((env,), {})])
+            self.assertEqual(
+                env.get('brim._start_response'), (
+                    '404 Not Found',
+                    [('Content-Length', '14'), ('Content-Type', 'text/plain')],
+                    None))
+            self.assertEqual(content, '404 Not Found\n')
+            self.assertEqual(ss.logger.debug_calls, [])
+            self.assertEqual(ss.logger.info_calls, [])
+            self.assertEqual(ss.logger.notice_calls, [])
+            self.assertEqual(ss.logger.error_calls, [])
+            self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(log_request_calls, [((env,), {})])
 
     def test_wsgi_entry_with_apps(self):
         self.test_wsgi_entry(with_app=True)
@@ -2042,290 +2031,290 @@ class TestWSGISubserver(TestIPSubserver):
         del env['brim._start_response']
         env['brim._bytes_out'] = 0
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 499 - - - - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_minimal(self):
         env = self._log_request_build()
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_3xx(self):
         env = self._log_request_build()
         env['brim._start_response'] = \
             ('301 Test', [('Content-Length', '10')], None)
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 301 10 - - - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_4xx(self):
         env = self._log_request_build()
         env['brim._start_response'] = \
             ('404 Test', [('Content-Length', '10')], None)
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 404 10 - - - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_5xx(self):
         env = self._log_request_build()
         env['brim._start_response'] = \
             ('503 Test', [('Content-Length', '10')], None)
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 1)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 1)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 503 10 - - - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_exception(self):
         env = self._log_request_build()
         del env['PATH_INFO']
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(len(ss.logger.exception_calls), 1)
-        self.assertEquals(len(ss.logger.exception_calls[0]), 2)
-        self.assertEquals(ss.logger.exception_calls[0][0],
-                          ('WSGI EXCEPTION:',))
-        self.assertEquals(len(ss.logger.exception_calls[0][1]), 3)
-        self.assertEquals(str(ss.logger.exception_calls[0][1][1]),
-                          "'PATH_INFO'")
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(len(ss.logger.exception_calls), 1)
+        self.assertEqual(len(ss.logger.exception_calls[0]), 2)
+        self.assertEqual(
+            ss.logger.exception_calls[0][0], ('WSGI EXCEPTION:',))
+        self.assertEqual(len(ss.logger.exception_calls[0][1]), 3)
+        self.assertEqual(
+            str(ss.logger.exception_calls[0][1][1]), "'PATH_INFO'")
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_path_quoted_requoted(self):
         env = self._log_request_build()
         env['PATH_INFO'] = '/path%20%2Ftest'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path%20/test HTTP/1.1 200 10 - - - '
             'abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_query(self):
         env = self._log_request_build()
         env['QUERY_STRING'] = 'param1=value1+value2&param2'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path?param1=value1%20value2&param2 '
             'HTTP/1.1 200 10 - - - abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_cluster_client(self):
         env = self._log_request_build()
         env['HTTP_X_CLUSTER_CLIENT_IP'] = '1.2.3.4'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_forwarded_for(self):
         env = self._log_request_build()
         env['HTTP_X_FORWARDED_FOR'] = '1.2.3.4, 1.2.3.5'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_cluster_client_forwarded_for(self):
         env = self._log_request_build()
         env['HTTP_X_CLUSTER_CLIENT_IP'] = '1.2.3.4'
         env['HTTP_X_FORWARDED_FOR'] = '1.2.3.5, 1.2.3.6'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.4 - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_remote_addr(self):
         env = self._log_request_build()
         env['REMOTE_ADDR'] = '1.2.3.4'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.4 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             '- - abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_remote_addr_cluster_client(self):
         env = self._log_request_build()
         env['REMOTE_ADDR'] = '1.2.3.4'
         env['HTTP_X_CLUSTER_CLIENT_IP'] = '1.2.3.5'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             '- - abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_remote_addr_forwarded_for(self):
         env = self._log_request_build()
         env['REMOTE_ADDR'] = '1.2.3.4'
         env['HTTP_X_FORWARDED_FOR'] = '1.2.3.5, 1.2.3.6'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             '- - abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_remote_addr_cluster_client_forwarded_for(self):
         env = self._log_request_build()
@@ -2333,302 +2322,390 @@ class TestWSGISubserver(TestIPSubserver):
         env['HTTP_X_CLUSTER_CLIENT_IP'] = '1.2.3.5'
         env['HTTP_X_FORWARDED_FOR'] = '1.2.3.6, 1.2.3.7'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '1.2.3.5 1.2.3.4 - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             '- - abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_headers(self):
         env = self._log_request_build()
         env['HTTP_CONTENT_TYPE'] = 'text/plain'
         env['HTTP_X_TEST'] = 'test value'
         ss = self._log_request_execute(env, log_headers=True)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 - - - headers: '
             'X-Test:test%20value%0AContent-Type:text/plain',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_client_disconnect(self):
         env = self._log_request_build()
         env['brim._client_disconnect'] = True
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 disconnect - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_goofy_code(self):
         env = self._log_request_build()
         env['brim._start_response'] = \
             ('2xx OK', [('Content-Length', '10')], None)
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 - 10 - - - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_auth_token(self):
         env = self._log_request_build()
         env['HTTP_X_AUTH_TOKEN'] = 'authtoken'
         ss = self._log_request_execute(env, log_auth_tokens=True)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - authtoken - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - '
             'abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_bytes_in(self):
         env = self._log_request_build()
         env['brim._bytes_in'] = 123
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 123 - - '
             'abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_referer(self):
         env = self._log_request_build()
         env['HTTP_REFERER'] = 'http://some.host/path%20/test?maybe=query+value'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - '
             'http://some.host/path%2520/test?maybe=query+value - abcdef '
             '2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_user_agent(self):
         env = self._log_request_build()
         env['HTTP_USER_AGENT'] = 'Some User Agent (v1.0)'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - '
             'Some%20User%20Agent%20(v1.0) abcdef 2.12000 - - -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_authenticated_user(self):
         env = self._log_request_build()
         env['brim.authenticated_user'] = 'someuser'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 - someuser -',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_wsgi_source(self):
         env = self._log_request_build()
         env['brim.wsgi_source'] = 'somesource'
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 - - somesource',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_additional_info(self):
         env = self._log_request_build()
-        env['brim.additional_request_log_info'] = ['test:', 'one', 'two']
+        env['brim.log_info'] = ['test:', 'one', 'two']
         ss = self._log_request_execute(env)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 - - - test: one two',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_log_request_additional_info_and_headers(self):
         env = self._log_request_build()
-        env['brim.additional_request_log_info'] = ['test:', 'one', 'two']
+        env['brim.log_info'] = ['test:', 'one', 'two']
         env['HTTP_CONTENT_TYPE'] = 'text/plain'
         ss = self._log_request_execute(env, log_headers=True)
-        self.assertEquals(ss.bucket_stats.get(0, 'request_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_200_count'), 1)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_201_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
-        self.assertEquals(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [(
+        self.assertEqual(ss.bucket_stats.get(0, 'request_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_2xx_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_200_count'), 1)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_201_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_3xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_4xx_count'), 0)
+        self.assertEqual(ss.bucket_stats.get(0, 'status_5xx_count'), 0)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [(
             '- - - - 20120223T225619Z GET /path HTTP/1.1 200 10 - - - abcdef '
             '2.12000 - - - test: one two headers: Content-Type:text/plain',)])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
-        self.assertEquals(ss.logger.txn, None)
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.txn, None)
 
     def test_capture_exception(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: wid:123 None ['None']",)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(
+            ss.logger.error_calls,
+            [("UNCAUGHT EXCEPTION: wid:123 None ['None']",)])
+        self.assertEqual(ss.logger.exception_calls, [])
 
         ss.logger = FakeLogger()
         try:
             raise Exception('test')
         except Exception:
             ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(len(ss.logger.error_calls), 1)
-        self.assertEquals(len(ss.logger.error_calls[0]), 1)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(len(ss.logger.error_calls), 1)
+        self.assertEqual(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
         self.assertTrue(e.startswith(
             "UNCAUGHT EXCEPTION: wid:123 Exception: test ['Traceback (most "
             "recent call last):', '  File "))
         self.assertTrue(e.endswith(
             '\', "    raise Exception(\'test\')", \'Exception: test\']'))
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [
             ('STDOUT: wid:123 one',), ('STDOUT: wid:123 two three',),
             ('STDOUT: wid:123 four',)])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stderr(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stderr('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [
             ('STDERR: wid:123 one',), ('STDERR: wid:123 two three',),
             ('STDERR: wid:123 four',)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
+
+    def test_clone_env(self):
+        ss = self._class(FakeServer(output=True), 'test')
+        newenv = ss.clone_env({
+            'brim': 1,
+            'brim.json_dumps': 2,
+            'brim.json_loads': 3,
+            'brim.logger': 4,
+            'brim.stats': 5,
+            'brim.txn': 6,
+            'SERVER_NAME': 7,
+            'SERVER_PORT': 8,
+            'SERVER_PROTOCOL': 9,
+            'OTHER': 10,
+            'REQUEST_PATH': 'request_path'})
+        self.assertEqual(newenv.get('brim'), 1)
+        self.assertEqual(newenv.get('brim.json_dumps'), 2)
+        self.assertEqual(newenv.get('brim.json_loads'), 3)
+        self.assertEqual(newenv.get('brim.logger'), 4)
+        self.assertEqual(newenv.get('brim.stats'), 5)
+        self.assertEqual(newenv.get('brim.txn'), 6)
+        self.assertEqual(newenv.get('SERVER_NAME'), 7)
+        self.assertEqual(newenv.get('SERVER_PORT'), 8)
+        self.assertEqual(newenv.get('SERVER_PROTOCOL'), 9)
+        self.assertEqual(newenv.get('OTHER'), None)
+        self.assertEqual(newenv.get('HTTP_REFERER'), 'request_path')
+        self.assertEqual(newenv.get('HTTP_USER_AGENT'), 'clone_env')
+        self.assertEquals(len(newenv), 11)
+
+    def test_get_response(self):
+        ss = self._class(FakeServer(output=True), 'test')
+        ss.logger = FakeLogger()
+        ss._parse_conf(Conf({}))
+        ss.worker_id = 0
+        ss.bucket_stats = server._BucketStats(['test'], {
+            'request_count': 'sum', 'status_2xx_count': 'sum',
+            'status_200_count': 'sum', 'status_201_count': 'sum',
+            'status_3xx_count': 'sum', 'status_4xx_count': 'sum',
+            'status_5xx_count': 'sum'})
+        ss.first_app = ss
+        status_line, headers_iteritems, excinfo, content_iter = \
+            ss.get_response({
+                'REQUEST_METHOD': 'GET',
+                'PATH_INFO': '/test',
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'wsgi.input': StringIO('test value')})
+        self.assertEqual(status_line, '404 Not Found')
+        self.assertEqual(dict(headers_iteritems), {
+            'Content-Length': '14', 'Content-Type': 'text/plain'})
+        self.assertEqual(excinfo, None)
+        self.assertEqual(''.join(content_iter), '404 Not Found\n')
+
+        def fake_app(env, start_response):
+            start_response(
+                '204 No Content',
+                [('Content-Length', '0'), ('Content-Type', 'text/plain')])
+            return []
+
+        status_line, headers_iteritems, excinfo, content_iter = \
+            ss.get_response({
+                'REQUEST_METHOD': 'GET',
+                'PATH_INFO': '/test',
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'wsgi.input': StringIO('test value')}, next_app=fake_app)
+        self.assertEqual(status_line, '204 No Content')
+        self.assertEqual(dict(headers_iteritems), {
+            'Content-Length': '0', 'Content-Type': 'text/plain'})
+        self.assertEqual(excinfo, None)
+        self.assertEqual(''.join(content_iter), '')
+
+        def fake_app2(env, start_response):
+            start_response(
+                '200 OK',
+                [('Content-Length', '7'), ('Content-Type', 'text/plain')])
+            return ['200 OK']
+
+        status_line, headers_iteritems, excinfo, content_iter = \
+            ss.get_response({
+                'REQUEST_METHOD': 'GET',
+                'PATH_INFO': '/test',
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'wsgi.input': StringIO('test value')}, next_app=fake_app2)
+        self.assertEqual(status_line, '200 OK')
+        self.assertEqual(dict(headers_iteritems), {
+            'Content-Length': '7', 'Content-Type': 'text/plain'})
+        self.assertEqual(excinfo, None)
+        self.assertEqual(''.join(content_iter), '200 OK')
 
 
 class TCPWithInvalidInit(object):
@@ -2753,11 +2830,11 @@ class TestTCPSubserver(TestIPSubserver):
 
     def test_init(self):
         ss = TestIPSubserver.test_init(self)
-        self.assertEquals(ss.stats_conf.get('connection_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('connection_count'), 'sum')
 
     def test_parse_conf_defaults(self):
         ss = TestIPSubserver.test_parse_conf_defaults(self)
-        self.assertEquals(ss.handler.__name__, 'TCPEcho')
+        self.assertEqual(ss.handler.__name__, 'TCPEcho')
 
     def test_parse_conf_no_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -2765,10 +2842,10 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(conf)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "[test] not configured with 'call' option.")
+        self.assertEqual(
+            str(exc), "[test] not configured with 'call' option.")
 
     def test_parse_conf_invalid_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -2776,18 +2853,18 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(conf)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid call value 'invalid' for [test].")
+        self.assertEqual(str(exc), "Invalid call value 'invalid' for [test].")
 
     def test_configure_handler(self):
         ss = self._class(FakeServer(), 'test')
         conf = Conf(self._get_default_confd())
         ss._parse_conf(conf)
-        self.assertEquals(ss.handler.__name__, 'TCPEcho')
-        self.assertEquals(ss.handler_conf, ss.handler.parse_conf('test', conf))
+        self.assertEqual(ss.handler.__name__, 'TCPEcho')
+        self.assertEqual(ss.handler_conf, ss.handler.parse_conf('test', conf))
 
-    def test_configure_handler_no_call(self):
+    def test_configure_handler_no_call_option(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['cll'] = confd['test']['call']
@@ -2795,21 +2872,21 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "[test] not configured with 'call' option.")
+        self.assertEqual(
+            str(exc), "[test] not configured with 'call' option.")
 
-    def test_configure_handler_invalid_call(self):
+    def test_configure_handler_invalid_call_option(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim_tcp_echo_TCPEcho'
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), "Invalid call value 'brim_tcp_echo_TCPEcho' for [test].")
 
     def test_configure_handler_no_load(self):
@@ -2819,9 +2896,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load class 'brim.tcp_echo.cp_echo' for [test].")
 
@@ -2832,9 +2909,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate 'brim.server._send_pid_sig' for "
             "[test]. Probably not a class.")
@@ -2846,9 +2923,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate "
             "'brim.test.unit.test_server.TCPWithInvalidInit' for [test]. "
@@ -2862,9 +2939,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.TCPWithInvalidCall' for [test]. "
@@ -2878,9 +2955,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.TCPWithNoCall' for [test]. Probably "
@@ -2894,9 +2971,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.TCPWithInvalidParseConf1' "
             "for [test]. Incorrect number of parse_conf args, 1, should be 3 "
@@ -2910,9 +2987,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.TCPWithInvalidParseConf2' "
             "for [test]. parse_conf probably not a method.")
@@ -2923,14 +3000,14 @@ class TestTCPSubserver(TestIPSubserver):
         confd['test']['call'] = 'brim.test.unit.test_server.TCPWithNoParseConf'
         conf = Conf(confd)
         ss._parse_conf(conf)
-        self.assertEquals(ss.handler_conf, conf)
+        self.assertEqual(ss.handler_conf, conf)
 
     def test_configure_handler_with_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.TCPWithParseConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.handler_conf, {'ok': True})
+        self.assertEqual(ss.handler_conf, {'ok': True})
 
     def test_configure_handler_invalid_stats_conf1(self):
         ss = self._class(FakeServer(), 'test')
@@ -2940,9 +3017,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.TCPWithInvalidStatsConf1' "
             "for [test]. Incorrect number of stats_conf args, 1, should be 3 "
@@ -2956,9 +3033,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.TCPWithInvalidStatsConf2' "
             "for [test]. stats_conf probably not a method.")
@@ -2968,17 +3045,17 @@ class TestTCPSubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.TCPWithNoStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('connection_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('connection_count'), 'sum')
 
     def test_configure_handler_with_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.TCPWithStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('connection_count'), 'sum')
-        self.assertEquals(ss.stats_conf.get('ok'), 'sum')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('connection_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('ok'), 'sum')
 
     def test_privileged_start(self):
         ss = self._class(FakeServer(), 'test')
@@ -2986,9 +3063,9 @@ class TestTCPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._privileged_start()
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), 'Could not bind to *:80: [Errno 13] Permission denied')
 
         ss = self._class(FakeServer(), 'test')
@@ -3012,8 +3089,8 @@ class TestTCPSubserver(TestIPSubserver):
             ss._privileged_start()
         finally:
             server.get_listening_tcp_socket = get_listening_tcp_socket_orig
-        self.assertEquals(ss.sock, 'sock')
-        self.assertEquals(get_listening_tcp_socket_calls, [(('*', 80), {
+        self.assertEqual(ss.sock, 'sock')
+        self.assertEqual(get_listening_tcp_socket_calls, [(('*', 80), {
             'keyfile': None, 'style': 'eventlet', 'retry': 30,
             'certfile': None, 'backlog': 4096})])
 
@@ -3065,25 +3142,24 @@ class TestTCPSubserver(TestIPSubserver):
             server.shutdown_safe = shutdown_safe_orig
 
         if output:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [(
-                (),
-                {'exceptions': ss._capture_exception,
-                 'stdout_func': ss._capture_stdout,
-                 'stderr_func': ss._capture_stderr})])
-        self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [((), {
+                'exceptions': ss._capture_exception,
+                'stdout_func': ss._capture_stdout,
+                'stderr_func': ss._capture_stderr})])
+        self.assertEqual(time_calls, [()])
+        self.assertEqual(get_logger_calls, [(
             ss.name, ss.log_name, ss.log_level, ss.log_facility,
             ss.server.no_daemon)])
-        self.assertEquals(sustain_workers_calls, [((1, ss._tcp_worker),
-                                                   {'logger': fake_logger})])
-        self.assertEquals(shutdown_safe_calls, [(ss.sock,)])
-        self.assertEquals(ss.worker_id, -1)
-        self.assertEquals(ss.start_time, 1)
-        self.assertEquals(ss.logger, fake_logger)
-        self.assertEquals(fake_logger.error_calls, [])
-        self.assertEquals(ss.handler.__class__.__name__, 'TCPEcho')
+        self.assertEqual(sustain_workers_calls, [
+            ((1, ss._tcp_worker), {'logger': fake_logger})])
+        self.assertEqual(shutdown_safe_calls, [(ss.sock,)])
+        self.assertEqual(ss.worker_id, -1)
+        self.assertEqual(ss.start_time, 1)
+        self.assertEqual(ss.logger, fake_logger)
+        self.assertEqual(fake_logger.error_calls, [])
+        self.assertEqual(ss.handler.__class__.__name__, 'TCPEcho')
 
     def test_start_with_output(self):
         self.test_start(output=True)
@@ -3144,8 +3220,8 @@ class TestTCPSubserver(TestIPSubserver):
             server.GreenPool = _GreenPool
             server.sustain_workers = _sustain_workers
             server.time = _time
-            ss = self._class(FakeServer(no_daemon=no_daemon, output=True),
-                             'test')
+            ss = self._class(
+                FakeServer(no_daemon=no_daemon, output=True), 'test')
             confd = self._get_default_confd()
             confd['test']['port'] = '0'
             ss._parse_conf(Conf(confd))
@@ -3154,7 +3230,7 @@ class TestTCPSubserver(TestIPSubserver):
             ss._start(bs)
             ss.sock.accept = _accept
             ss._tcp_worker(0)
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             server.setproctitle = setproctitle_orig
@@ -3164,38 +3240,38 @@ class TestTCPSubserver(TestIPSubserver):
             server.time = time_orig
 
         if no_setproctitle or no_daemon:
-            self.assertEquals(setproctitle_calls, [])
+            self.assertEqual(setproctitle_calls, [])
         else:
-            self.assertEquals(setproctitle_calls, [('0:test:brimd',)])
-        self.assertEquals(ss.worker_id, 0)
-        self.assertEquals(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
+            self.assertEqual(setproctitle_calls, [('0:test:brimd',)])
+        self.assertEqual(ss.worker_id, 0)
+        self.assertEqual(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
         if no_daemon:
-            self.assertEquals(use_hub_calls, [])
+            self.assertEqual(use_hub_calls, [])
         else:
-            self.assertEquals(use_hub_calls, [(None,)])
-        self.assertEquals(ss.handler.__class__.__name__, 'TCPEcho')
-        self.assertEquals(
+            self.assertEqual(use_hub_calls, [(None,)])
+        self.assertEqual(ss.handler.__class__.__name__, 'TCPEcho')
+        self.assertEqual(
             GreenPool_calls, [((), {'size': ss.concurrent_per_worker})])
-        self.assertEquals(len(spawn_n_calls), 1)
-        self.assertEquals(len(spawn_n_calls[0]), 6)
-        self.assertEquals(spawn_n_calls[0][0].__class__.__name__, 'TCPEcho')
-        self.assertEquals(spawn_n_calls[0][1], ss)
-        self.assertEquals(spawn_n_calls[0][2].bucket_stats, ss.bucket_stats)
-        self.assertEquals(spawn_n_calls[0][3], 'sock')
-        self.assertEquals(spawn_n_calls[0][4], 'ip')
-        self.assertEquals(spawn_n_calls[0][5], 'port')
+        self.assertEqual(len(spawn_n_calls), 1)
+        self.assertEqual(len(spawn_n_calls[0]), 6)
+        self.assertEqual(spawn_n_calls[0][0].__class__.__name__, 'TCPEcho')
+        self.assertEqual(spawn_n_calls[0][1], ss)
+        self.assertEqual(spawn_n_calls[0][2].bucket_stats, ss.bucket_stats)
+        self.assertEqual(spawn_n_calls[0][3], 'sock')
+        self.assertEqual(spawn_n_calls[0][4], 'ip')
+        self.assertEqual(spawn_n_calls[0][5], 'port')
         if raises:
-            self.assertEquals(accept_calls, [()])
+            self.assertEqual(accept_calls, [()])
         else:
-            self.assertEquals(accept_calls, [(), ()])
+            self.assertEqual(accept_calls, [(), ()])
         if raises == 'socket einval':
-            self.assertEquals(exc, None)
+            self.assertEqual(exc, None)
         elif raises == 'socket other':
-            self.assertEquals(str(exc), 'test socket other')
+            self.assertEqual(str(exc), 'test socket other')
         elif raises == 'other':
-            self.assertEquals(str(exc), 'test other')
+            self.assertEqual(str(exc), 'test other')
         else:
-            self.assertEquals(str(exc), 'additional accept')
+            self.assertEqual(str(exc), 'additional accept')
 
     def test_tcp_worker_no_setproctitle(self):
         self.test_tcp_worker(no_setproctitle=True)
@@ -3217,56 +3293,57 @@ class TestTCPSubserver(TestIPSubserver):
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: tid:123 None ['None']",)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(
+            ss.logger.error_calls,
+            [("UNCAUGHT EXCEPTION: tid:123 None ['None']",)])
+        self.assertEqual(ss.logger.exception_calls, [])
 
         ss.logger = FakeLogger()
         try:
             raise Exception('test')
         except Exception:
             ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(len(ss.logger.error_calls), 1)
-        self.assertEquals(len(ss.logger.error_calls[0]), 1)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(len(ss.logger.error_calls), 1)
+        self.assertEqual(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
         self.assertTrue(e.startswith(
             "UNCAUGHT EXCEPTION: tid:123 Exception: test ['Traceback (most "
             "recent call last):', '  File "))
         self.assertTrue(e.endswith(
             '\', "    raise Exception(\'test\')", \'Exception: test\']'))
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [
             ('STDOUT: tid:123 one',), ('STDOUT: tid:123 two three',),
             ('STDOUT: tid:123 four',)])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stderr(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stderr('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [
             ('STDERR: tid:123 one',), ('STDERR: tid:123 two three',),
             ('STDERR: tid:123 four',)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
 
 class UDPWithInvalidInit(object):
@@ -3379,32 +3456,31 @@ class UDPWithStatsConf(object):
 
     @classmethod
     def stats_conf(cls, name, conf):
-        return ['ok']
+        return [('ok', 'sum')]
 
 
 class TestUDPSubserver(TestIPSubserver):
 
     _class = server.UDPSubserver
-    _override_workers = 1
 
     def _get_default_confd(self):
         return {'test': {'call': 'brim.udp_echo.UDPEcho'}}
 
     def test_init(self):
         ss = TestIPSubserver.test_init(self)
-        self.assertEquals(ss.stats_conf.get('datagram_count'), 'worker')
+        self.assertEqual(ss.stats_conf.get('datagram_count'), 'sum')
 
     def test_parse_conf_defaults(self):
         ss = TestIPSubserver.test_parse_conf_defaults(self)
-        self.assertEquals(ss.handler.__name__, 'UDPEcho')
-        self.assertEquals(ss.max_datagram_size, 65536)
+        self.assertEqual(ss.handler.__name__, 'UDPEcho')
+        self.assertEqual(ss.max_datagram_size, 65536)
 
     def test_parse_conf_max_datagram_size(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd.setdefault('brim', {})['max_datagram_size'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.max_datagram_size, 123)
+        self.assertEqual(ss.max_datagram_size, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -3412,9 +3488,9 @@ class TestUDPSubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('brim', {})['max_datagram_size'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [brim] max_datagram_size of 'abc' cannot be "
             "converted to int.")
@@ -3423,7 +3499,7 @@ class TestUDPSubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd.setdefault('test', {})['max_datagram_size'] = '123'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.max_datagram_size, 123)
+        self.assertEqual(ss.max_datagram_size, 123)
 
         ss = self._class(FakeServer(), 'test')
         exc = None
@@ -3431,9 +3507,9 @@ class TestUDPSubserver(TestIPSubserver):
             confd = self._get_default_confd()
             confd.setdefault('test', {})['max_datagram_size'] = 'abc'
             ss._parse_conf(Conf(confd))
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Configuration value [test] max_datagram_size of 'abc' cannot be "
             "converted to int.")
@@ -3444,10 +3520,10 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(conf)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "[test] not configured with 'call' option.")
+        self.assertEqual(
+            str(exc), "[test] not configured with 'call' option.")
 
     def test_parse_conf_invalid_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -3455,18 +3531,18 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(conf)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid call value 'invalid' for [test].")
+        self.assertEqual(str(exc), "Invalid call value 'invalid' for [test].")
 
     def test_configure_handler(self):
         ss = self._class(FakeServer(), 'test')
         conf = Conf(self._get_default_confd())
         ss._parse_conf(conf)
-        self.assertEquals(ss.handler.__name__, 'UDPEcho')
-        self.assertEquals(ss.handler_conf, ss.handler.parse_conf('test', conf))
+        self.assertEqual(ss.handler.__name__, 'UDPEcho')
+        self.assertEqual(ss.handler_conf, ss.handler.parse_conf('test', conf))
 
-    def test_configure_handler_no_call(self):
+    def test_configure_handler_no_call_option(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['cll'] = confd['test']['call']
@@ -3474,10 +3550,10 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "[test] not configured with 'call' option.")
+        self.assertEqual(
+            str(exc), "[test] not configured with 'call' option.")
 
     def test_configure_handler_invalid_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -3486,9 +3562,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), "Invalid call value 'brim_udp_echo_UDPEcho' for [test].")
 
     def test_configure_handler_no_load(self):
@@ -3498,9 +3574,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load class 'brim.udp_echo.cp_echo' for [test].")
 
@@ -3511,9 +3587,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate 'brim.server._send_pid_sig' for "
             "[test]. Probably not a class.")
@@ -3525,25 +3601,25 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate "
             "'brim.test.unit.test_server.UDPWithInvalidInit' for [test]. "
             "Incorrect number of args, 1, should be 3 (self, name, "
             "parsed_conf).")
 
-    def test_configure_handler_invalid_call(self):
+    def test_configure_handler_invalid_call_option(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.UDPWithInvalidCall'
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.UDPWithInvalidCall' for [test]. "
@@ -3557,9 +3633,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.UDPWithNoCall' for [test]. Probably "
@@ -3573,9 +3649,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.UDPWithInvalidParseConf1' "
             "for [test]. Incorrect number of parse_conf args, 1, should be 3 "
@@ -3589,9 +3665,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.UDPWithInvalidParseConf2' "
             "for [test]. parse_conf probably not a method.")
@@ -3602,14 +3678,14 @@ class TestUDPSubserver(TestIPSubserver):
         confd['test']['call'] = 'brim.test.unit.test_server.UDPWithNoParseConf'
         conf = Conf(confd)
         ss._parse_conf(conf)
-        self.assertEquals(ss.handler_conf, conf)
+        self.assertEqual(ss.handler_conf, conf)
 
     def test_configure_handler_with_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.UDPWithParseConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.handler_conf, {'ok': True})
+        self.assertEqual(ss.handler_conf, {'ok': True})
 
     def test_configure_handler_invalid_stats_conf1(self):
         ss = self._class(FakeServer(), 'test')
@@ -3619,9 +3695,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.UDPWithInvalidStatsConf1' "
             "for [test]. Incorrect number of stats_conf args, 1, should be 3 "
@@ -3635,9 +3711,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use 'brim.test.unit.test_server.UDPWithInvalidStatsConf2' "
             "for [test]. stats_conf probably not a method.")
@@ -3647,17 +3723,17 @@ class TestUDPSubserver(TestIPSubserver):
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.UDPWithNoStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('datagram_count'), 'worker')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('datagram_count'), 'sum')
 
     def test_configure_handler_with_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
         confd = self._get_default_confd()
         confd['test']['call'] = 'brim.test.unit.test_server.UDPWithStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('datagram_count'), 'worker')
-        self.assertEquals(ss.stats_conf.get('ok'), 'worker')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('datagram_count'), 'sum')
+        self.assertEqual(ss.stats_conf.get('ok'), 'sum')
 
     def test_privileged_start(self):
         ss = self._class(FakeServer(), 'test')
@@ -3665,9 +3741,9 @@ class TestUDPSubserver(TestIPSubserver):
         exc = None
         try:
             ss._privileged_start()
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc), 'Could not bind to *:80: [Errno 13] Permission denied')
 
         ss = self._class(FakeServer(), 'test')
@@ -3691,20 +3767,18 @@ class TestUDPSubserver(TestIPSubserver):
             ss._privileged_start()
         finally:
             server.get_listening_udp_socket = get_listening_udp_socket_orig
-        self.assertEquals(ss.sock, 'sock')
-        self.assertEquals(get_listening_udp_socket_calls,
-                          [(('*', 80), {'style': 'eventlet', 'retry': 30})])
+        self.assertEqual(ss.sock, 'sock')
+        self.assertEqual(
+            get_listening_udp_socket_calls,
+            [(('*', 80), {'style': 'eventlet', 'retry': 30})])
 
-    def test_start(self, output=False, no_daemon=False, raises=False):
+    def test_start(self, output=False):
         capture_exceptions_stdout_stderr_calls = []
         time_calls = []
         get_logger_calls = []
         fake_logger = FakeLogger()
-        use_hub_calls = []
-        spawn_n_calls = []
-        GreenPool_calls = []
-        recvfrom_calls = []
-        ss = [None]
+        sustain_workers_calls = []
+        shutdown_safe_calls = []
 
         def _capture_exceptions_stdout_stderr(*args, **kwargs):
             capture_exceptions_stdout_stderr_calls.append((args, kwargs))
@@ -3716,6 +3790,68 @@ class TestUDPSubserver(TestIPSubserver):
         def _get_logger(*args):
             get_logger_calls.append(args)
             return fake_logger
+
+        def _sustain_workers(*args, **kwargs):
+            sustain_workers_calls.append((args, kwargs))
+
+        def _shutdown_safe(*args):
+            shutdown_safe_calls.append(args)
+
+        capture_exceptions_stdout_stderr_orig = \
+            server.capture_exceptions_stdout_stderr
+        time_orig = server.time
+        get_logger_orig = server.get_logger
+        sustain_workers_orig = server.sustain_workers
+        shutdown_safe_orig = server.shutdown_safe
+        try:
+            server.capture_exceptions_stdout_stderr = \
+                _capture_exceptions_stdout_stderr
+            server.time = _time
+            server.get_logger = _get_logger
+            server.sustain_workers = _sustain_workers
+            server.shutdown_safe = _shutdown_safe
+            ss = TestIPSubserver.test_start(self, output=output)
+        finally:
+            server.capture_exceptions_stdout_stderr = \
+                capture_exceptions_stdout_stderr_orig
+            server.time = time_orig
+            server.get_logger = get_logger_orig
+            server.sustain_workers = sustain_workers_orig
+            server.shutdown_safe = shutdown_safe_orig
+
+        if output:
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [])
+        else:
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [((), {
+                'exceptions': ss._capture_exception,
+                'stdout_func': ss._capture_stdout,
+                'stderr_func': ss._capture_stderr})])
+        self.assertEqual(time_calls, [()])
+        self.assertEqual(get_logger_calls, [(
+            ss.name, ss.log_name, ss.log_level, ss.log_facility,
+            ss.server.no_daemon)])
+        self.assertEqual(sustain_workers_calls, [
+            ((1, ss._udp_worker), {'logger': fake_logger})])
+        self.assertEqual(shutdown_safe_calls, [(ss.sock,)])
+        self.assertEqual(ss.worker_id, -1)
+        self.assertEqual(ss.start_time, 1)
+        self.assertEqual(ss.logger, fake_logger)
+        self.assertEqual(fake_logger.error_calls, [])
+        self.assertEqual(ss.handler.__class__.__name__, 'UDPEcho')
+
+    def test_start_with_output(self):
+        self.test_start(output=True)
+
+    def test_udp_worker(self, no_setproctitle=False, no_daemon=False,
+                        raises=False):
+        setproctitle_calls = []
+        use_hub_calls = []
+        spawn_n_calls = []
+        GreenPool_calls = []
+        recvfrom_calls = []
+
+        def _setproctitle(*args):
+            setproctitle_calls.append(args)
 
         def _use_hub(*args):
             use_hub_calls.append(args)
@@ -3744,156 +3880,149 @@ class TestUDPSubserver(TestIPSubserver):
                 return 'datagram', ('ip', 'port')
             raise Exception('additional recvfrom')
 
-        def _func_before_start(created_ss):
-            created_ss.sock.recvfrom = _recvfrom
-            ss[0] = created_ss
+        def _sustain_workers(*args, **kwargs):
+            pass
 
-        capture_exceptions_stdout_stderr_orig = \
-            server.capture_exceptions_stdout_stderr
-        time_orig = server.time
-        get_logger_orig = server.get_logger
+        def _time():
+            return 1
+
+        setproctitle_orig = server.setproctitle
         use_hub_orig = server.use_hub
         GreenPool_orig = server.GreenPool
+        sustain_workers_orig = server.sustain_workers
+        time_orig = server.time
         exc = None
         try:
-            server.capture_exceptions_stdout_stderr = \
-                _capture_exceptions_stdout_stderr
-            server.time = _time
-            server.get_logger = _get_logger
+            server.setproctitle = None if no_setproctitle else _setproctitle
             server.use_hub = _use_hub
             server.GreenPool = _GreenPool
+            server.sustain_workers = _sustain_workers
+            server.time = _time
+            ss = self._class(
+                FakeServer(no_daemon=no_daemon, output=True), 'test')
+            confd = self._get_default_confd()
+            confd['test']['port'] = '0'
+            ss._parse_conf(Conf(confd))
+            ss._privileged_start()
             bs = server._BucketStats(['0'], {'start_time': 'worker'})
-            TestIPSubserver.test_start(self, output=output,
-                                       no_daemon=no_daemon,
-                                       func_before_start=_func_before_start,
-                                       bucket_stats=bs)
-        except Exception, err:
+            ss._start(bs)
+            ss.sock.recvfrom = _recvfrom
+            ss._udp_worker(0)
+        except Exception as err:
             exc = err
         finally:
-            server.capture_exceptions_stdout_stderr = \
-                capture_exceptions_stdout_stderr_orig
-            server.time = time_orig
-            server.get_logger = get_logger_orig
+            server.setproctitle = setproctitle_orig
             server.use_hub = use_hub_orig
             server.GreenPool = GreenPool_orig
+            server.sustain_workers = sustain_workers_orig
+            server.time = time_orig
 
-        ss = ss[0]
-        self.assertEquals(ss.worker_id, 0)
-        if output:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
+        if no_setproctitle or no_daemon:
+            self.assertEqual(setproctitle_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((), {
-                'exceptions': ss._capture_exception,
-                'stdout_func': ss._capture_stdout,
-                'stderr_func': ss._capture_stderr})])
-        self.assertEquals(ss.start_time, 1)
-        self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(
-            ss.name, ss.log_name, ss.log_level, ss.log_facility,
-            ss.server.no_daemon)])
-        self.assertEquals(ss.logger, fake_logger)
-        self.assertEquals(fake_logger.error_calls, [])
-        self.assertEquals(ss.handler.__class__.__name__, 'UDPEcho')
-        self.assertEquals(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
+            self.assertEqual(setproctitle_calls, [('0:test:brimd',)])
+        self.assertEqual(ss.worker_id, 0)
+        self.assertEqual(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
         if no_daemon:
-            self.assertEquals(use_hub_calls, [])
+            self.assertEqual(use_hub_calls, [])
         else:
-            self.assertEquals(use_hub_calls, [(None,)])
-        self.assertEquals(GreenPool_calls, [
-            ((), {'size': ss.concurrent_per_worker})])
-        self.assertEquals(len(spawn_n_calls), 1)
-        self.assertEquals(len(spawn_n_calls[0]), 7)
-        self.assertEquals(spawn_n_calls[0][0].__class__.__name__, 'UDPEcho')
-        self.assertEquals(spawn_n_calls[0][1], ss)
-        self.assertEquals(spawn_n_calls[0][2].bucket_stats, ss.bucket_stats)
-        self.assertEquals(spawn_n_calls[0][3], ss.sock)
-        self.assertEquals(spawn_n_calls[0][4], 'datagram')
-        self.assertEquals(spawn_n_calls[0][5], 'ip')
-        self.assertEquals(spawn_n_calls[0][6], 'port')
+            self.assertEqual(use_hub_calls, [(None,)])
+        self.assertEqual(
+            GreenPool_calls, [((), {'size': ss.concurrent_per_worker})])
+        self.assertEqual(len(spawn_n_calls), 1)
+        self.assertEqual(len(spawn_n_calls[0]), 7)
+        self.assertEqual(spawn_n_calls[0][0].__class__.__name__, 'UDPEcho')
+        self.assertEqual(spawn_n_calls[0][1], ss)
+        self.assertEqual(spawn_n_calls[0][2].bucket_stats, ss.bucket_stats)
+        self.assertEqual(spawn_n_calls[0][3], ss.sock)
+        self.assertEqual(spawn_n_calls[0][4], 'datagram')
+        self.assertEqual(spawn_n_calls[0][5], 'ip')
+        self.assertEqual(spawn_n_calls[0][6], 'port')
         if raises:
-            self.assertEquals(recvfrom_calls, [(ss.max_datagram_size,)])
+            self.assertEqual(recvfrom_calls, [(ss.max_datagram_size,)])
         else:
-            self.assertEquals(recvfrom_calls, [
+            self.assertEqual(recvfrom_calls, [
                 (ss.max_datagram_size,), (ss.max_datagram_size,)])
         if raises == 'socket einval':
-            self.assertEquals(exc, None)
+            self.assertEqual(exc, None)
         elif raises == 'socket other':
-            self.assertEquals(str(exc), 'test socket other')
+            self.assertEqual(str(exc), 'test socket other')
         elif raises == 'other':
-            self.assertEquals(str(exc), 'test other')
+            self.assertEqual(str(exc), 'test other')
         else:
-            self.assertEquals(str(exc), 'additional recvfrom')
+            self.assertEqual(str(exc), 'additional recvfrom')
 
-    def test_start_with_output(self):
-        self.test_start(output=True)
+    def test_udp_worker_no_setproctitle(self):
+        self.test_udp_worker(no_setproctitle=True)
 
     def test_start_no_daemon(self):
-        self.test_start(no_daemon=True)
+        self.test_udp_worker(no_daemon=True)
 
     def test_start_raises_socket_einval(self):
-        self.test_start(raises='socket einval')
+        self.test_udp_worker(raises='socket einval')
 
     def test_start_raises_socket_other(self):
-        self.test_start(raises='socket other')
+        self.test_udp_worker(raises='socket other')
 
     def test_start_raises_other(self):
-        self.test_start(raises='other')
+        self.test_udp_worker(raises='other')
 
     def test_capture_exception(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: uid:123 None ['None']",)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(
+            ss.logger.error_calls,
+            [("UNCAUGHT EXCEPTION: uid:123 None ['None']",)])
+        self.assertEqual(ss.logger.exception_calls, [])
 
         ss.logger = FakeLogger()
         try:
             raise Exception('test')
         except Exception:
             ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(len(ss.logger.error_calls), 1)
-        self.assertEquals(len(ss.logger.error_calls[0]), 1)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(len(ss.logger.error_calls), 1)
+        self.assertEqual(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
         self.assertTrue(e.startswith(
             "UNCAUGHT EXCEPTION: uid:123 Exception: test ['Traceback (most "
             "recent call last):', '  File "))
         self.assertTrue(e.endswith(
             '\', "    raise Exception(\'test\')", \'Exception: test\']'))
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [
             ('STDOUT: uid:123 one',), ('STDOUT: uid:123 two three',),
             ('STDOUT: uid:123 four',)])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stderr(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stderr('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [
             ('STDERR: uid:123 one',), ('STDERR: uid:123 two three',),
             ('STDERR: uid:123 four',)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
 
 class DaemonWithInvalidInit(object):
@@ -4006,7 +4135,7 @@ class DaemonWithStatsConf(object):
 
     @classmethod
     def stats_conf(cls, name, conf):
-        return ['ok']
+        return [('ok', 'sum')]
 
 
 class TestDaemonsSubserver(TestSubserver):
@@ -4015,9 +4144,9 @@ class TestDaemonsSubserver(TestSubserver):
 
     def test_parse_conf_defaults(self):
         ss = TestSubserver.test_parse_conf_defaults(self)
-        self.assertEquals(ss.daemons, [])
-        self.assertEquals(ss.worker_count, 0)
-        self.assertEquals(ss.worker_names, ['0'])
+        self.assertEqual(ss.daemons, [])
+        self.assertEqual(ss.worker_count, 0)
+        self.assertEqual(ss.worker_names, ['0'])
 
     def test_configure_daemons(self):
         ss = self._class(FakeServer(), 'test')
@@ -4027,15 +4156,15 @@ class TestDaemonsSubserver(TestSubserver):
         confd.setdefault('two', {})['call'] = 'brim.daemon_sample.DaemonSample'
         conf = Conf(confd)
         ss._parse_conf(conf)
-        self.assertEquals(len(ss.daemons), 2)
-        self.assertEquals(ss.daemons[0][0], 'one')
-        self.assertEquals(ss.daemons[1][0], 'two')
-        self.assertEquals(ss.daemons[0][1].__name__, 'DaemonSample')
-        self.assertEquals(ss.daemons[1][1].__name__, 'DaemonSample')
-        self.assertEquals(ss.daemons[0][2],
-                          ss.daemons[0][1].parse_conf('one', conf))
-        self.assertEquals(ss.daemons[1][2],
-                          ss.daemons[1][1].parse_conf('two', conf))
+        self.assertEqual(len(ss.daemons), 2)
+        self.assertEqual(ss.daemons[0][0], 'one')
+        self.assertEqual(ss.daemons[1][0], 'two')
+        self.assertEqual(ss.daemons[0][1].__name__, 'DaemonSample')
+        self.assertEqual(ss.daemons[1][1].__name__, 'DaemonSample')
+        self.assertEqual(
+            ss.daemons[0][2], ss.daemons[0][1].parse_conf('one', conf))
+        self.assertEqual(
+            ss.daemons[1][2], ss.daemons[1][1].parse_conf('two', conf))
 
     def test_configure_daemons_conf_no_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -4045,10 +4174,10 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc),
-                          "Daemon [one] not configured with 'call' option.")
+        self.assertEqual(
+            str(exc), "Daemon [one] not configured with 'call' option.")
 
     def test_configure_daemons_conf_invalid_call(self):
         ss = self._class(FakeServer(), 'test')
@@ -4058,9 +4187,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Invalid call value 'brim_daemon_sample_DaemonSample' for daemon "
             "[one].")
@@ -4073,9 +4202,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Could not load class 'brim.daemon_sample.aemon_sample' for "
             "daemon [one].")
@@ -4088,9 +4217,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate 'brim.server._send_pid_sig' for "
             "daemon [one]. Probably not a class.")
@@ -4104,9 +4233,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to instantiate "
             "'brim.test.unit.test_server.DaemonWithInvalidInit' for daemon "
@@ -4122,9 +4251,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.DaemonWithInvalidCall' for daemon "
@@ -4140,9 +4269,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Would not be able to use "
             "'brim.test.unit.test_server.DaemonWithNoCall' for daemon "
@@ -4157,9 +4286,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidParseConf1' for "
@@ -4175,9 +4304,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidParseConf2' for "
@@ -4191,7 +4320,7 @@ class TestDaemonsSubserver(TestSubserver):
             'brim.test.unit.test_server.DaemonWithNoParseConf'
         conf = Conf(confd)
         ss._parse_conf(conf)
-        self.assertEquals(ss.daemons[0][2], conf)
+        self.assertEqual(ss.daemons[0][2], conf)
 
     def test_configure_daemons_with_parse_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -4200,7 +4329,7 @@ class TestDaemonsSubserver(TestSubserver):
         confd.setdefault('one', {})['call'] = \
             'brim.test.unit.test_server.DaemonWithParseConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.daemons[0][2], {'ok': True})
+        self.assertEqual(ss.daemons[0][2], {'ok': True})
 
     def test_configure_daemons_invalid_stats_conf1(self):
         ss = self._class(FakeServer(), 'test')
@@ -4211,9 +4340,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf1' for "
@@ -4229,9 +4358,9 @@ class TestDaemonsSubserver(TestSubserver):
         exc = None
         try:
             ss._parse_conf(Conf(confd))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "Cannot use "
             "'brim.test.unit.test_server.DaemonWithInvalidStatsConf2' for "
@@ -4244,7 +4373,7 @@ class TestDaemonsSubserver(TestSubserver):
         confd.setdefault('one', {})['call'] = \
             'brim.test.unit.test_server.DaemonWithNoStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
 
     def test_configure_daemons_with_stats_conf(self):
         ss = self._class(FakeServer(), 'test')
@@ -4253,8 +4382,8 @@ class TestDaemonsSubserver(TestSubserver):
         confd.setdefault('one', {})['call'] = \
             'brim.test.unit.test_server.DaemonWithStatsConf'
         ss._parse_conf(Conf(confd))
-        self.assertEquals(ss.stats_conf.get('start_time'), 'worker')
-        self.assertEquals(ss.stats_conf.get('ok'), 'worker')
+        self.assertEqual(ss.stats_conf.get('start_time'), 'worker')
+        self.assertEqual(ss.stats_conf.get('ok'), 'sum')
 
     def test_start(self, output=False):
         capture_exceptions_stdout_stderr_calls = []
@@ -4300,23 +4429,23 @@ class TestDaemonsSubserver(TestSubserver):
             server.sustain_workers = sustain_workers_orig
 
         if output:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [])
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [])
         else:
-            self.assertEquals(capture_exceptions_stdout_stderr_calls, [((), {
+            self.assertEqual(capture_exceptions_stdout_stderr_calls, [((), {
                 'exceptions': ss._capture_exception,
                 'stdout_func': ss._capture_stdout,
                 'stderr_func': ss._capture_stderr})])
-        self.assertEquals(time_calls, [()])
-        self.assertEquals(get_logger_calls, [(
+        self.assertEqual(time_calls, [()])
+        self.assertEqual(get_logger_calls, [(
             ss.name, ss.log_name, ss.log_level, ss.log_facility,
             ss.server.no_daemon)])
-        self.assertEquals(ss.worker_count, 1)
-        self.assertEquals(sustain_workers_calls, [
+        self.assertEqual(ss.worker_count, 1)
+        self.assertEqual(sustain_workers_calls, [
             ((ss.worker_count, ss._daemon), {'logger': fake_logger})])
-        self.assertEquals(ss.worker_id, -1)
-        self.assertEquals(ss.start_time, 1)
-        self.assertEquals(ss.logger, fake_logger)
-        self.assertEquals(fake_logger.error_calls, [])
+        self.assertEqual(ss.worker_id, -1)
+        self.assertEqual(ss.start_time, 1)
+        self.assertEqual(ss.logger, fake_logger)
+        self.assertEqual(fake_logger.error_calls, [])
 
     def test_start_with_output(self):
         self.test_start(output=True)
@@ -4356,20 +4485,20 @@ class TestDaemonsSubserver(TestSubserver):
             server.sustain_workers = sustain_workers_orig
 
         if no_setproctitle:
-            self.assertEquals(setproctitle_calls, [])
+            self.assertEqual(setproctitle_calls, [])
         else:
-            self.assertEquals(setproctitle_calls, [('one:test:brimd',)])
-        self.assertEquals(ss.worker_id, 0)
-        self.assertEquals(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
-        self.assertEquals(ss.daemons[0][0], 'one')
-        self.assertEquals(ss.daemons[0][1].__name__, 'DaemonWithStatsConf')
-        self.assertEquals(ss.daemons[0][2].store, {
+            self.assertEqual(setproctitle_calls, [('one:test:brimd',)])
+        self.assertEqual(ss.worker_id, 0)
+        self.assertEqual(ss.bucket_stats.get(ss.worker_id, 'start_time'), 1)
+        self.assertEqual(ss.daemons[0][0], 'one')
+        self.assertEqual(ss.daemons[0][1].__name__, 'DaemonWithStatsConf')
+        self.assertEqual(ss.daemons[0][2].store, {
             'test': {'daemons': 'one'},
             'one': {'call': 'brim.test.unit.test_server.DaemonWithStatsConf'}})
-        self.assertEquals(len(daemon.calls), 1)
-        self.assertEquals(len(daemon.calls[0]), 2)
-        self.assertEquals(daemon.calls[0][0], ss)
-        self.assertEquals(daemon.calls[0][1].bucket_stats, ss.bucket_stats)
+        self.assertEqual(len(daemon.calls), 1)
+        self.assertEqual(len(daemon.calls[0]), 2)
+        self.assertEqual(daemon.calls[0][0], ss)
+        self.assertEqual(daemon.calls[0][1].bucket_stats, ss.bucket_stats)
 
     def test_daemon_no_setproctitle(self):
         self.test_daemon(no_setproctitle=True)
@@ -4379,58 +4508,60 @@ class TestDaemonsSubserver(TestSubserver):
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: did:123 None ['None']",)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(
+            ss.logger.error_calls,
+            [("UNCAUGHT EXCEPTION: did:123 None ['None']",)])
+        self.assertEqual(ss.logger.exception_calls, [])
 
         ss.logger = FakeLogger()
         try:
             raise Exception('test')
         except Exception:
             ss._capture_exception(*exc_info())
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(len(ss.logger.error_calls), 1)
-        self.assertEquals(len(ss.logger.error_calls[0]), 1)
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(len(ss.logger.error_calls), 1)
+        self.assertEqual(len(ss.logger.error_calls[0]), 1)
         e = ss.logger.error_calls[0][0]
         self.assertTrue(e.startswith(
             "UNCAUGHT EXCEPTION: did:123 Exception: test ['Traceback (most "
             "recent call last):', '  File "))
         self.assertTrue(e.endswith(
             '\', "    raise Exception(\'test\')", \'Exception: test\']'))
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stdout(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stdout('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [
             ('STDOUT: did:123 one',), ('STDOUT: did:123 two three',),
             ('STDOUT: did:123 four',)])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
     def test_capture_stderr(self):
         ss = self._class(FakeServer(output=True), 'test')
         ss.logger = FakeLogger()
         ss.worker_id = 123
         ss._capture_stderr('one\ntwo three\nfour\n')
-        self.assertEquals(ss.logger.debug_calls, [])
-        self.assertEquals(ss.logger.info_calls, [])
-        self.assertEquals(ss.logger.notice_calls, [])
-        self.assertEquals(ss.logger.error_calls, [
+        self.assertEqual(ss.logger.debug_calls, [])
+        self.assertEqual(ss.logger.info_calls, [])
+        self.assertEqual(ss.logger.notice_calls, [])
+        self.assertEqual(ss.logger.error_calls, [
             ('STDERR: did:123 one',), ('STDERR: did:123 two three',),
             ('STDERR: did:123 four',)])
-        self.assertEquals(ss.logger.exception_calls, [])
+        self.assertEqual(ss.logger.exception_calls, [])
 
 
+@patch('__builtin__.open', mock_open(read_data='12345'))
 class TestServer(TestCase):
 
     def setUp(self):
@@ -4505,10 +4636,10 @@ class TestServer(TestCase):
 
     def test_uses_standard_items_by_default(self):
         serv = server.Server()
-        self.assertEquals(serv.args, server.sys_argv[1:])
-        self.assertEquals(serv.stdin, server.sys_stdin)
-        self.assertEquals(serv.stdout, server.sys_stdout)
-        self.assertEquals(serv.stderr, server.sys_stderr)
+        self.assertEqual(serv.args, server.sys_argv[1:])
+        self.assertEqual(serv.stdin, server.sys_stdin)
+        self.assertEqual(serv.stdout, server.sys_stdout)
+        self.assertEqual(serv.stderr, server.sys_stderr)
 
     def test_main(self):
         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
@@ -4522,308 +4653,385 @@ class TestServer(TestCase):
         orig_wsgi_server = server.wsgi.server
         try:
             server.wsgi.server = _server
-            self.assertEquals(self.serv.main(), 0)
+            self.assertEqual(self.serv.main(), 0)
         finally:
             server.wsgi.server = orig_wsgi_server
 
-        self.assertEquals(len(server_calls), 1)
+        self.assertEqual(len(server_calls), 1)
 
     def test_args_exception(self):
         self.serv.args = [123]
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(),
-                          "'int' object is unsubscriptable\n")
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertTrue(
+            self.stderr.getvalue() in [
+                "'int' object is unsubscriptable\n",
+                "'int' object has no attribute '__getitem__'\n"],
+            repr(self.stderr.getvalue()))
 
     def test_args_help1(self):
         self.serv.args = ['-?']
         try:
-            self.assertEquals(self.serv.main(), 0)
+            self.assertEqual(self.serv.main(), 0)
         except SystemExit:
             pass
         self.assertTrue('Usage: ' in self.stdout.getvalue())
         self.assertTrue("Command (defaults to 'no-daemon'):" in
                         self.stdout.getvalue())
         self.assertTrue('Options:' in self.stdout.getvalue())
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_args_help2(self):
         self.serv.args = ['-h']
         try:
-            self.assertEquals(self.serv.main(), 0)
+            self.assertEqual(self.serv.main(), 0)
         except SystemExit:
             pass
         self.assertTrue('Usage: ' in self.stdout.getvalue())
         self.assertTrue("Command (defaults to 'no-daemon'):" in
                         self.stdout.getvalue())
         self.assertTrue('Options:' in self.stdout.getvalue())
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_args_help3(self):
         self.serv.args = ['--help']
         try:
-            self.assertEquals(self.serv.main(), 0)
+            self.assertEqual(self.serv.main(), 0)
         except SystemExit:
             pass
         self.assertTrue('Usage: ' in self.stdout.getvalue())
         self.assertTrue("Command (defaults to 'no-daemon'):" in
                         self.stdout.getvalue())
         self.assertTrue('Options:' in self.stdout.getvalue())
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_args_default_conf(self):
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.read_conf_calls, [(server.DEFAULT_CONF_FILES,)])
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.read_conf_calls, [(server.DEFAULT_CONF_FILES,)])
 
     def test_args_override_conf1(self):
         self.serv.args = ['-c', 'one.conf']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.read_conf_calls, [(['one.conf'],)])
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.read_conf_calls, [(['one.conf'],)])
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_args_override_conf2(self):
         self.serv.args = ['-c', 'one.conf', '--conf', 'two.conf']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.read_conf_calls, [(['one.conf', 'two.conf'],)])
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.read_conf_calls, [(['one.conf', 'two.conf'],)])
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_args_default_pid_file(self):
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.serv.pid_file, '/var/run/brimd.pid')
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['status']
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '12345 is running\n')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.serv.pid_file, '/var/run/brimd.pid')
 
     def test_args_override_pid_file1(self):
         self.serv.args = ['-p', 'pidfile']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.serv.pid_file, 'pidfile')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.serv.pid_file, 'pidfile')
 
     def test_args_override_pid_file2(self):
         self.serv.args = ['--pid-file', 'pidfile']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.serv.pid_file, 'pidfile')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.serv.pid_file, 'pidfile')
+
+    def test_args_no_pid_file(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-p', '-', 'status']
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(
+            self.stderr.getvalue(),
+            'pid_file not in use so status cannot be used.\n')
+        self.assertEqual(self.serv.pid_file, '-')
 
     def test_args_default_nodaemon_output(self):
-        self.assertEquals(self.serv.main(), 1)
+        self.assertEqual(self.serv.main(), 1)
         self.assertTrue(self.serv.output)
 
     def test_args_default_start_output(self):
         self.serv.args = ['start']
         self.send_pid_sig_retval[0] = False
-        self.assertEquals(self.serv.main(), 1)
+        self.assertEqual(self.serv.main(), 1)
         self.assertFalse(self.serv.output)
 
     def test_args_override_output1(self):
         self.serv.args = ['start', '-o']
         self.send_pid_sig_retval[0] = False
-        self.assertEquals(self.serv.main(), 1)
+        self.assertEqual(self.serv.main(), 1)
         self.assertTrue(self.serv.output)
 
     def test_args_override_output2(self):
         self.serv.args = ['start', '--output']
         self.send_pid_sig_retval[0] = False
-        self.assertEquals(self.serv.main(), 1)
+        self.assertEqual(self.serv.main(), 1)
         self.assertTrue(self.serv.output)
 
     def test_version(self):
         self.serv.args = ['--version']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(),
-                          'Brim.Net Core Server %s\n' % version)
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(
+            self.stdout.getvalue(), 'Brim.Net Core Server %s\n' % __version__)
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_parser_error(self):
         self.serv.args = ['--invalid']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(),
-                          'no such option: --invalid\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(
+            self.stderr.getvalue(), 'no such option: --invalid\n')
 
     def test_too_many_commands(self):
         self.serv.args = ['one', 'two']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(),
-                          'Too many commands given; only one allowed.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(
+            self.stderr.getvalue(),
+            'Too many commands given; only one allowed.\n')
 
     def test_default_command_no_daemon1(self):
-        self.assertEquals(self.serv.main(), 1)
+        self.assertEqual(self.serv.main(), 1)
         self.assertTrue(self.serv.no_daemon)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_default_command_no_daemon2(self):
         self.serv.args = ['start']
         self.send_pid_sig_retval[0] = False
-        self.assertEquals(self.serv.main(), 1)
+        self.assertEqual(self.serv.main(), 1)
         self.assertFalse(self.serv.no_daemon)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_start_already_running(self):
+        self.conf.files = ['ok.conf']
         self.serv.args = ['start']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '12345 already running\n')
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '12345 already running\n')
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_start_no_conf(self):
         self.serv.args = ['start']
         self.send_pid_sig_retval[0] = False
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_start_has_conf(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['start']
         self.send_pid_sig_retval[0] = False
-        self.assertEquals(self.serv._parse_args(), self.conf)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.serv._parse_args(), self.conf)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+
+    def test_start_has_conf_no_pid_file_in_use(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-p', '-', 'start']
+        self.send_pid_sig_retval[0] = False
+        self.assertEqual(self.serv._parse_args(), self.conf)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_restart_no_conf(self):
         self.serv.args = ['restart']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_restart_has_conf(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['restart']
-        self.assertEquals(self.serv._parse_args(), self.conf)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.fork_calls, [()])
+        self.assertEqual(self.serv._parse_args(), self.conf)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.fork_calls, [()])
+
+    def test_restart_has_conf_no_pid_file_in_use(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-p', '-', 'restart']
+        exc = None
+        try:
+            self.serv._parse_args()
+        except Exception as err:
+            exc = err
+        self.assertEqual(
+            str(exc), 'pid_file not in use so restart cannot be used.')
 
     def test_restart_has_conf_fork_side(self):
         self.fork_retval[0] = 0
         self.conf.files = ['ok.conf']
         self.serv.args = ['restart']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.fork_calls, [()])
-        self.assertEquals(self.send_pid_sig_calls, [
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.fork_calls, [()])
+        self.assertEqual(self.send_pid_sig_calls, [
             ((self.serv.pid_file, 0), {}),
             ((self.serv.pid_file, server.SIGHUP),
                 {'expect_exit': True, 'pid_override': 12345})])
 
     def test_reload_no_conf(self):
         self.serv.args = ['reload']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_reload_has_conf(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['reload']
-        self.assertEquals(self.serv._parse_args(), self.conf)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.fork_calls, [()])
+        self.assertEqual(self.serv._parse_args(), self.conf)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.fork_calls, [()])
+
+    def test_reload_has_conf_no_pid_file_in_use(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-p', '-', 'reload']
+        exc = None
+        try:
+            self.serv._parse_args()
+        except Exception as err:
+            exc = err
+        self.assertEqual(
+            str(exc), 'pid_file not in use so reload cannot be used.')
 
     def test_reload_has_conf_fork_side(self):
         self.fork_retval[0] = 0
         self.conf.files = ['ok.conf']
         self.serv.args = ['reload']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.fork_calls, [()])
-        self.assertEquals(self.send_pid_sig_calls, [
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.fork_calls, [()])
+        self.assertEqual(self.send_pid_sig_calls, [
             ((self.serv.pid_file, 0), {}),
             ((self.serv.pid_file, server.SIGHUP),
                 {'expect_exit': True, 'pid_override': 12345})])
 
     def test_force_reload_no_conf(self):
         self.serv.args = ['force-reload']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_force_reload_has_conf(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['force-reload']
-        self.assertEquals(self.serv._parse_args(), self.conf)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.fork_calls, [()])
+        self.assertEqual(self.serv._parse_args(), self.conf)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.fork_calls, [()])
 
     def test_force_reload_has_conf_fork_side(self):
         self.fork_retval[0] = 0
         self.conf.files = ['ok.conf']
         self.serv.args = ['force-reload']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.fork_calls, [()])
-        self.assertEquals(self.send_pid_sig_calls, [
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.fork_calls, [()])
+        self.assertEqual(self.send_pid_sig_calls, [
             ((self.serv.pid_file, 0), {}),
             ((self.serv.pid_file, server.SIGHUP),
                 {'expect_exit': True, 'pid_override': 12345})])
 
     def test_shutdown(self):
+        self.conf.files = ['ok.conf']
         self.serv.args = ['shutdown']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls, [
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.send_pid_sig_calls, [
             ((self.serv.pid_file, server.SIGHUP), {'expect_exit': True})])
 
+    def test_shutdown_no_pid_file_in_use(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-p', '-', 'shutdown']
+        exc = None
+        try:
+            self.serv._parse_args()
+        except Exception as err:
+            exc = err
+        self.assertEqual(
+            str(exc), 'pid_file not in use so shutdown cannot be used.')
+
     def test_stop(self):
+        self.conf.files = ['ok.conf']
         self.serv.args = ['stop']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls, [
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(self.send_pid_sig_calls, [
             ((self.serv.pid_file, server.SIGTERM), {'expect_exit': True})])
 
+    def test_stop_no_pid_file_in_use(self):
+        self.conf.files = ['ok.conf']
+        self.serv.args = ['-p', '-', 'stop']
+        exc = None
+        try:
+            self.serv._parse_args()
+        except Exception as err:
+            exc = err
+        self.assertEqual(
+            str(exc), 'pid_file not in use so stop cannot be used.')
+
     def test_status_running(self):
+        self.conf.files = ['ok.conf']
         self.serv.args = ['status']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '12345 is running\n')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls,
-                          [((self.serv.pid_file, 0), {})])
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '12345 is running\n')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(
+            self.send_pid_sig_calls, [((self.serv.pid_file, 0), {})])
 
     def test_status_not_running(self):
+        self.conf.files = ['ok.conf']
         self.send_pid_sig_retval[0] = False
         self.serv.args = ['status']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), '12345 is not running\n')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls,
-                          [((self.serv.pid_file, 0), {})])
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), '12345 is not running\n')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(
+            self.send_pid_sig_calls, [((self.serv.pid_file, 0), {})])
 
     def test_status_not_running_no_pid(self):
+        self.conf.files = ['ok.conf']
         self.send_pid_sig_retval[0] = False
         self.send_pid_sig_retval[1] = 0
         self.serv.args = ['status']
-        self.assertEquals(self.serv.main(), 0)
-        self.assertEquals(self.stdout.getvalue(), 'not running\n')
-        self.assertEquals(self.stderr.getvalue(), '')
-        self.assertEquals(self.send_pid_sig_calls,
-                          [((self.serv.pid_file, 0), {})])
+        self.assertEqual(self.serv.main(), 0)
+        self.assertEqual(self.stdout.getvalue(), 'not running\n')
+        self.assertEqual(self.stderr.getvalue(), '')
+        self.assertEqual(
+            self.send_pid_sig_calls, [((self.serv.pid_file, 0), {})])
 
     def test_no_daemon_no_conf(self):
         self.serv.args = ['no-daemon']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), 'No configuration found.\n')
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), 'No configuration found.\n')
 
     def test_no_daemon_has_conf(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
-        self.assertEquals(self.serv._parse_args(), self.conf)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(), '')
+        self.assertEqual(self.serv._parse_args(), self.conf)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_unknown_command(self):
+        self.conf.files = ['ok.conf']
         self.serv.args = ['unknown']
-        self.assertEquals(self.serv.main(), 1)
-        self.assertEquals(self.stdout.getvalue(), '')
-        self.assertEquals(self.stderr.getvalue(),
-                          "Unknown command 'unknown'.\n")
+        self.assertEqual(self.serv.main(), 1)
+        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(
+            self.stderr.getvalue(), "Unknown command 'unknown'.\n")
 
     def test_parse_conf_default(self):
         self.conf.files = ['ok.conf']
@@ -4831,24 +5039,31 @@ class TestServer(TestCase):
         self.serv._parse_args()
         self.serv._parse_conf(Conf({
             'wsgi': {'port': '1234'},
-            'wsgi2': {},
+            'wsgi#name1': {},
+            'wsgi#name2': {},
             'tcp': {'call': 'brim.test.unit.test_server.TCPWithStatsConf'},
-            'tcp2': {'call': 'brim.test.unit.test_server.TCPWithStatsConf'},
+            'tcp#name1': {
+                'call': 'brim.test.unit.test_server.TCPWithStatsConf'},
+            'tcp#name2': {
+                'call': 'brim.test.unit.test_server.TCPWithStatsConf'},
             'udp': {'call': 'brim.test.unit.test_server.UDPWithStatsConf'},
-            'udp2': {'call': 'brim.test.unit.test_server.UDPWithStatsConf'},
+            'udp#name1': {
+                'call': 'brim.test.unit.test_server.UDPWithStatsConf'},
+            'udp#name2': {
+                'call': 'brim.test.unit.test_server.UDPWithStatsConf'},
             'daemons': {}}))
-        self.assertEquals(self.serv.user, None)
-        self.assertEquals(self.serv.group, None)
-        self.assertEquals(self.serv.umask, 0022)
-        self.assertEquals(self.serv.log_name, 'brim')
-        self.assertEquals(self.serv.log_level, 'INFO')
-        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL0')
-        self.assertEquals(
-            sorted(s.name for s in self.serv.subservers),
-            ['daemons', 'tcp', 'tcp2', 'udp', 'udp2', 'wsgi', 'wsgi2'])
+        self.assertEqual(self.serv.user, None)
+        self.assertEqual(self.serv.group, None)
+        self.assertEqual(self.serv.umask, 0022)
+        self.assertEqual(self.serv.log_name, 'brim')
+        self.assertEqual(self.serv.log_level, 'INFO')
+        self.assertEqual(self.serv.log_facility, 'LOG_LOCAL0')
+        self.assertEqual(sorted(s.name for s in self.serv.subservers), [
+            'daemons', 'tcp', 'tcp#name1', 'tcp#name2', 'udp', 'udp#name1',
+            'udp#name2', 'wsgi', 'wsgi#name1', 'wsgi#name2'])
         # Just verifies subserver._parse_conf was called.
         wsgi = [s for s in self.serv.subservers if s.name == 'wsgi'][0]
-        self.assertEquals(wsgi.port, 1234)
+        self.assertEqual(wsgi.port, 1234)
 
     def test_parse_conf_sets_error_handler(self):
         self.conf.files = ['ok.conf']
@@ -4859,72 +5074,76 @@ class TestServer(TestCase):
         exc = None
         try:
             conf.get_int('brim', 'test', 0)
-        except SystemExit, err:
+        except SystemExit as err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] test of 'abc' "
-                                    "cannot be converted to int.")
+        self.assertEqual(
+            str(exc),
+            "Configuration value [brim] test of 'abc' cannot be converted to "
+            "int.")
         self.serv._parse_conf(conf)
         # Asserts conf.error is now the new behavior of just raising Exception.
         exc = None
         try:
             conf.get_int('brim', 'test', 0)
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Configuration value [brim] test of 'abc' "
-                                    "cannot be converted to int.")
+        self.assertEqual(
+            str(exc),
+            "Configuration value [brim] test of 'abc' cannot be converted to "
+            "int.")
 
     def test_parse_conf_user(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'user': 'name'}}))
-        self.assertEquals(self.serv.user, 'name')
+        self.assertEqual(self.serv.user, 'name')
 
     def test_parse_conf_group(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'group': 'name'}}))
-        self.assertEquals(self.serv.group, 'name')
+        self.assertEqual(self.serv.group, 'name')
 
     def test_parse_conf_umask(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'umask': '0777'}}))
-        self.assertEquals(self.serv.umask, 0777)
+        self.assertEqual(self.serv.umask, 0777)
         exc = None
         try:
             self.serv._parse_conf(Conf({'brim': {'umask': 'abc'}}))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid umask value 'abc'.")
+        self.assertEqual(str(exc), "Invalid umask value 'abc'.")
         exc = None
         try:
             self.serv._parse_conf(Conf({'brim': {'umask': '99'}}))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(exc), "Invalid umask value '99'.")
+        self.assertEqual(str(exc), "Invalid umask value '99'.")
 
     def test_parse_conf_log_name(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'log_name': 'name'}}))
-        self.assertEquals(self.serv.log_name, 'name')
+        self.assertEqual(self.serv.log_name, 'name')
 
     def test_parse_conf_log_level(self):
         self.conf.files = ['ok.conf']
         self.serv.args = ['no-daemon']
         self.serv._parse_args()
         self.serv._parse_conf(Conf({'brim': {'log_level': 'DEBUG'}}))
-        self.assertEquals(self.serv.log_level, 'DEBUG')
+        self.assertEqual(self.serv.log_level, 'DEBUG')
         exc = None
         try:
             self.serv._parse_conf(Conf({'brim': {'log_level': 'invalid'}}))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err), "Invalid [brim] log_level 'INVALID'.")
+        self.assertEqual(str(exc), "Invalid [brim] log_level 'INVALID'.")
 
     def test_parse_conf_log_facility(self):
         self.conf.files = ['ok.conf']
@@ -4932,17 +5151,17 @@ class TestServer(TestCase):
         self.serv._parse_args()
         self.serv._parse_conf(
             Conf({'brim': {'log_facility': 'LOG_LOCAL1'}}))
-        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL1')
+        self.assertEqual(self.serv.log_facility, 'LOG_LOCAL1')
         self.serv._parse_conf(Conf({'brim': {'log_facility': 'LOCAL2'}}))
-        self.assertEquals(self.serv.log_facility, 'LOG_LOCAL2')
+        self.assertEqual(self.serv.log_facility, 'LOG_LOCAL2')
         exc = None
         try:
             self.serv._parse_conf(
                 Conf({'brim': {'log_facility': 'invalid'}}))
-        except Exception, err:
+        except Exception as err:
             exc = err
-        self.assertEquals(str(err),
-                          "Invalid [brim] log_facility 'LOG_INVALID'.")
+        self.assertEqual(
+            str(exc), "Invalid [brim] log_facility 'LOG_INVALID'.")
 
     def test_start(self):
         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
@@ -4965,7 +5184,7 @@ class TestServer(TestCase):
             server.sustain_workers = orig_sustain_workers
         # Since we're in no-daemon, Server didn't call sustain_workers, but the
         # wsgi subserver did.
-        self.assertEquals(sustain_workers_calls, [
+        self.assertEqual(sustain_workers_calls, [
             ((0, subserv._wsgi_worker), {'logger': subserv.logger})])
 
     def test_start_no_subservers(self):
@@ -4984,12 +5203,12 @@ class TestServer(TestCase):
         try:
             server.sustain_workers = _sustain_workers
             self.serv._start()
-        except Exception, err:
+        except Exception as err:
             exc = err
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(str(exc), 'No subservers configured.')
-        self.assertEquals(sustain_workers_calls, [])
+        self.assertEqual(str(exc), 'No subservers configured.')
+        self.assertEqual(sustain_workers_calls, [])
 
     def test_start_daemoned_parent_side(self):
         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
@@ -5019,9 +5238,9 @@ class TestServer(TestCase):
         finally:
             server.sustain_workers = orig_sustain_workers
             del server.open
-        self.assertEquals(sustain_workers_calls, [])
-        self.assertEquals(open_calls, [('/var/run/brimd.pid', 'w')])
-        self.assertEquals(open_retval[0].getvalue(), '12345\n')
+        self.assertEqual(sustain_workers_calls, [])
+        self.assertEqual(open_calls, [('/var/run/brimd.pid', 'w')])
+        self.assertEqual(open_retval[0].getvalue(), '12345\n')
 
     def test_start_daemoned_child_side(self):
         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
@@ -5043,9 +5262,9 @@ class TestServer(TestCase):
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls, [
+        self.assertEqual(sustain_workers_calls, [
             ((1, self.serv._start_subserver), {'logger': self.serv.logger})])
-        self.assertEquals(self.capture_calls, [
+        self.assertEqual(self.capture_calls, [
             ((), {'exceptions': self.serv._capture_exception,
                   'stdout_func': self.serv._capture_stdout,
                   'stderr_func': self.serv._capture_stderr})])
@@ -5070,9 +5289,9 @@ class TestServer(TestCase):
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls, [
+        self.assertEqual(sustain_workers_calls, [
             ((1, self.serv._start_subserver), {'logger': self.serv.logger})])
-        self.assertEquals(self.capture_calls, [])
+        self.assertEqual(self.capture_calls, [])
 
     def test_start_subserver(self, no_setproctitle=False):
         self.conf = Conf({'brim': {'port': '0'}, 'wsgi': {}})
@@ -5094,9 +5313,9 @@ class TestServer(TestCase):
             self.serv._start()
         finally:
             server.sustain_workers = orig_sustain_workers
-        self.assertEquals(sustain_workers_calls, [
+        self.assertEqual(sustain_workers_calls, [
             ((1, self.serv._start_subserver), {'logger': self.serv.logger})])
-        self.assertEquals(self.capture_calls, [
+        self.assertEqual(self.capture_calls, [
             ((), {'exceptions': self.serv._capture_exception,
                   'stdout_func': self.serv._capture_stdout,
                   'stderr_func': self.serv._capture_stderr})])
@@ -5118,10 +5337,10 @@ class TestServer(TestCase):
         finally:
             server.setproctitle = setproctitle_orig
         if no_setproctitle:
-            self.assertEquals(setproctitle_calls, [])
+            self.assertEqual(setproctitle_calls, [])
         else:
-            self.assertEquals(setproctitle_calls, [('wsgi:brimd',)])
-        self.assertEquals(start_calls, [(self.serv.bucket_stats[0],)])
+            self.assertEqual(setproctitle_calls, [('wsgi:brimd',)])
+        self.assertEqual(start_calls, [(self.serv.bucket_stats[0],)])
 
     def test_start_subserver_no_setproctitle(self):
         self.test_start_subserver(no_setproctitle=True)
@@ -5129,16 +5348,17 @@ class TestServer(TestCase):
     def test_capture_exception(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_exception()
-        self.assertEquals(self.serv.logger.error_calls,
-                          [("UNCAUGHT EXCEPTION: main None ['None']",)])
+        self.assertEqual(
+            self.serv.logger.error_calls,
+            [("UNCAUGHT EXCEPTION: main None ['None']",)])
 
         self.serv.logger = FakeLogger()
         try:
             raise Exception('testing')
         except Exception:
             self.serv._capture_exception(*exc_info())
-        self.assertEquals(len(self.serv.logger.error_calls), 1)
-        self.assertEquals(len(self.serv.logger.error_calls[0]), 1)
+        self.assertEqual(len(self.serv.logger.error_calls), 1)
+        self.assertEqual(len(self.serv.logger.error_calls[0]), 1)
         self.assertTrue(self.serv.logger.error_calls[0][0].startswith(
             'UNCAUGHT EXCEPTION: main Exception: testing [\'Traceback '
             '(most recent call last):\''))
@@ -5148,26 +5368,26 @@ class TestServer(TestCase):
     def test_capture_stdout(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.info_calls, [
+        self.assertEqual(self.serv.logger.info_calls, [
             ('STDOUT: main one',), ('STDOUT: main two',),
             ('STDOUT: main three',)])
 
         self.serv.logger = FakeLogger()
         self.serv._capture_stdout('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.info_calls, [
+        self.assertEqual(self.serv.logger.info_calls, [
             ('STDOUT: main one',), ('STDOUT: main two',),
             ('STDOUT: main three',)])
 
     def test_capture_stderr(self):
         self.serv.logger = FakeLogger()
         self.serv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.error_calls, [
+        self.assertEqual(self.serv.logger.error_calls, [
             ('STDERR: main one',), ('STDERR: main two',),
             ('STDERR: main three',)])
 
         self.serv.logger = FakeLogger()
         self.serv._capture_stderr('one\ntwo\nthree\n')
-        self.assertEquals(self.serv.logger.error_calls, [
+        self.assertEqual(self.serv.logger.error_calls, [
             ('STDERR: main one',), ('STDERR: main two',),
             ('STDERR: main three',)])
 

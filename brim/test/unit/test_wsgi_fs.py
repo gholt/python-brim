@@ -1,4 +1,4 @@
-"""Contains unit and functional tests for the Brim.Net Core Package."""
+"""Tests for brim.wsgi_fs."""
 """Copyright and License.
 
 Copyright 2012-2014 Gregory Holt
@@ -15,3 +15,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from unittest import main, TestCase
+
+from brim import wsgi_fs
+
+
+class TestFS(TestCase):
+
+    def test_placeholder(self):
+        self.assertTrue(wsgi_fs is not None)
+
+
+if __name__ == '__main__':
+    main()
