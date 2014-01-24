@@ -1,0 +1,141 @@
+.. _brim_package:
+
+.. raw:: html
+
+    <h1>API Documentation</h1>
+
+brim
+####
+
+.. automodule:: brim
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.conf
+*********
+
+.. automodule:: brim.conf
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.daemon_sample
+******************
+
+.. automodule:: brim.daemon_sample
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.http
+*********
+
+.. automodule:: brim.http
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.httpform
+*************
+
+.. automodule:: brim.httpform
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.log
+********
+
+.. automodule:: brim.log
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.server
+***********
+
+.. automodule:: brim.server
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.service
+************
+
+.. automodule:: brim.service
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.tcp_echo
+*************
+
+.. automodule:: brim.tcp_echo
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.udp_echo
+*************
+
+.. automodule:: brim.udp_echo
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.util
+*********
+
+.. automodule:: brim.util
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.wsgi_basic_auth
+********************
+
+.. automodule:: brim.wsgi_basic_auth
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.wsgi_echo
+**************
+
+.. automodule:: brim.wsgi_echo
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.wsgi_fs
+************
+
+.. automodule:: brim.wsgi_fs
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+
+brim.wsgi_stats
+***************
+
+.. automodule:: brim.wsgi_stats
+    :members:
+    :undoc-members:
+    :special-members: __call__
+    :show-inheritance:
+

@@ -1,0 +1,333 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sample brimd.conf &mdash; Brim.Net Core Package 0.05 documentation</title>
+    
+    <link rel="stylesheet" href="_static/brim.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.05',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Brim.Net Core Package 0.05 documentation" href="index.html" />
+    <link rel="next" title="brim" href="api.html" />
+    <link rel="prev" title="CHANGELOG" href="changelog.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="brim"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="changelog.html" title="CHANGELOG"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Brim.Net Core Package 0.05 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sample-brimd-conf">
+<span id="brimdconfsample"></span><h1>Sample brimd.conf<a class="headerlink" href="#sample-brimd-conf" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-python"><pre>[brim]
+# additional_confs = &lt;file-list&gt;
+#   Will include the conf files in &lt;file-list&gt; with this conf. Default: ''
+# user = &lt;name&gt;
+#   The local user to run as. Default: &lt;current-user&gt;
+# group = &lt;name&gt;
+#   The local group to run as. Default: &lt;default-group-of-user&gt;
+# umask = &lt;mask&gt;
+#   The umask to run with. Default: 0022
+# pid_file = &lt;path&gt;
+#   The file to use to store the process id of brimd serving this conf.
+#   Default: /var/run/brimd.pid or ~/.brimd.pid
+#
+#   The following are also available in [wsgi], [tcp], [udp], and [daemon]
+#   sections as well as this section (which will define the defaults for the
+#   other sections).
+# log_name = &lt;name&gt;
+#   The name to send to syslog with each log line. Default: brim
+# log_level = &lt;level&gt;
+#   The level at which lesser log records will be suppressed. Valid values are:
+#   CRITICAL, ERROR, WARNING, NOTICE, INFO, and DEBUG. Default: INFO
+# log_facility = &lt;facility&gt;
+#   The facility value sent to syslog. Normally this is one of LOCAL0-7.
+#   Default: LOCAL0
+# json_dumps = &lt;func&gt;
+#   Specifies the Python function to use for converting Python objects into
+#   JSON. This uses json.dumps by default, but you can use other faster
+#   functions if you have them installed, such as simplejson.dumps.
+#   Default: json.dumps
+# json_loads = &lt;func&gt;
+#   Specifies the Python function to use for converting JSON into Python
+#   objects. This uses json.loads by default, but you can use other faster
+#   functions if you have them installed, such as simplejson.loads.
+#   Default: json.loads
+#
+#   The following are also available in [wsgi], [tcp], and [udp] sections as
+#   well as this section (which will define the defaults for the other
+#   sections).
+# ip = &lt;ip&gt;
+#   The ip address to listen on or * to listen on all addresses. Default: *
+# port = &lt;port&gt;
+#   The port to listen on. Default: 80
+# workers = &lt;number&gt;
+#   The number of subprocess workers to spawn to handle requests. Usually you
+#   want to set this to at least the number of CPU cores you have. Default: 1
+# certfile = &lt;path&gt;
+#   The path to the SSL certificate file to enable SSL. Default: &lt;not-set&gt;
+# keyfile = &lt;path&gt;
+#   The path to the SSL key file to enable SSL. Default: &lt;not-set&gt;
+# client_timeout = &lt;seconds&gt;
+#   The number of seconds with no activity by a client before dropping the
+#   connection. Default: 60
+# concurrent_per_worker = &lt;number&gt;
+#   The number of concurrent connections each worker is allowed to handle.
+#   Default: 1024
+# backlog = &lt;number&gt;
+#   The number of socket connections that can be queued. Default: 4096
+# listen_retry = &lt;seconds&gt;
+#   The number of seconds to keep trying to bind to the configured ip and port
+#   before giving up. Default: 30
+# eventlet_hub = &lt;name or module&gt;
+#   The Eventlet coroutine hub to use. Default: Eventlet's default
+
+[wsgi#name]
+#   The #name part may be omitted to use the default 'wsgi' name or included to
+#   separate it from other wsgi configs. In this way you can run multiple wsgi
+#   servers on distinct ports with the same brimd instance.
+# apps = &lt;name&gt; [&lt;name&gt;] ...
+#   The names of the WSGI apps to configure. Each &lt;name&gt; should have a
+#   corresponding [name] section elsewhere in the configuration. See the
+#   example [wsgi_echo] below.
+# log_headers = &lt;boolean&gt;
+#   Whether all headers should be sent to the request log or not. Default: no
+# count_status_codes = &lt;code&gt; [&lt;code&gt;] ...
+#   The list of HTTP status codes to track. See brim.wsgi_stats for a WSGI app
+#   that reports server stats. Each code listed here will be tracked indepently
+#   of the 2xx, 3xx, 4xx, and 5xx tracking. The default is 404 408 499 501. 404
+#   Not Found, 408 Request Timeout, and 499 Disconnect are usually tracked
+#   separately because they can indicate a problem with the server whereas
+#   other 4xx codes usually indicate a problem with the client. 501 Not
+#   Implemented is usually tracked separately because it can indicate a problem
+#   with the client rather than the server unlike most other 5xx codes.
+# wsgi_input_iter_chunk_size = &lt;bytes&gt;
+#   The number of bytes read per chunk when the WSGI input is used as an
+#   iterator. This use case isn't very common. Default: 4096
+# wsgi_output_iter_chunk_size = &lt;bytes&gt;
+#   The number of bytes read per chunk when using Transfer-encoding: Chunked and
+#   iterating out a response. Useful to decrease for long polling, short message
+#   connections such as HTML5 Server-Sent Events. Technically in violation of
+#   the WSGI spec but supported by Eventlet. Default: 4096
+
+[tcp#name]
+#   The #name part may be omitted to use the default 'tcp' name or included to
+#   separate it from other tcp configs. In this way you can run multiple tcp
+#   servers on distinct ports with the same brimd instance.
+call = &lt;package.module.Class&gt;
+#   Set to the Python class that will handle the incoming connections.
+#   Additional options are described in the above [brim] section. The Python
+#   handler class may have options of its own as well.
+#
+# For the brim.tcp_echo.TCPEcho class:
+# chunk_read = &lt;bytes&gt;
+#   The maximum number of bytes to read before echoing it back. Default: 65536
+
+[udp#name]
+#   The #name part may be omitted to use the default 'udp' name or included to
+#   separate it from other udp configs. In this way you can run multiple udp
+#   servers on distinct ports with the same brimd instance.
+call = &lt;package.module.Class&gt;
+#   Set to the Python class that will handle the incoming datagrams.
+#   Additional options are described in the above [brim] section. The Python
+#   handler class may have options of its own as well.
+# max_datagram_size = &lt;bytes&gt;
+#   The maximum sized UDP datagram to receive. Default: 65536
+
+[daemons]
+# daemons = &lt;name&gt; [&lt;name&gt;] ...
+#   The name of daemons to configure. Each &lt;name&gt; should have a corresponding
+#   [name] section elsewhere in the configuration. See the example
+#   [daemon_sample] below. Daemons are subprocesses for background tasks.
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# WSGI Apps Available In The Brim.Net Core Package
+#
+
+[wsgi_echo]
+#   A simple WSGI application that just echoes the request body back in the
+#   response. This is a good starting point for other WSGI applications. See
+#   the source for what's implemented and why.
+call = brim.wsgi_echo.WSGIEcho
+#   Each application needs at least this call value set to the Python class
+#   that will handle the application's requests.
+# path = &lt;path&gt;
+#   The request path to match and serve; any other paths will be passed on to
+#   the next WSGI app in the chain. Default: /echo
+# max_echo = &lt;bytes&gt;
+#   The maximum bytes to echo; any additional bytes will be ignored.
+#   Default: 65536
+
+[wsgi_stats]
+#   Reports the brimd server stats as a JSON reponse. The stats contain basic
+#   things like the server start time and request counts.
+call = brim.wsgi_stats.WSGIStats
+#   Each application needs at least this call value set to the Python class
+#   that will handle the application's requests.
+# path = &lt;path&gt;
+#   The request path to match and serve; any other paths will be passed on to
+#   the next WSGI app in the chain. This can serve as a basic restriction to
+#   accessing the stats by setting it to a hard to guess value.
+#   Default: /stats
+
+[wsgi_basic_auth]
+#   A WSGI application that offers Basic Auth capabilities.
+#   WARNING: This is HTTP Basic Auth, so the password will be transmitted in
+#   the clear. You definitely should be using SSL when using Basic Auth.
+call = brim.wsgi_basic_auth.WSGIBasicAuth
+# auth_path = &lt;path&gt;
+#   The local file path to the auth details. This file should be plain text,
+#   one user per line, with each line a user name followed by whitespace and
+#   then the bcrypt password entry for the user. You can obtain the bcrypt
+#   password entry with the following:
+#       $ python -c '
+#       &gt; import bcrypt
+#       &gt; print bcrypt.hashpw("secret", bcrypt.gensalt())'
+#   The file will automatically be reloaded if changed within five minutes.
+
+[wsgi_fs]
+#   A WSGI application that simply serves up any files under a
+#   specified location on the file system.
+call = brim.wsgi_fs.WSGIFS
+# path = &lt;path&gt;
+#   The request path to match and serve; any paths that do not begin with this
+#   value will be passed on to the next WSGI app in the chain. Default: /
+# serve_path = &lt;path&gt;
+#   The local file path containing files to serve.
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# TCP Apps Available In The Brim.Net Core Package
+#
+
+[tcp_echo]
+#   An application that just echoes any incoming data back. This is a good
+#   starting point for other TCP applications. See the source for what's
+#   implemented and why.
+call = brim.tcp_echo.TCPEcho
+# chunk_read = &lt;bytes&gt;
+#   The maximum number of bytes to read before echoing it back. Default: 65536
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# UDP Apps Available In The Brim.Net Core Package
+#
+
+[udp_echo]
+#   An application that just echoes any incoming data back. This is a good
+#   starting point for other UDP applications. See the source for what's
+#   implemented and why.
+call = brim.udp_echo.UDP
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Daemons Available In The Brim.Net Core Package
+#
+
+[daemon_sample]
+#   A simple daemon that just logs a status line every so often. This can be a
+#   good starting point for other daemons. See the source for what's
+#   implemented and why.
+call = brim.daemon_sample.DaemonSample
+#   Each daemon needs at least this call value set to the Python class that
+#   will be launched by the server.
+# interval = &lt;seconds&gt;
+#   The number of seconds between each status line logged. Default: 60
+</pre>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="changelog.html"
+                        title="previous chapter">CHANGELOG</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="next chapter">brim</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/brimdconfsample.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="brim"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="changelog.html" title="CHANGELOG"
+             >previous</a> |</li>
+        <li><a href="index.html">Brim.Net Core Package 0.05 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012-2014, Gregory Holt, portions (httpform) 2011 OpenStack, LLC..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b3.
+    </div>
+  </body>
+</html>
