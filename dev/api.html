@@ -115,7 +115,7 @@ iteratively.</td>
 <p>Provides a simple way to work with configuration files.</p>
 <p>This module can translate a ConfigParser-style configuration file into a
 simple dict, wrapping that with a <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">Conf</span></tt></a> class providing
-convenient &#8220;get&#8221; functions that work much like dict&#8217;s &#8220;get&#8221; method
+convenient &quot;get&quot; functions that work much like dict's &quot;get&quot; method
 (return None or the default value provided if the section or option is
 missing) for various value types.</p>
 <p>Simple Example Using <a class="reference internal" href="#brim.conf.read_conf" title="brim.conf.read_conf"><tt class="xref py py-func docutils literal"><span class="pre">read_conf()</span></tt></a>:</p>
@@ -198,9 +198,9 @@ as well:</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>store</strong> &#8211; A dict representing the configuration, as described
+<li><strong>store</strong> -- A dict representing the configuration, as described
 above.</li>
-<li><strong>files</strong> &#8211; A list of file names the configuration was read from.</li>
+<li><strong>files</strong> -- A list of file names the configuration was read from.</li>
 </ul>
 </td>
 </tr>
@@ -210,7 +210,7 @@ above.</li>
 <dt id="brim.conf.Conf.error">
 <tt class="descname">error</tt><big>(</big><em>section</em>, <em>option</em>, <em>value</em>, <em>conversion_type</em>, <em>err</em><big>)</big><a class="headerlink" href="#brim.conf.Conf.error" title="Permalink to this definition">¶</a></dt>
 <dd><p>Handles an error converting a section/option value.</p>
-<p>This function is called when one of the &#8220;get&#8221; methods cannot
+<p>This function is called when one of the &quot;get&quot; methods cannot
 convert a value. By default, this method calls sys.exit with an
 explanatory message, but you can override it by setting
 Conf.error to another method.</p>
@@ -232,14 +232,14 @@ iterator of sections rather than just one section name.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>section</strong> &#8211; The section name (or an iterator of section
+<li><strong>section</strong> -- The section name (or an iterator of section
 names) within the conf that was read.</li>
-<li><strong>option</strong> &#8211; The option name within the section that was read.</li>
-<li><strong>value</strong> &#8211; The value read and failed conversion.</li>
-<li><strong>conversion_type</strong> &#8211; The name of the type of conversion that
+<li><strong>option</strong> -- The option name within the section that was read.</li>
+<li><strong>value</strong> -- The value read and failed conversion.</li>
+<li><strong>conversion_type</strong> -- The name of the type of conversion that
 failed, such as <tt class="docutils literal"><span class="pre">'boolean'</span></tt>, <tt class="docutils literal"><span class="pre">'int'</span></tt>, <tt class="docutils literal"><span class="pre">'float'</span></tt>, or
 <tt class="docutils literal"><span class="pre">path</span></tt>.</li>
-<li><strong>err</strong> &#8211; The Exception that was raised, if any, during the
+<li><strong>err</strong> -- The Exception that was raised, if any, during the
 conversion.</li>
 </ul>
 </td>
@@ -330,12 +330,12 @@ ConfigParser.Error be raised instead.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>conf_files</strong> &#8211; An iterable of conf files or a string
+<li><strong>conf_files</strong> -- An iterable of conf files or a string
 representing a single conf file to read and translate.
 Values in files further into the list override any values from
 prior files. File names may use the ~/filename or ~user/filename
 format and are expanded with os.path.expanduser.</li>
-<li><strong>exit_on_read_exception</strong> &#8211; A boolean that indicates whether
+<li><strong>exit_on_read_exception</strong> -- A boolean that indicates whether
 sys.exit should be called on error or if a ConfigParser.Error
 should be raised instead.</li>
 </ul>
@@ -354,7 +354,7 @@ configuration read from the conf_files.</p>
 <span id="brim-daemon-sample"></span><h2>brim.daemon_sample<a class="headerlink" href="#module-brim.daemon_sample" title="Permalink to this headline">¶</a></h2>
 <p>A simple daemon that just logs a status line every so often.</p>
 <p>This can be a good starting point for other daemons. See the source for
-what&#8217;s implemented and why.</p>
+what's implemented and why.</p>
 <p>Configuration Options:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">daemon_sample</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">daemon_sample</span><span class="o">.</span><span class="n">DaemonSample</span>
@@ -407,8 +407,8 @@ all daemons and set by the controlling
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the daemon.</li>
-<li><strong>parsed_conf</strong> &#8211; The result from parse_conf.</li>
+<li><strong>name</strong> -- The name of the daemon.</li>
+<li><strong>parsed_conf</strong> -- The result from parse_conf.</li>
 </ul>
 </td>
 </tr>
@@ -449,9 +449,9 @@ will be treated as an unsigned integer.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>subserver</strong> &#8211; The <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a> that is
+<li><strong>subserver</strong> -- The <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a> that is
 managing this daemon.</li>
-<li><strong>stats</strong> &#8211; The shared memory statistics object as defined
+<li><strong>stats</strong> -- The shared memory statistics object as defined
 above.</li>
 </ul>
 </td>
@@ -491,9 +491,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the daemon, indicates the daemon&#8217;s
+<li><strong>name</strong> -- The name of the daemon, indicates the daemon's
 section in the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>
@@ -547,9 +547,9 @@ largest value of the stat from all daemons.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the daemon, indicates the daemon&#8217;s
+<li><strong>name</strong> -- The name of the daemon, indicates the daemon's
 section in the overall configuration for the daemon server.</li>
-<li><strong>parsed_conf</strong> &#8211; The result from <a class="reference internal" href="#brim.daemon_sample.DaemonSample.parse_conf" title="brim.daemon_sample.DaemonSample.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>parsed_conf</strong> -- The result from <a class="reference internal" href="#brim.daemon_sample.DaemonSample.parse_conf" title="brim.daemon_sample.DaemonSample.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
 </ul>
 </td>
 </tr>
@@ -566,8 +566,8 @@ section in the overall configuration for the daemon server.</li>
 <div class="section" id="module-brim.http">
 <span id="brim-http"></span><h2>brim.http<a class="headerlink" href="#module-brim.http" title="Permalink to this headline">¶</a></h2>
 <p>Utilities for working with HTTP.</p>
-<p>This isn&#8217;t WebOb <a class="reference external" href="http://www.webob.org/">http://www.webob.org/</a> or Werkzeug
-<a class="reference external" href="http://werkzeug.pocoo.org">http://werkzeug.pocoo.org</a> but often it&#8217;s enough and you should be able
+<p>This isn't WebOb <a class="reference external" href="http://www.webob.org/">http://www.webob.org/</a> or Werkzeug
+<a class="reference external" href="http://werkzeug.pocoo.org">http://werkzeug.pocoo.org</a> but often it's enough and you should be able
 to upgrade easily to an alternative once you do need it.</p>
 <p>There are classes for standard HTTP responses, such as
 <a class="reference internal" href="#brim.http.HTTPNotFound" title="brim.http.HTTPNotFound"><tt class="xref py py-class docutils literal"><span class="pre">HTTPNotFound</span></tt></a> for 404. These classes are all subclasses of
@@ -581,7 +581,7 @@ as used as WSGI apps. The 2xx classes are all subclasses of
 <p>Instead of a Request object, this package just provides some simpler
 classes and functions, like <a class="reference internal" href="#brim.http.QueryParser" title="brim.http.QueryParser"><tt class="xref py py-class docutils literal"><span class="pre">QueryParser</span></tt></a> and
 <a class="reference internal" href="#brim.http.get_header_int" title="brim.http.get_header_int"><tt class="xref py py-func docutils literal"><span class="pre">get_header_int()</span></tt></a>, and some replacement functions like
-<a class="reference internal" href="#brim.http.quote" title="brim.http.quote"><tt class="xref py py-func docutils literal"><span class="pre">quote()</span></tt></a> (it&#8217;s Unicode-safe by using UTF8).</p>
+<a class="reference internal" href="#brim.http.quote" title="brim.http.quote"><tt class="xref py py-func docutils literal"><span class="pre">quote()</span></tt></a> (it's Unicode-safe by using UTF8).</p>
 <dl class="data">
 <dt id="brim.http.CODE2NAME">
 <tt class="descclassname">brim.http.</tt><tt class="descname">CODE2NAME</tt><em class="property"> = {300: 'Multiple Choices', 301: 'Moved Permanently', 302: 'Found', 303: 'See Other', 304: 'Not Modified', 305: 'Use Proxy', 307: 'Temporary Redirect', 100: 'Continue', 101: 'Switching Protocols', 102: 'Processing', 400: 'Bad Request', 401: 'Unauthorized', 402: 'Payment Required', 403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed', 406: 'Not Acceptable', 407: 'Proxy Authentication Required', 408: 'Request Timeout', 409: 'Conflict', 410: 'Gone', 411: 'Length Required', 412: 'Precondition Failed', 413: 'Request Entity Too Large', 414: 'Request-URI Too Long', 415: 'Unsupported Media Type', 416: 'Requested Range Not Satisfiable', 417: 'Expectation Failed', 422: 'Unprocessable Entity', 423: 'Locked', 424: 'Failed Dependency', 426: 'Upgrade Required', 200: 'OK', 201: 'Created', 202: 'Accepted', 203: 'Non-Authoritative Information', 204: 'No Content', 205: 'Reset Content', 206: 'Partial Content', 207: 'Multi-Status', 208: 'Already Reported', 226: 'IM Used', 500: 'Internal Server Error', 501: 'Not Implemented', 502: 'Bad Gateway', 503: 'Service Unavailable', 504: 'Gateway Timeout', 505: 'HTTP Version Not Supported', 506: 'Variant Also Negotiates', 507: 'Insufficient Storage', 508: 'Loop Detected', 510: 'Not Extended'}</em><a class="headerlink" href="#brim.http.CODE2NAME" title="Permalink to this definition">¶</a></dt>
@@ -647,22 +647,22 @@ classes and functions, like <a class="reference internal" href="#brim.http.Query
 <em class="property">exception </em><tt class="descclassname">brim.http.</tt><tt class="descname">HTTPException</tt><big>(</big><em>body=None</em>, <em>headers=None</em>, <em>code=500</em><big>)</big><a class="headerlink" href="#brim.http.HTTPException" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
 <p>Root class of all brim.http response classes.</p>
-<p>If the body is None and the headers don&#8217;t have a content-length or
+<p>If the body is None and the headers don't have a content-length or
 transfer-encoding the body is set to a reasonable default for the
 status code.</p>
 <p>If the body has a length (as determined by
-<tt class="docutils literal"><span class="pre">hasattr(body,</span> <span class="pre">'__len__')</span></tt>) and the headers don&#8217;t have a
+<tt class="docutils literal"><span class="pre">hasattr(body,</span> <span class="pre">'__len__')</span></tt>) and the headers don't have a
 content-length or transfer-encoding, the content-length is set to
-the body&#8217;s length.</p>
+the body's length.</p>
 <p>If the headers have no content-type, text/plain is used by default.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>body</strong> &#8211; The body of the response.</li>
-<li><strong>headers</strong> &#8211; A dict of the headers to include in the response.</li>
-<li><strong>code</strong> &#8211; The HTTP response code to give; defaults to 500.</li>
+<li><strong>body</strong> -- The body of the response.</li>
+<li><strong>headers</strong> -- A dict of the headers to include in the response.</li>
+<li><strong>code</strong> -- The HTTP response code to give; defaults to 500.</li>
 </ul>
 </td>
 </tr>
@@ -991,8 +991,8 @@ the body&#8217;s length.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query_string</strong> &#8211; The HTTP query string, such as in WSGI&#8217;s
-<tt class="docutils literal"><span class="pre">env['QUERY_STRING']</span></tt>. If using something other than WSGI&#8217;s
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query_string</strong> -- The HTTP query string, such as in WSGI's
+<tt class="docutils literal"><span class="pre">env['QUERY_STRING']</span></tt>. If using something other than WSGI's
 QUERY_STRING, be sure to <strong>not</strong> include the question mark that
 separates the path?query string as it would be translated as the
 first character of the first parameter.</td>
@@ -1008,12 +1008,12 @@ first character of the first parameter.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
-<li><strong>default</strong> &#8211; The default value if the parameter does not
+<li><strong>name</strong> -- The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> -- The default value if the parameter does not
 exist. If default is None, the parameter is considered
 required and <a class="reference internal" href="#brim.http.HTTPBadRequest" title="brim.http.HTTPBadRequest"><tt class="xref py py-class docutils literal"><span class="pre">HTTPBadRequest</span></tt></a> is raised if the
 parameter is missing.</li>
-<li><strong>last_only</strong> &#8211; If True (the default), only the last value of
+<li><strong>last_only</strong> -- If True (the default), only the last value of
 the parameter is returned if the parameter is specified
 multiple times. If False, all values are returned in a list
 (even if there is only one value).</li>
@@ -1039,8 +1039,8 @@ value then the value of <tt class="docutils literal"><span class="pre">not</span
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
-<li><strong>default</strong> &#8211; The default value if the parameter does not
+<li><strong>name</strong> -- The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> -- The default value if the parameter does not
 exist. If default is None, the parameter is considered
 required and <a class="reference internal" href="#brim.http.HTTPBadRequest" title="brim.http.HTTPBadRequest"><tt class="xref py py-class docutils literal"><span class="pre">HTTPBadRequest</span></tt></a> is raised if the
 parameter is missing.</li>
@@ -1062,8 +1062,8 @@ parameter is missing.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
-<li><strong>default</strong> &#8211; The default value if the parameter does not
+<li><strong>name</strong> -- The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> -- The default value if the parameter does not
 exist or has no value. If default is None, the parameter is
 be considered required and <a class="reference internal" href="#brim.http.HTTPBadRequest" title="brim.http.HTTPBadRequest"><tt class="xref py py-class docutils literal"><span class="pre">HTTPBadRequest</span></tt></a> is
 raised if the parameter is missing.</li>
@@ -1085,8 +1085,8 @@ raised if the parameter is missing.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the query parameter to retrieve.</li>
-<li><strong>default</strong> &#8211; The default value if the parameter does not
+<li><strong>name</strong> -- The name of the query parameter to retrieve.</li>
+<li><strong>default</strong> -- The default value if the parameter does not
 exist or has no value. If default is None, the parameter is
 be considered required and <a class="reference internal" href="#brim.http.HTTPBadRequest" title="brim.http.HTTPBadRequest"><tt class="xref py py-class docutils literal"><span class="pre">HTTPBadRequest</span></tt></a> is
 raised if the parameter is missing.</li>
@@ -1108,9 +1108,9 @@ raised if the parameter is missing.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>env</strong> &#8211; The standard WSGI env to read from.</li>
-<li><strong>name</strong> &#8211; The name of the header to retrieve.</li>
-<li><strong>default</strong> &#8211; If specified, the default value if the header cannot
+<li><strong>env</strong> -- The standard WSGI env to read from.</li>
+<li><strong>name</strong> -- The name of the header to retrieve.</li>
+<li><strong>default</strong> -- If specified, the default value if the header cannot
 be found. If default is None, the header value is considered
 required and <a class="reference internal" href="#brim.http.HTTPBadRequest" title="brim.http.HTTPBadRequest"><tt class="xref py py-class docutils literal"><span class="pre">HTTPBadRequest</span></tt></a> is raised if the header
 is missing.</li>
@@ -1134,9 +1134,9 @@ is missing.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>env</strong> &#8211; The standard WSGI env to read from.</li>
-<li><strong>name</strong> &#8211; The name of the header to retrieve.</li>
-<li><strong>default</strong> &#8211; If specified, the default value if the header cannot
+<li><strong>env</strong> -- The standard WSGI env to read from.</li>
+<li><strong>name</strong> -- The name of the header to retrieve.</li>
+<li><strong>default</strong> -- If specified, the default value if the header cannot
 be found. If default is None, the header value is considered
 required and HTTPBadRequest is raised if the header is missing.</li>
 </ul>
@@ -1157,9 +1157,9 @@ required and HTTPBadRequest is raised if the header is missing.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>env</strong> &#8211; The standard WSGI env to read from.</li>
-<li><strong>name</strong> &#8211; The name of the header to retrieve.</li>
-<li><strong>default</strong> &#8211; If specified, the default value if the header cannot
+<li><strong>env</strong> -- The standard WSGI env to read from.</li>
+<li><strong>name</strong> -- The name of the header to retrieve.</li>
+<li><strong>default</strong> -- If specified, the default value if the header cannot
 be found. If default is None, the header value is considered
 required and HTTPBadRequest is raised if the header is missing.</li>
 </ul>
@@ -1180,9 +1180,9 @@ required and HTTPBadRequest is raised if the header is missing.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>env</strong> &#8211; The standard WSGI env to read from.</li>
-<li><strong>name</strong> &#8211; The name of the header to retrieve.</li>
-<li><strong>default</strong> &#8211; If specified, the default value if the header cannot
+<li><strong>env</strong> -- The standard WSGI env to read from.</li>
+<li><strong>name</strong> -- The name of the header to retrieve.</li>
+<li><strong>default</strong> -- If specified, the default value if the header cannot
 be found. If default is None, the header value is considered
 required and HTTPBadRequest is raised if the header is missing.</li>
 </ul>
@@ -1209,7 +1209,7 @@ documentation, and is subject to major changes.</p>
 </div>
 <p>Provides tools for parsing an HTTP Form POST without reading the whole
 thing into memory first. Many thanks to Michael Barton for the original
-prototype which I mangled into OpenStack Swift&#8217;s formpost middleware and
+prototype which I mangled into OpenStack Swift's formpost middleware and
 then into this module.</p>
 <p>The basic usage is to iterate over iter_form results, which are
 rfc822.Message instances:</p>
@@ -1278,8 +1278,8 @@ for usage.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>env</strong> &#8211; The WSGI environment for the incoming request.</li>
-<li><strong>read_chunk_size</strong> &#8211; The maximum amount to read at once from the
+<li><strong>env</strong> -- The WSGI environment for the incoming request.</li>
+<li><strong>read_chunk_size</strong> -- The maximum amount to read at once from the
 incoming request.</li>
 </ul>
 </td>
@@ -1315,7 +1315,7 @@ the next message of the generator.</p>
 <div class="section" id="module-brim.log">
 <span id="brim-log"></span><h2>brim.log<a class="headerlink" href="#module-brim.log" title="Permalink to this headline">¶</a></h2>
 <p>Provides logging utilities for brimd.</p>
-<p>Normally you don&#8217;t need to use this module directly as the active logger
+<p>Normally you don't need to use this module directly as the active logger
 itself is passed via the WSGI <tt class="docutils literal"><span class="pre">env['brim.logger']</span></tt> value.</p>
 <dl class="function">
 <dt id="brim.log.get_logger">
@@ -1326,21 +1326,21 @@ itself is passed via the WSGI <tt class="docutils literal"><span class="pre">env
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>route</strong> &#8211; The str log route, which is often the same as the name
+<li><strong>route</strong> -- The str log route, which is often the same as the name
 but does not have to be. Think of this as the key for the logger
 in source code.</li>
-<li><strong>name</strong> &#8211; The str log name, this is the name sent to the
+<li><strong>name</strong> -- The str log name, this is the name sent to the
 underlying log system. Think of this as the display name for the
 logger.</li>
-<li><strong>level</strong> &#8211; The str log level for which any records at or above
+<li><strong>level</strong> -- The str log level for which any records at or above
 the level will be sent to the underlying log system. Any records
 below the level will be discarded.</li>
-<li><strong>facility</strong> &#8211; If the underlying log system supports it, such as
+<li><strong>facility</strong> -- If the underlying log system supports it, such as
 syslog, this str facility value can help direct the system where
 to store the records.</li>
-<li><strong>console</strong> &#8211; If set True, the underlying log system will simply
+<li><strong>console</strong> -- If set True, the underlying log system will simply
 be to sys.stdout. This can be useful for debugging. Normally
-you&#8217;ll want to set this False so the log records are sent to
+you'll want to set this False so the log records are sent to
 syslog.</li>
 </ul>
 </td>
@@ -1368,7 +1368,7 @@ deemed to make it nicer for delivery to syslog.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>excinfo</strong> &#8211; The exception info (exctype, value, traceback) such
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>excinfo</strong> -- The exception info (exctype, value, traceback) such
 as returned with sys.exc_info.</td>
 </tr>
 </tbody>
@@ -1379,7 +1379,7 @@ as returned with sys.exc_info.</td>
 <div class="section" id="module-brim.server">
 <span id="brim-server"></span><h2>brim.server<a class="headerlink" href="#module-brim.server" title="Permalink to this headline">¶</a></h2>
 <p>The main module that implements the Brim.Net Core Server.</p>
-<p>Normally you don&#8217;t directly use this module but instead configure and
+<p>Normally you don't directly use this module but instead configure and
 run brimd.</p>
 <p>See <a class="reference internal" href="brimdconfsample.html#brimdconfsample"><em>brimd.conf-sample</em></a> for configuration
 options.</p>
@@ -1400,7 +1400,7 @@ specific to that subconfig.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>server</strong> &#8211; The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>server</strong> -- The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</td>
 </tr>
 </tbody>
 </table>
@@ -1416,7 +1416,7 @@ specific to that subconfig.</p>
 <dt id="brim.server.IPSubserver">
 <em class="property">class </em><tt class="descclassname">brim.server.</tt><tt class="descname">IPSubserver</tt><big>(</big><em>server</em>, <em>name</em><big>)</big><a class="headerlink" href="#brim.server.IPSubserver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a></p>
-<p>Base class for &#8220;raw&#8221; IP based subservers.</p>
+<p>Base class for &quot;raw&quot; IP based subservers.</p>
 <p>Created for each [wsgi], [wsgi2], etc., [tcp], [tcp2], etc. [udp],
 [udp2], etc. config section to hold the attributes specific to that
 subconfig.</p>
@@ -1425,8 +1425,8 @@ subconfig.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>server</strong> &#8211; The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
-<li><strong>name</strong> &#8211; The name of the subserver (&#8216;wsgi&#8217;, &#8216;tcp&#8217;, &#8216;udp&#8217;, etc.)</li>
+<li><strong>server</strong> -- The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the subserver ('wsgi', 'tcp', 'udp', etc.)</li>
 </ul>
 </td>
 </tr>
@@ -1451,13 +1451,13 @@ subconfig.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>args</strong> &#8211; Command line arguments for the server, without the
+<li><strong>args</strong> -- Command line arguments for the server, without the
 process name. Defaults to sys.argv[1:]</li>
-<li><strong>stdin</strong> &#8211; The file-like object to treat as standard input.
+<li><strong>stdin</strong> -- The file-like object to treat as standard input.
 Defaults to sys.stdin.</li>
-<li><strong>stdout</strong> &#8211; The file-like object to treat as standard output.
+<li><strong>stdout</strong> -- The file-like object to treat as standard output.
 Defaults to sys.stdout.</li>
-<li><strong>stderr</strong> &#8211; The file-like object to treat as standard error.
+<li><strong>stderr</strong> -- The file-like object to treat as standard error.
 Defaults to sys.stderr.</li>
 </ul>
 </td>
@@ -1496,9 +1496,9 @@ specific to that subconfig.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>server</strong> &#8211; The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
-<li><strong>name</strong> &#8211; The name of the subserver (&#8216;wsgi&#8217;, &#8216;tcp&#8217;, &#8216;udp&#8217;,
-&#8216;daemons&#8217;, etc.)</li>
+<li><strong>server</strong> -- The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the subserver ('wsgi', 'tcp', 'udp',
+'daemons', etc.)</li>
 </ul>
 </td>
 </tr>
@@ -1545,8 +1545,8 @@ attributes specific to that subconfig.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>server</strong> &#8211; The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
-<li><strong>name</strong> &#8211; The name of the subserver (&#8216;tcp&#8217;, &#8216;tcp2&#8217;, &#8216;tcp3&#8217;, etc.)</li>
+<li><strong>server</strong> -- The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the subserver ('tcp', 'tcp2', 'tcp3', etc.)</li>
 </ul>
 </td>
 </tr>
@@ -1566,8 +1566,8 @@ attributes specific to that subconfig.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>server</strong> &#8211; The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
-<li><strong>name</strong> &#8211; The name of the subserver (&#8216;udp&#8217;, &#8216;udp2&#8217;, &#8216;udp3&#8217;, etc.)</li>
+<li><strong>server</strong> -- The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the subserver ('udp', 'udp2', 'udp3', etc.)</li>
 </ul>
 </td>
 </tr>
@@ -1590,8 +1590,8 @@ WSGISubserver through <tt class="docutils literal"><span class="pre">env['brim']
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>server</strong> &#8211; The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
-<li><strong>name</strong> &#8211; The name of the subserver (&#8216;wsgi&#8217;, &#8216;wsgi2&#8217;, &#8216;wsgi3&#8217;,
+<li><strong>server</strong> -- The parent <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the subserver ('wsgi', 'wsgi2', 'wsgi3',
 etc.)</li>
 </ul>
 </td>
@@ -1712,8 +1712,8 @@ the next app in its pipeline onward.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>env</strong> &#8211; The WSGI environment of the request.</li>
-<li><strong>next_app</strong> &#8211; Optional; indicates the next WSGI app to send
+<li><strong>env</strong> -- The WSGI environment of the request.</li>
+<li><strong>next_app</strong> -- Optional; indicates the next WSGI app to send
 the request through rather than the entire WSGI pipeline.</li>
 </ul>
 </td>
@@ -1761,7 +1761,7 @@ traceback).</p>
 <dd><p>Drops the privileges of the running process.</p>
 <p>Drops privileges to the user, group, and umask given, changes the
 process to session leader, and changes working directories to /. If
-a group is not given, the user&#8217;s default group will be used. Will
+a group is not given, the user's default group will be used. Will
 raise an Exception with an explanatory message if the user or group
 cannot be found or if permission is denied while attempting the
 switch.</p>
@@ -1770,10 +1770,10 @@ switch.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>user</strong> &#8211; The user to switch to.</li>
-<li><strong>group</strong> &#8211; The group to switch to; defaults to the default group
+<li><strong>user</strong> -- The user to switch to.</li>
+<li><strong>group</strong> -- The group to switch to; defaults to the default group
 of the user.</li>
-<li><strong>umask</strong> &#8211; The umask to set; defaults 0022.</li>
+<li><strong>umask</strong> -- The umask to set; defaults 0022.</li>
 </ul>
 </td>
 </tr>
@@ -1792,20 +1792,20 @@ optional parameters.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ip</strong> &#8211; The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
+<li><strong>ip</strong> -- The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
 translated to <tt class="docutils literal"><span class="pre">'0.0.0.0'</span></tt> which will listen on all configured
 addresses.</li>
-<li><strong>port</strong> &#8211; The tcp port to listen on.</li>
-<li><strong>backlog</strong> &#8211; The amount of system queued connections allowed.</li>
-<li><strong>retry</strong> &#8211; The number seconds to keep trying to bind the socket,
-in case there&#8217;s another process bound but exiting soon. This
+<li><strong>port</strong> -- The tcp port to listen on.</li>
+<li><strong>backlog</strong> -- The amount of system queued connections allowed.</li>
+<li><strong>retry</strong> -- The number seconds to keep trying to bind the socket,
+in case there's another process bound but exiting soon. This
 allows near zero-downtime process handoffs as you start the new
 one and kill the old.</li>
-<li><strong>certfile</strong> &#8211; The certificate file if you wish the socket to be
+<li><strong>certfile</strong> -- The certificate file if you wish the socket to be
 ssl wrapped (see ssl.wrap_socket).</li>
-<li><strong>keyfile</strong> &#8211; The key file if you wish the socket to be ssl
+<li><strong>keyfile</strong> -- The key file if you wish the socket to be ssl
 wrapped (see ssl.wrap_socket).</li>
-<li><strong>style</strong> &#8211; The libraries you&#8217;d like to use in creating the
+<li><strong>style</strong> -- The libraries you'd like to use in creating the
 socket. The default will use the standard Python libraries.
 <tt class="docutils literal"><span class="pre">'eventlet'</span></tt> is recognized and will use the Eventlet
 libraries. Other styles may added in the future.</li>
@@ -1827,15 +1827,15 @@ optional parameters.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ip</strong> &#8211; The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
+<li><strong>ip</strong> -- The ip address to listen on. <tt class="docutils literal"><span class="pre">''</span></tt> and <tt class="docutils literal"><span class="pre">'*'</span></tt> are
 translated to <tt class="docutils literal"><span class="pre">'0.0.0.0'</span></tt> which will listen on all configured
 addresses.</li>
-<li><strong>port</strong> &#8211; The udp port to listen on.</li>
-<li><strong>retry</strong> &#8211; The number seconds to keep trying to bind the socket,
-in case there&#8217;s another process bound but exiting soon. This
+<li><strong>port</strong> -- The udp port to listen on.</li>
+<li><strong>retry</strong> -- The number seconds to keep trying to bind the socket,
+in case there's another process bound but exiting soon. This
 allows near zero-downtime process handoffs as you start the new
 one and kill the old.</li>
-<li><strong>style</strong> &#8211; The libraries you&#8217;d like to use in creating the
+<li><strong>style</strong> -- The libraries you'd like to use in creating the
 socket. The default will use the standard Python libraries.
 <tt class="docutils literal"><span class="pre">'Eventlet'</span></tt> is recognized and will use the Eventlet
 libraries. Other styles may added in the future.</li>
@@ -1859,7 +1859,7 @@ libraries. Other styles may added in the future.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signum</strong> &#8211; The signal number to convert.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signum</strong> -- The signal number to convert.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A str representing the signal.</td>
 </tr>
@@ -1882,7 +1882,7 @@ possible. For instance, a web server might exit after it completes
 any requests already in progress.</p>
 <p>SIGTERM generally means the processes should exit immediately,
 canceling anything they may have been doing at the time.</p>
-<p>If <em>workers_desired</em> is 0, a special &#8220;inproc&#8221; mode will be activated
+<p>If <em>workers_desired</em> is 0, a special &quot;inproc&quot; mode will be activated
 where just the <em>worker_func</em> will be called and then
 <em>sustain_workers</em> will return. This can be useful for debugging.</p>
 <p>See the source of <a class="reference internal" href="#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a> for a good example
@@ -1892,15 +1892,15 @@ of how to use <em>sustain_workers</em>.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>workers_desired</strong> &#8211; The number of subprocesses desired to be
+<li><strong>workers_desired</strong> -- The number of subprocesses desired to be
 maintained. If 0, no subprocesses will be made and <em>worker_func</em>
 will simply be called and then <em>sustain_workers</em> will return.</li>
-<li><strong>worker_func</strong> &#8211; The function to be called by each subprocess
+<li><strong>worker_func</strong> -- The function to be called by each subprocess
 once it starts. <em>worker_func</em> should not return except on
 catastrophic error or when signaled to do so. If <em>worker_func</em>
 exits without being signaled, another subprocess will be started
 and the function called again.</li>
-<li><strong>logger</strong> &#8211; If set, debug information will be sent to this
+<li><strong>logger</strong> -- If set, debug information will be sent to this
 logging.Logger instance.</li>
 </ul>
 </td>
@@ -1914,7 +1914,7 @@ logging.Logger instance.</li>
 <span id="brim-tcp-echo"></span><h2>brim.tcp_echo<a class="headerlink" href="#module-brim.tcp_echo" title="Permalink to this headline">¶</a></h2>
 <p>Contains a simple straight TCP socket application.</p>
 <p>The application just echoes any incoming data back. This is a good
-starting point for other TCP applications. See the source for what&#8217;s
+starting point for other TCP applications. See the source for what's
 implemented and why.</p>
 <p>Configuration Options:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp_echo</span><span class="p">]</span>
@@ -1965,15 +1965,15 @@ the controlling
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>A simple straight TCP socket application.</p>
 <p>The application just echoes any incoming data back. This is a good
-starting point for other TCP applications. See the source for what&#8217;s
+starting point for other TCP applications. See the source for what's
 implemented and why.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the app.</li>
-<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.tcp_echo.TCPEcho.parse_conf" title="brim.tcp_echo.TCPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the app.</li>
+<li><strong>parsed_conf</strong> -- The conf result from <a class="reference internal" href="#brim.tcp_echo.TCPEcho.parse_conf" title="brim.tcp_echo.TCPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
 </ul>
 </td>
 </tr>
@@ -2015,11 +2015,11 @@ will be treated as an unsigned integer.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>subserver</strong> &#8211; The <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a> that is
+<li><strong>subserver</strong> -- The <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a> that is
 managing this app.</li>
-<li><strong>stats</strong> &#8211; The shared memory statistics object as defined
+<li><strong>stats</strong> -- The shared memory statistics object as defined
 above.</li>
-<li><strong>sock</strong> &#8211; The just connected socket.</li>
+<li><strong>sock</strong> -- The just connected socket.</li>
 </ul>
 </td>
 </tr>
@@ -2053,9 +2053,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>
@@ -2109,9 +2109,9 @@ largest value of the stat from all workers.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the daemon server.</li>
-<li><strong>parsed_conf</strong> &#8211; The result from <a class="reference internal" href="#brim.tcp_echo.TCPEcho.parse_conf" title="brim.tcp_echo.TCPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>parsed_conf</strong> -- The result from <a class="reference internal" href="#brim.tcp_echo.TCPEcho.parse_conf" title="brim.tcp_echo.TCPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
 </ul>
 </td>
 </tr>
@@ -2129,7 +2129,7 @@ the overall configuration for the daemon server.</li>
 <span id="brim-udp-echo"></span><h2>brim.udp_echo<a class="headerlink" href="#module-brim.udp_echo" title="Permalink to this headline">¶</a></h2>
 <p>Contains a simple straight UDP datagram application.</p>
 <p>The application just echoes any incoming data back. This is a good
-starting point for other UDP applications. See the source for what&#8217;s
+starting point for other UDP applications. See the source for what's
 implemented and why.</p>
 <p>Configuration Options:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp_echo</span><span class="p">]</span>
@@ -2176,15 +2176,15 @@ controlling <a class="reference internal" href="#brim.server.Subserver" title="b
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>A simple straight UDP socket application.</p>
 <p>The application just echoes any incoming data back. This is a good
-starting point for other UDP applications. See the source for what&#8217;s
+starting point for other UDP applications. See the source for what's
 implemented and why.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the app.</li>
-<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.udp_echo.UDPEcho.parse_conf" title="brim.udp_echo.UDPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>name</strong> -- The name of the app.</li>
+<li><strong>parsed_conf</strong> -- The conf result from <a class="reference internal" href="#brim.udp_echo.UDPEcho.parse_conf" title="brim.udp_echo.UDPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
 </ul>
 </td>
 </tr>
@@ -2226,15 +2226,15 @@ will be treated as an unsigned integer.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>subserver</strong> &#8211; The <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a> that is
+<li><strong>subserver</strong> -- The <a class="reference internal" href="#brim.server.Subserver" title="brim.server.Subserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Subserver</span></tt></a> that is
 managing this app.</li>
-<li><strong>stats</strong> &#8211; The shared memory statistics object as defined
+<li><strong>stats</strong> -- The shared memory statistics object as defined
 above.</li>
-<li><strong>sock</strong> &#8211; The socket associated with the datagram; useful for
+<li><strong>sock</strong> -- The socket associated with the datagram; useful for
 replying back using sendto.</li>
-<li><strong>datagram</strong> &#8211; The just received datagram.</li>
-<li><strong>ip</strong> &#8211; The remote IP address.</li>
-<li><strong>port</strong> &#8211; The remote IP port.</li>
+<li><strong>datagram</strong> -- The just received datagram.</li>
+<li><strong>ip</strong> -- The remote IP address.</li>
+<li><strong>port</strong> -- The remote IP port.</li>
 </ul>
 </td>
 </tr>
@@ -2262,9 +2262,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>
@@ -2318,9 +2318,9 @@ largest value of the stat from all workers.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the daemon server.</li>
-<li><strong>parsed_conf</strong> &#8211; The result from <a class="reference internal" href="#brim.udp_echo.UDPEcho.parse_conf" title="brim.udp_echo.UDPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>parsed_conf</strong> -- The result from <a class="reference internal" href="#brim.udp_echo.UDPEcho.parse_conf" title="brim.udp_echo.UDPEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
 </ul>
 </td>
 </tr>
@@ -2363,8 +2363,8 @@ lock relinquished when the context ends.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>path</strong> &#8211; The path to gain an advisory lock on.</li>
-<li><strong>timeout</strong> &#8211; The number of seconds to wait to gain the lock
+<li><strong>path</strong> -- The path to gain an advisory lock on.</li>
+<li><strong>timeout</strong> -- The number of seconds to wait to gain the lock
 before raising <a class="reference internal" href="#brim.util.LockPathTimeout" title="brim.util.LockPathTimeout"><tt class="xref py py-class docutils literal"><span class="pre">LockPathTimeout</span></tt></a>.</li>
 </ul>
 </td>
@@ -2382,9 +2382,9 @@ before raising <a class="reference internal" href="#brim.util.LockPathTimeout" t
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>path</strong> &#8211; The path to create a directory and all parent
+<li><strong>path</strong> -- The path to create a directory and all parent
 directories for.</li>
-<li><strong>mode</strong> &#8211; The permissions mode (masked with the current umask) to
+<li><strong>mode</strong> -- The permissions mode (masked with the current umask) to
 create new directories with; defaults to 0o777.</li>
 </ul>
 </td>
@@ -2445,9 +2445,9 @@ clear. You definitely should be using SSL when using Basic Auth.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the app.</li>
-<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.wsgi_basic_auth.WSGIBasicAuth.parse_conf" title="brim.wsgi_basic_auth.WSGIBasicAuth.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
-<li><strong>next_app</strong> &#8211; The next WSGI app in the chain.</li>
+<li><strong>name</strong> -- The name of the app.</li>
+<li><strong>parsed_conf</strong> -- The conf result from <a class="reference internal" href="#brim.wsgi_basic_auth.WSGIBasicAuth.parse_conf" title="brim.wsgi_basic_auth.WSGIBasicAuth.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>next_app</strong> -- The next WSGI app in the chain.</li>
 </ul>
 </td>
 </tr>
@@ -2462,8 +2462,8 @@ clear. You definitely should be using SSL when using Basic Auth.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>env</strong> &#8211; The WSGI env as per the spec.</li>
-<li><strong>start_response</strong> &#8211; The WSGI start_response as per the spec.</li>
+<li><strong>env</strong> -- The WSGI env as per the spec.</li>
+<li><strong>start_response</strong> -- The WSGI start_response as per the spec.</li>
 </ul>
 </td>
 </tr>
@@ -2507,9 +2507,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>
@@ -2529,7 +2529,7 @@ representing the overall configuration of the server.</li>
 <span id="brim-wsgi-echo"></span><h2>brim.wsgi_echo<a class="headerlink" href="#module-brim.wsgi_echo" title="Permalink to this headline">¶</a></h2>
 <p>A simple WSGI application that just echoes the request body.</p>
 <p>This is a good starting point for other WSGI applications. See the
-source for what&#8217;s implemented and why.</p>
+source for what's implemented and why.</p>
 <p>Configuration Options:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">wsgi_echo</span><span class="p">]</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">brim</span><span class="o">.</span><span class="n">wsgi_echo</span><span class="o">.</span><span class="n">WSGIEcho</span>
@@ -2575,15 +2575,15 @@ controlling <a class="reference internal" href="#brim.server.Subserver" title="b
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>A simple WSGI application that just echoes the request body.</p>
 <p>This is a good starting point for other WSGI applications. See the
-source for what&#8217;s implemented and why.</p>
+source for what's implemented and why.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the app.</li>
-<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.wsgi_echo.WSGIEcho.parse_conf" title="brim.wsgi_echo.WSGIEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
-<li><strong>next_app</strong> &#8211; The next WSGI app in the chain.</li>
+<li><strong>name</strong> -- The name of the app.</li>
+<li><strong>parsed_conf</strong> -- The conf result from <a class="reference internal" href="#brim.wsgi_echo.WSGIEcho.parse_conf" title="brim.wsgi_echo.WSGIEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>next_app</strong> -- The next WSGI app in the chain.</li>
 </ul>
 </td>
 </tr>
@@ -2602,8 +2602,8 @@ the chain.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>env</strong> &#8211; The WSGI env as per the spec.</li>
-<li><strong>start_response</strong> &#8211; The WSGI start_response as per the spec.</li>
+<li><strong>env</strong> -- The WSGI env as per the spec.</li>
+<li><strong>start_response</strong> -- The WSGI start_response as per the spec.</li>
 </ul>
 </td>
 </tr>
@@ -2647,9 +2647,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>
@@ -2709,9 +2709,9 @@ largest value of the stat from all workers.</td>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the daemon server.</li>
-<li><strong>parsed_conf</strong> &#8211; The result from <a class="reference internal" href="#brim.wsgi_echo.WSGIEcho.parse_conf" title="brim.wsgi_echo.WSGIEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>parsed_conf</strong> -- The result from <a class="reference internal" href="#brim.wsgi_echo.WSGIEcho.parse_conf" title="brim.wsgi_echo.WSGIEcho.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
 </ul>
 </td>
 </tr>
@@ -2755,9 +2755,9 @@ documentation, and is subject to major changes.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the app.</li>
-<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.wsgi_fs.WSGIFS.parse_conf" title="brim.wsgi_fs.WSGIFS.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
-<li><strong>next_app</strong> &#8211; The next WSGI app in the chain.</li>
+<li><strong>name</strong> -- The name of the app.</li>
+<li><strong>parsed_conf</strong> -- The conf result from <a class="reference internal" href="#brim.wsgi_fs.WSGIFS.parse_conf" title="brim.wsgi_fs.WSGIFS.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>next_app</strong> -- The next WSGI app in the chain.</li>
 </ul>
 </td>
 </tr>
@@ -2775,8 +2775,8 @@ requests are passed on to the next WSGI app in the chain.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>env</strong> &#8211; The WSGI env as per the spec.</li>
-<li><strong>start_response</strong> &#8211; The WSGI start_response as per the spec.</li>
+<li><strong>env</strong> -- The WSGI env as per the spec.</li>
+<li><strong>start_response</strong> -- The WSGI start_response as per the spec.</li>
 </ul>
 </td>
 </tr>
@@ -2814,9 +2814,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>
@@ -2880,9 +2880,9 @@ support.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>name</strong> &#8211; The name of the app.</li>
-<li><strong>parsed_conf</strong> &#8211; The conf result from <a class="reference internal" href="#brim.wsgi_stats.WSGIStats.parse_conf" title="brim.wsgi_stats.WSGIStats.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
-<li><strong>next_app</strong> &#8211; The next WSGI app in the chain.</li>
+<li><strong>name</strong> -- The name of the app.</li>
+<li><strong>parsed_conf</strong> -- The conf result from <a class="reference internal" href="#brim.wsgi_stats.WSGIStats.parse_conf" title="brim.wsgi_stats.WSGIStats.parse_conf"><tt class="xref py py-meth docutils literal"><span class="pre">parse_conf()</span></tt></a>.</li>
+<li><strong>next_app</strong> -- The next WSGI app in the chain.</li>
 </ul>
 </td>
 </tr>
@@ -2901,8 +2901,8 @@ the chain.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>env</strong> &#8211; The WSGI env as per the spec.</li>
-<li><strong>start_response</strong> &#8211; The WSGI start_response as per the spec.</li>
+<li><strong>env</strong> -- The WSGI env as per the spec.</li>
+<li><strong>start_response</strong> -- The WSGI start_response as per the spec.</li>
 </ul>
 </td>
 </tr>
@@ -2940,9 +2940,9 @@ configuration options.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>name</strong> &#8211; The name of the app, indicates the app&#8217;s section in
+<li><strong>name</strong> -- The name of the app, indicates the app's section in
 the overall configuration for the server.</li>
-<li><strong>conf</strong> &#8211; The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
+<li><strong>conf</strong> -- The <a class="reference internal" href="#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance
 representing the overall configuration of the server.</li>
 </ul>
 </td>

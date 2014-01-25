@@ -59,10 +59,10 @@
 <blockquote>
 <div><p>Copyright 2012-2014 Gregory Holt</p>
 <p>Portions (httpform) Copyright 2011 OpenStack, LLC.</p>
-<p>Licensed under the Apache License, Version 2.0 (the &#8220;License&#8221;); you may not use this file except in compliance with the License. You may obtain a copy of the License at</p>
+<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at</p>
 <blockquote>
 <div><a class="reference external" href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a></div></blockquote>
-<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &#8220;AS IS&#8221; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</p>
+<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</p>
 </div></blockquote>
 <div class="toctree-wrapper compound">
 <ul>
@@ -80,7 +80,7 @@
 </ul>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">This is a prerelease version of this project. As such, even as the author I don&#8217;t completely trust this code yet. It works for the specific cases I&#8217;ve tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible &#8220;oddities&#8221;, please file issues on github: <a class="reference external" href="http://github.com/gholt/brim">http://github.com/gholt/brim</a> Thanks, and be careful!</p>
+<p class="last">This is a prerelease version of this project. As such, even as the author I don't completely trust this code yet. It works for the specific cases I've tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible &quot;oddities&quot;, please file issues on github: <a class="reference external" href="http://github.com/gholt/brim">http://github.com/gholt/brim</a> Thanks, and be careful!</p>
 </div>
 <div class="section" id="api">
 <h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
@@ -110,7 +110,7 @@
 <span id="id1"></span><h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
 <p>This is the core package for Brim.Net Python-based applications.</p>
 <p>It provides some reusable utility code and provides brimd, a launcher offering ease of deployment of WSGI applications (currently just using the Eventlet WSGI server), straight TCP and UDP socket applications, and maintaining background daemons.</p>
-<p>The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency &#8211; when a subprocess exits without being requested to, it will be restarted automatically.</p>
+<p>The brimd server will spawn subprocesses to handle requests and start daemons allowing for use of multiple CPU cores and for resiliency -- when a subprocess exits without being requested to, it will be restarted automatically.</p>
 <div class="section" id="required-dependencies">
 <h3>Required Dependencies<a class="headerlink" href="#required-dependencies" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -130,8 +130,8 @@
 </div>
 <div class="section" id="usage-examples">
 <h2>Usage Examples<a class="headerlink" href="#usage-examples" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="example-wsgi-usage">
-<h3>Example WSGI Usage<a class="headerlink" href="#example-wsgi-usage" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="wsgi-usage">
+<h3>WSGI Usage<a class="headerlink" href="#wsgi-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
 <li><p class="first">Create ~/.brimd.conf:</p>
 <div class="highlight-python"><pre>[wsgi]
@@ -149,7 +149,7 @@ call = brim.wsgi_stats.WSGIStats</pre>
 <div class="highlight-python"><pre>$ brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; app (echos <em>Just a test.</em> back):</p>
+<li><p class="first">Access the &quot;echo&quot; app (echos <em>Just a test.</em> back):</p>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1:8901/echo --data-binary 'Just a test.'</pre>
 </div>
 </li>
@@ -157,7 +157,7 @@ call = brim.wsgi_stats.WSGIStats</pre>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1:8901/invalid</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;stats&#8221; app (returns JSON formatted server stats):</p>
+<li><p class="first">Access the &quot;stats&quot; app (returns JSON formatted server stats):</p>
 <div class="highlight-python"><pre>$ curl -s http://127.0.0.1:8901/stats | python -mjson.tool</pre>
 </div>
 </li>
@@ -169,8 +169,8 @@ call = brim.wsgi_stats.WSGIStats</pre>
 <p>Run <tt class="docutils literal"><span class="pre">brimd</span> <span class="pre">-h</span></tt> for more details on server control. It supports the standard init.d-style commands as well a special no-daemon mode for debugging.</p>
 <p>Also, see the included <a class="reference internal" href="brimdconfsample.html#brimdconfsample"><em>brimd.conf-sample</em></a> for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.</p>
 </div>
-<div class="section" id="example-wsgi-multi-configuration-usage">
-<h3>Example WSGI Multi-Configuration Usage<a class="headerlink" href="#example-wsgi-multi-configuration-usage" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="wsgi-multi-configuration-usage">
+<h3>WSGI Multi-Configuration Usage<a class="headerlink" href="#wsgi-multi-configuration-usage" title="Permalink to this headline">¶</a></h3>
 <p>You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:</p>
 <ul>
 <li><p class="first">Create ~/.brimd.conf:</p>
@@ -200,20 +200,20 @@ path = /echo2</pre>
 <div class="highlight-python"><pre>$ brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; app on the main port:</p>
+<li><p class="first">Access the &quot;echo&quot; app on the main port:</p>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1:8901/echo --data-binary 'Just a test.'</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; app on the second port:</p>
+<li><p class="first">Access the &quot;echo&quot; app on the second port:</p>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1:8902/echo2 --data-binary 'Just a test.'</pre>
 </div>
 </li>
-<li><p class="first">Note that the apps don&#8217;t answer on the other ports:</p>
+<li><p class="first">Note that the apps don't answer on the other ports:</p>
 <div class="highlight-python"><pre>$ curl -i http://127.0.0.1:8901/echo2 --data-binary 'Just a test.'
 $ curl -i http://127.0.0.1:8902/echo --data-binary 'Just a test.'</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;stats&#8221; app and see it&#8217;s configured on both ports:</p>
+<li><p class="first">Access the &quot;stats&quot; app and see it's configured on both ports:</p>
 <div class="highlight-python"><pre>$ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
 $ curl -s http://127.0.0.1:8902/stats | python -mjson.tool</pre>
 </div>
@@ -225,8 +225,8 @@ $ curl -s http://127.0.0.1:8902/stats | python -mjson.tool</pre>
 </ul>
 <p>The included <a class="reference internal" href="brimdconfsample.html#brimdconfsample"><em>brimd.conf-sample</em></a> shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
 </div>
-<div class="section" id="example-tcp-straight-socket-application-usage">
-<h3>Example TCP Straight Socket Application Usage<a class="headerlink" href="#example-tcp-straight-socket-application-usage" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="tcp-straight-socket-application-usage">
+<h3>TCP Straight Socket Application Usage<a class="headerlink" href="#tcp-straight-socket-application-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
 <li><p class="first">Create ~/.brimd.conf:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
@@ -239,7 +239,7 @@ $ curl -s http://127.0.0.1:8902/stats | python -mjson.tool</pre>
 <div class="highlight-python"><pre>$ brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; app (echos <em>Just a test.</em> back):</p>
+<li><p class="first">Access the &quot;echo&quot; app (echos <em>Just a test.</em> back):</p>
 <div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 127.0.0.1 8903</pre>
 </div>
 </li>
@@ -261,7 +261,7 @@ call = brim.tcp_echo.TCPEcho</pre>
 <div class="highlight-python"><pre>$ brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; apps (echo <em>Just a test.</em> back):</p>
+<li><p class="first">Access the &quot;echo&quot; apps (echo <em>Just a test.</em> back):</p>
 <div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 127.0.0.1 8903
 $ echo 'Just a test.' | nc -q 2 127.0.0.1 8904</pre>
 </div>
@@ -273,8 +273,8 @@ $ echo 'Just a test.' | nc -q 2 127.0.0.1 8904</pre>
 </ul>
 <p>The included <a class="reference internal" href="brimdconfsample.html#brimdconfsample"><em>brimd.conf-sample</em></a> shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
 </div>
-<div class="section" id="example-udp-application-usage">
-<h3>Example UDP Application Usage<a class="headerlink" href="#example-udp-application-usage" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="udp-application-usage">
+<h3>UDP Application Usage<a class="headerlink" href="#udp-application-usage" title="Permalink to this headline">¶</a></h3>
 <ul>
 <li><p class="first">Create ~/.brimd.conf:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
@@ -287,7 +287,7 @@ $ echo 'Just a test.' | nc -q 2 127.0.0.1 8904</pre>
 <div class="highlight-python"><pre>$ brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; app (echos <em>Just a test.</em> back):</p>
+<li><p class="first">Access the &quot;echo&quot; app (echos <em>Just a test.</em> back):</p>
 <div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8905</pre>
 </div>
 </li>
@@ -309,7 +309,7 @@ call = brim.udp_echo.UDPEcho</pre>
 <div class="highlight-python"><pre>$ brimd start</pre>
 </div>
 </li>
-<li><p class="first">Access the &#8220;echo&#8221; apps (echo <em>Just a test.</em> back):</p>
+<li><p class="first">Access the &quot;echo&quot; apps (echo <em>Just a test.</em> back):</p>
 <div class="highlight-python"><pre>$ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8905
 $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8906</pre>
 </div>
@@ -321,10 +321,10 @@ $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8906</pre>
 </ul>
 <p>The included <a class="reference internal" href="brimdconfsample.html#brimdconfsample"><em>brimd.conf-sample</em></a> shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.</p>
 </div>
-<div class="section" id="example-daemon-usage">
-<h3>Example Daemon Usage<a class="headerlink" href="#example-daemon-usage" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="daemon-usage">
+<h3>Daemon Usage<a class="headerlink" href="#daemon-usage" title="Permalink to this headline">¶</a></h3>
 <p>The brimd server can manage additional daemons as well as the main WSGI server. You configure them much like WSGI apps, but with the daemons configuration value. There is a brim.daemon_sample.DaemonSample that can be a good start for writing new daemons.</p>
-<p>Here&#8217;s an example brimd.conf that starts the sample daemon:</p>
+<p>Here's an example brimd.conf that starts the sample daemon:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">daemons</span><span class="p">]</span>
 <span class="n">daemons</span> <span class="o">=</span> <span class="n">sample</span>
 
@@ -338,7 +338,7 @@ $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8906</pre>
 <h2>Development Examples<a class="headerlink" href="#development-examples" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="wsgi-application-development">
 <h3>WSGI Application Development<a class="headerlink" href="#wsgi-application-development" title="Permalink to this headline">¶</a></h3>
-<p>Developing WSGI applications for brimd is quite similar to other Python WSGI servers. Here&#8217;s a simple example:</p>
+<p>Developing WSGI applications for brimd is quite similar to other Python WSGI servers. Here's a simple example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">next_app</span><span class="p">):</span>
@@ -352,7 +352,7 @@ $ echo 'Just a test.' | nc -q 2 -u 127.0.0.1 8906</pre>
         <span class="k">return</span> <span class="n">body</span>
 </pre></div>
 </div>
-<p>Here&#8217;s an example ~/.brimd.conf with this app active:</p>
+<p>Here's an example ~/.brimd.conf with this app active:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">wsgi</span><span class="p">]</span>
 <span class="n">port</span> <span class="o">=</span> <span class="mi">8901</span>
 <span class="n">apps</span> <span class="o">=</span> <span class="n">helloworld</span>
@@ -373,8 +373,8 @@ Hello World!</pre>
 <p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is the usual WSGI (env, start_response) call made per incoming request.</p>
 <p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> is a little different for brimd and takes the name of the app as configured in the brimd.conf file, the full brimd configuration object as an instance of brim.conf.Conf, and the next WSGI app in the chain (the last app in the chain will always be brimd itself).</p>
 <p>The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.</p>
-<p>The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
-<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a path in the config and exit if it doesn&#8217;t exist:</p>
+<p>The conf, while by default is the full server brim.conf.Conf instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the brim.conf.Conf instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a path in the config and exit if it doesn't exist:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">next_app</span><span class="p">):</span>
@@ -397,12 +397,12 @@ Hello World!</pre>
         <span class="k">return</span> <span class="n">path</span>
 </pre></div>
 </div>
-<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<p>Now, let's restart the server without yet updating the config and see what happens:</p>
 <div class="highlight-python"><pre>$ brimd restart
 [helloworld] you must configure a path to serve.</pre>
 </div>
-<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
-<p>Now, let&#8217;s update our configuration:</p>
+<p>It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let's update our configuration:</p>
 <div class="highlight-python"><pre>[wsgi]
 port = 8901
 apps = helloworld
@@ -420,7 +420,7 @@ Date: Sat, 14 Jan 2012 23:05:20 GMT
 
 Hello World!</pre>
 </div>
-<p>To continue our example, let&#8217;s add stats to our application. We&#8217;ll count how many times we&#8217;re called and the last time we were called:</p>
+<p>To continue our example, let's add stats to our application. We'll count how many times we're called and the last time we were called:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 
 
@@ -495,7 +495,7 @@ Hello World!</pre>
 </tr>
 </tbody>
 </table>
-<p>So now, let&#8217;s add the brim.wsgi_stats.WSGIStats app to our configuration so we&#8217;ll be able to get a report on the server stats; we&#8217;ll also set up two workers to show the separate worker stats:</p>
+<p>So now, let's add the brim.wsgi_stats.WSGIStats app to our configuration so we'll be able to get a report on the server stats; we'll also set up two workers to show the separate worker stats:</p>
 <div class="highlight-python"><pre>[wsgi]
 port = 8901
 apps = helloworld stats
@@ -508,7 +508,7 @@ path = /here
 [stats]
 call = brim.wsgi_stats.WSGIStats</pre>
 </div>
-<p>Let&#8217;s try it out:</p>
+<p>Let's try it out:</p>
 <div class="highlight-python"><pre>$ brimd restart
 $ curl http://127.0.0.1:8901/here
 Hello World!
@@ -563,8 +563,8 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
         "helloworld.requests": 12348,
 ...</pre>
 </div>
-<div class="section" id="extra-wsgi-env-items">
-<h4>Extra WSGI env Items<a class="headerlink" href="#extra-wsgi-env-items" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="extra-wsgi-environment-items">
+<h4>Extra WSGI Environment Items<a class="headerlink" href="#extra-wsgi-environment-items" title="Permalink to this headline">¶</a></h4>
 <table border="1" class="docutils">
 <colgroup>
 <col width="5%" />
@@ -572,20 +572,20 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td>brim</td>
-<td>This is the <a class="reference internal" href="api.html#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a> instance itself. Normally you don&#8217;t need access to this, but some apps like <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> do.</td>
+<td>This is the <a class="reference internal" href="api.html#brim.server.Server" title="brim.server.Server"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.Server</span></tt></a> instance itself. Normally you don't need access to this, but some apps like <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> do.</td>
 </tr>
 <tr class="row-even"><td>brim.start</td>
 <td>The time.time() the request started processing.</td>
 </tr>
 <tr class="row-odd"><td>brim.logger</td>
-<td>A logging.Logger instance for most logging needs. This logger can be configured in brimd.conf and by default it logs at the INFO level and above to syslog&#8217;s LOCAL0 facility. Note that the server automatically logs request/responses at the NOTICE level, so you don&#8217;t have to.</td>
+<td>A logging.Logger instance for most logging needs. This logger can be configured in brimd.conf and by default it logs at the INFO level and above to syslog's LOCAL0 facility. Note that the server automatically logs request/responses at the NOTICE level, so you don't have to.</td>
 </tr>
 <tr class="row-even"><td>brim.txn</td>
 <td>A uuid.uuid4().hex value to unique identify the request. This can be very useful when logging so that you can track what a request is doing on a busy server. This is automatically added to every log line the brim.logger logs.</td>
 </tr>
 <tr class="row-odd"><td>brim.log_info</td>
 <td><p class="first">A list of strings that will be appended to the request log line that brimd generates. This can be useful for identifying requests or what actions requests may have taken.</p>
-<p>It&#8217;s usually best to add your app&#8217;s info all at once with a prefix word, like:</p>
+<p>It's usually best to add your app's info all at once with a prefix word, like:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">env</span><span class="p">[</span><span class="s">&#39;brim.log_info&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s">&#39;myapp:&#39;</span><span class="p">,</span> <span class="s">&#39;myinfo1&#39;</span><span class="p">,</span> <span class="s">&#39;myinfo2&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -597,7 +597,7 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
 </td>
 </tr>
 <tr class="row-even"><td>brim.stats</td>
-<td><p class="first">An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app&#8217;s stats_conf class method. See the <a class="reference internal" href="api.html#brim.wsgi_echo.WSGIEcho" title="brim.wsgi_echo.WSGIEcho"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_echo.WSGIEcho</span></tt></a> and <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> apps for examples of how to use these stats. This stats object will implement at least the following methods:</p>
+<td><p class="first">An object that gives access to server stats. Which stats are available is determined by the server configuration, and specifically by each app's stats_conf class method. See the <a class="reference internal" href="api.html#brim.wsgi_echo.WSGIEcho" title="brim.wsgi_echo.WSGIEcho"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_echo.WSGIEcho</span></tt></a> and <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> apps for examples of how to use these stats. This stats object will implement at least the following methods:</p>
 <div class="last highlight-python"><pre>get(&lt;name&gt;)         Return the int value of the
                     stat &lt;name&gt;.
 set(&lt;name&gt;, int)    Sets the int value of the
@@ -612,7 +612,7 @@ incr(&lt;name&gt;)        Increments the value of the
 <td>&nbsp;</td>
 </tr>
 <tr class="row-even"><td>brim.json_loads</td>
-<td>These are the JSON dumps and loads functions for converting to and from JSON and Python objects. By default, these are json.dumps and json.loads, but faster libraries are out there and can be configured in brimd.conf. Using these env items means you&#8217;ll automatically use whatever is configured.</td>
+<td>These are the JSON dumps and loads functions for converting to and from JSON and Python objects. By default, these are json.dumps and json.loads, but faster libraries are out there and can be configured in brimd.conf. Using these env items means you'll automatically use whatever is configured.</td>
 </tr>
 </tbody>
 </table>
@@ -657,7 +657,7 @@ incr(&lt;name&gt;)        Increments the value of the
     }
 }</pre>
 </div>
-<p>Notice there are overall server stats and individual worker stats. Here is what&#8217;s available by default (apps can configure additional stats):</p>
+<p>Notice there are overall server stats and individual worker stats. Here is what's available by default (apps can configure additional stats):</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="4%" />
@@ -665,7 +665,7 @@ incr(&lt;name&gt;)        Increments the value of the
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td>request_count</td>
-<td>This is the number of requests served by the server and is simply a sum of all the worker&#8217;s request_counts.</td>
+<td>This is the number of requests served by the server and is simply a sum of all the worker's request_counts.</td>
 </tr>
 <tr class="row-even"><td>start_time</td>
 <td>This is the <tt class="docutils literal"><span class="pre">int(time.time())</span></tt> the server was started. Each worker also has a start_time that indicates when that subprocess was started. If a subprocess crashes and restarts, this start_time will be different than the overall server start_time.</td>
@@ -689,7 +689,7 @@ incr(&lt;name&gt;)        Increments the value of the
 <td>&nbsp;</td>
 </tr>
 <tr class="row-odd"><td>etc.</td>
-<td>These track specific response codes. Which response codes are tracked can be configured in brimd.conf, but are 404, 408, 499, and 501 by default. A high 404 count on a server that normally shouldn&#8217;t do so can indicate missing files or a bad incoming link. 408 Request Timeout and 499 Disconnect can indicate network problems or perhaps too aggressive timeouts. 501 Not Implemented counts can often be subtracted from the status_5xx_count to get a true count of real server problems.</td>
+<td>These track specific response codes. Which response codes are tracked can be configured in brimd.conf, but are 404, 408, 499, and 501 by default. A high 404 count on a server that normally shouldn't do so can indicate missing files or a bad incoming link. 408 Request Timeout and 499 Disconnect can indicate network problems or perhaps too aggressive timeouts. 501 Not Implemented counts can often be subtracted from the status_5xx_count to get a true count of real server problems.</td>
 </tr>
 </tbody>
 </table>
@@ -708,7 +708,7 @@ incr(&lt;name&gt;)        Increments the value of the
         <span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an ~/.brimd.conf to run this application:</p>
+<p>You'd probably want a lot of error checking in your call, but this works for now. So let's set up an ~/.brimd.conf to run this application:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">tcp</span><span class="p">]</span>
 <span class="n">port</span> <span class="o">=</span> <span class="mi">8903</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
@@ -722,8 +722,8 @@ Hello World!</pre>
 <p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is called for each incoming connection with the subserver, stats, socket, ip, and port of the connection. The subserver is the <a class="reference internal" href="api.html#brim.server.TCPSubserver" title="brim.server.TCPSubserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.TCPSubserver</span></tt></a> that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just established TCP connection.</p>
 <p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a>.</p>
 <p>The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.</p>
-<p>The conf, while by default is the full server <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
-<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a message in the config and exit if it doesn&#8217;t exist:</p>
+<p>The conf, while by default is the full server <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
@@ -744,12 +744,12 @@ Hello World!</pre>
         <span class="k">return</span> <span class="n">message</span>
 </pre></div>
 </div>
-<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<p>Now, let's restart the server without yet updating the config and see what happens:</p>
 <div class="highlight-python"><pre>$ brimd restart
 [tcp] you must configure a message to serve.</pre>
 </div>
-<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
-<p>Now, let&#8217;s update our configuration:</p>
+<p>It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let's update our configuration:</p>
 <div class="highlight-python"><pre>[tcp]
 port = 8903
 call = mypackage.mymodule.HelloWorld
@@ -760,7 +760,7 @@ message = Hello, hello!</pre>
 $ nc -q 2 127.0.0.1 8903
 Hello, hello!</pre>
 </div>
-<p>To continue our example, let&#8217;s add stats to our application. We&#8217;ll count how many times we&#8217;re called and the last time we were called:</p>
+<p>To continue our example, let's add stats to our application. We'll count how many times we're called and the last time we were called:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 
 
@@ -832,7 +832,7 @@ Hello, hello!</pre>
 </tr>
 </tbody>
 </table>
-<p>So now, let&#8217;s add the <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> WSGI app to our configuration so we&#8217;ll be able to get a report on the server stats; we&#8217;ll also set up two workers to show the separate worker stats:</p>
+<p>So now, let's add the <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> WSGI app to our configuration so we'll be able to get a report on the server stats; we'll also set up two workers to show the separate worker stats:</p>
 <div class="highlight-python"><pre>[tcp]
 port = 8903
 call = mypackage.mymodule.HelloWorld
@@ -846,7 +846,7 @@ apps = stats
 [stats]
 call = brim.wsgi_stats.WSGIStats</pre>
 </div>
-<p>Let&#8217;s try it out (note that the 0 values aren&#8217;t actually included in the stats output &#8211; it is assumed to be 0 if missing for brevity &#8211; but they&#8217;re included here for better understanding):</p>
+<p>Let's try it out (note that the 0 values aren't actually included in the stats output -- it is assumed to be 0 if missing for brevity -- but they're included here for better understanding):</p>
 <div class="highlight-python"><pre>$ brimd restart
 $ nc -q 2 127.0.0.1 8903
 Hello, hello!
@@ -919,7 +919,7 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
         <span class="n">sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="s">&#39;Hello World!</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>You&#8217;d probably want a lot of error checking in your call, but this works for now. So let&#8217;s set up an ~/.brimd.conf to run this application:</p>
+<p>You'd probably want a lot of error checking in your call, but this works for now. So let's set up an ~/.brimd.conf to run this application:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">udp</span><span class="p">]</span>
 <span class="n">port</span> <span class="o">=</span> <span class="mi">8905</span>
 <span class="n">call</span> <span class="o">=</span> <span class="n">mypackage</span><span class="o">.</span><span class="n">mymodule</span><span class="o">.</span><span class="n">HelloWorld</span>
@@ -933,8 +933,8 @@ Hello World!</pre>
 <p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is called for each incoming datagram with the subserver, stats, datagram, socket, ip, and port of the datagram. The subserver is the <a class="reference internal" href="api.html#brim.server.UDPSubserver" title="brim.server.UDPSubserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.UDPSubserver</span></tt></a> that accepted the request; usually you just use the logger attribute of this class. The stats will be explained a bit further down. The socket, ip, and port represent the just received datagram. The datagram is the payload of the UDP packet received.</p>
 <p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> takes the name of the app as configured in the brimd.conf file, and the full brimd configuration object as an instance of <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a>.</p>
 <p>The name lets you know which part of the conf to access for any app-specific configuration, though you can always stray outside just that section if needed.</p>
-<p>The conf, while by default is the full server <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
-<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a message in the config and exit if it doesn&#8217;t exist:</p>
+<p>The conf, while by default is the full server <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your app's <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your app to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conf</span><span class="p">):</span>
@@ -954,12 +954,12 @@ Hello World!</pre>
         <span class="k">return</span> <span class="n">message</span>
 </pre></div>
 </div>
-<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<p>Now, let's restart the server without yet updating the config and see what happens:</p>
 <div class="highlight-python"><pre>$ brimd restart
 [udp] you must configure a message to serve.</pre>
 </div>
-<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
-<p>Now, let&#8217;s update our configuration:</p>
+<p>It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let's update our configuration:</p>
 <div class="highlight-python"><pre>[udp]
 port = 8905
 call = mypackage.mymodule.HelloWorld
@@ -970,7 +970,7 @@ message = Hello, hello!</pre>
 $ echo 'test' | nc -u -q 2 127.0.0.1 8905
 Hello, hello!</pre>
 </div>
-<p>To continue our example, let&#8217;s add stats to our application. We&#8217;ll record the last time we were called:</p>
+<p>To continue our example, let's add stats to our application. We'll record the last time we were called:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 
 
@@ -1040,7 +1040,7 @@ Hello, hello!</pre>
 </tr>
 </tbody>
 </table>
-<p>So now, let&#8217;s add the brim.wsgi_stats.WSGIStats WSGI app to our configuration so we&#8217;ll be able to get a report on the server stats:</p>
+<p>So now, let's add the brim.wsgi_stats.WSGIStats WSGI app to our configuration so we'll be able to get a report on the server stats:</p>
 <div class="highlight-python"><pre>[udp]
 port = 8905
 call = mypackage.mymodule.HelloWorld
@@ -1053,7 +1053,7 @@ apps = stats
 [stats]
 call = brim.wsgi_stats.WSGIStats</pre>
 </div>
-<p>Let&#8217;s try it out:</p>
+<p>Let's try it out:</p>
 <div class="highlight-python"><pre>$ brimd restart
 $ echo 'test' | nc -u -q 2 127.0.0.1 8905
 Hello, hello!
@@ -1069,7 +1069,7 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
 </div>
 <div class="section" id="daemon-development">
 <h3>Daemon Development<a class="headerlink" href="#daemon-development" title="Permalink to this headline">¶</a></h3>
-<p>Daemons for brimd are simply background processes you&#8217;d like brimd to ensure are running. If the daemon exits, it&#8217;ll just be restarted automatically. Developing daemons is quite simple:</p>
+<p>Daemons for brimd are simply background processes you'd like brimd to ensure are running. If the daemon exits, it'll just be restarted automatically. Developing daemons is quite simple:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
 
 
@@ -1086,7 +1086,7 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
             <span class="n">sleep</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>So let&#8217;s set up an ~/.brimd.conf to run this daemon:</p>
+<p>So let's set up an ~/.brimd.conf to run this daemon:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">daemons</span><span class="p">]</span>
 <span class="n">daemons</span> <span class="o">=</span> <span class="n">helloworld</span>
 
@@ -1103,8 +1103,8 @@ Feb 27 20:16:08 lucid brimdaemons sample log line 1
 <p>The <tt class="docutils literal"><span class="pre">__call__</span></tt> method is called to start the daemon subprocess with the subserver and stats object to use. The subserver is the <a class="reference internal" href="api.html#brim.server.DaemonsSubserver" title="brim.server.DaemonsSubserver"><tt class="xref py py-class docutils literal"><span class="pre">brim.server.DaemonsSubserver</span></tt></a> that started the subprocess; usually you just use the logger attribute of this class. The stats will be explained a bit further down.</p>
 <p>The <tt class="docutils literal"><span class="pre">__init__</span></tt> takes the name of the daemon as configured in the brimd.conf file, and the full brimd configuration object as an instance of <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a>.</p>
 <p>The name lets you know which part of the conf to access for any daemon-specific configuration, though you can always stray outside just that section if needed.</p>
-<p>The conf, while by default is the full server <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your daemon&#8217;s <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your daemon to try to keep it running.</p>
-<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance and returns whatever you want as the conf argument to your constructor. To continue our example, we&#8217;ll look for a message in the config and exit if it doesn&#8217;t exist:</p>
+<p>The conf, while by default is the full server <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance, it can be pre-parsed if desired. This is useful if you want to raise an exception if the configuration is invalid, preventing the server from starting with an explanatory message. Otherwise, once your daemon's <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called, you should not raise any exceptions unless something goes horribly wrong, as brimd will just keep restarting your daemon to try to keep it running.</p>
+<p>To pre-parse the configuration, you just add a class method of parse_conf that takes the <a class="reference internal" href="api.html#brim.conf.Conf" title="brim.conf.Conf"><tt class="xref py py-class docutils literal"><span class="pre">brim.conf.Conf</span></tt></a> instance and returns whatever you want as the conf argument to your constructor. To continue our example, we'll look for a message in the config and exit if it doesn't exist:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
 
 
@@ -1131,12 +1131,12 @@ Feb 27 20:16:08 lucid brimdaemons sample log line 1
         <span class="k">return</span> <span class="n">message</span>
 </pre></div>
 </div>
-<p>Now, let&#8217;s restart the server without yet updating the config and see what happens:</p>
+<p>Now, let's restart the server without yet updating the config and see what happens:</p>
 <div class="highlight-python"><pre>$ brimd restart
 [helloworld] you must configure a message to log.</pre>
 </div>
-<p>It&#8217;s important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses&#8217; memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
-<p>Now, let&#8217;s update our configuration:</p>
+<p>It's important to note that this early config parsing is done in the main server process before any subprocesses are launched. Anything loaded into memory will copied into the subprocesses' memory as well. So, to reiterate, <tt class="docutils literal"><span class="pre">parse_conf</span></tt> is called in the main process and <tt class="docutils literal"><span class="pre">__init__</span></tt> is called in each subprocess.</p>
+<p>Now, let's update our configuration:</p>
 <div class="highlight-python"><pre>[daemons]
 daemons = helloworld
 
@@ -1150,7 +1150,7 @@ $ sudo tail -F /var/log/syslog
 Feb 27 20:17:11 lucid brimdaemons Hello, hello! 1
 ...</pre>
 </div>
-<p>To continue our example, let&#8217;s add stats to our daemon. We&#8217;ll record the last time we logged:</p>
+<p>To continue our example, let's add stats to our daemon. We'll record the last time we logged:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span><span class="p">,</span> <span class="n">time</span>
 
 
@@ -1224,7 +1224,7 @@ Feb 27 20:17:11 lucid brimdaemons Hello, hello! 1
 </tr>
 </tbody>
 </table>
-<p>So now, let&#8217;s add the <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> WSGI app to our configuration so we&#8217;ll be able to get a report on the server stats:</p>
+<p>So now, let's add the <a class="reference internal" href="api.html#brim.wsgi_stats.WSGIStats" title="brim.wsgi_stats.WSGIStats"><tt class="xref py py-class docutils literal"><span class="pre">brim.wsgi_stats.WSGIStats</span></tt></a> WSGI app to our configuration so we'll be able to get a report on the server stats:</p>
 <div class="highlight-python"><pre>[daemons]
 daemons = helloworld
 
@@ -1239,7 +1239,7 @@ apps = stats
 [stats]
 call = brim.wsgi_stats.WSGIStats</pre>
 </div>
-<p>Let&#8217;s try it out:</p>
+<p>Let's try it out:</p>
 <div class="highlight-python"><pre>$ brimd restart
 $ sudo tail -F /var/log/syslog
 Feb 27 20:18:33 lucid brimdaemons Hello, hello! 1
@@ -1275,16 +1275,16 @@ $ curl -s http://127.0.0.1:8901/stats | python -mjson.tool
 </ul>
 </li>
 <li><a class="reference internal" href="#usage-examples">Usage Examples</a><ul>
-<li><a class="reference internal" href="#example-wsgi-usage">Example WSGI Usage</a></li>
-<li><a class="reference internal" href="#example-wsgi-multi-configuration-usage">Example WSGI Multi-Configuration Usage</a></li>
-<li><a class="reference internal" href="#example-tcp-straight-socket-application-usage">Example TCP Straight Socket Application Usage</a></li>
-<li><a class="reference internal" href="#example-udp-application-usage">Example UDP Application Usage</a></li>
-<li><a class="reference internal" href="#example-daemon-usage">Example Daemon Usage</a></li>
+<li><a class="reference internal" href="#wsgi-usage">WSGI Usage</a></li>
+<li><a class="reference internal" href="#wsgi-multi-configuration-usage">WSGI Multi-Configuration Usage</a></li>
+<li><a class="reference internal" href="#tcp-straight-socket-application-usage">TCP Straight Socket Application Usage</a></li>
+<li><a class="reference internal" href="#udp-application-usage">UDP Application Usage</a></li>
+<li><a class="reference internal" href="#daemon-usage">Daemon Usage</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#development-examples">Development Examples</a><ul>
 <li><a class="reference internal" href="#wsgi-application-development">WSGI Application Development</a><ul>
-<li><a class="reference internal" href="#extra-wsgi-env-items">Extra WSGI env Items</a></li>
+<li><a class="reference internal" href="#extra-wsgi-environment-items">Extra WSGI Environment Items</a></li>
 <li><a class="reference internal" href="#server-stats">Server Stats</a></li>
 </ul>
 </li>

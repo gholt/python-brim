@@ -73,8 +73,8 @@ Usage Examples
 ==============
 
 
-Example WSGI Usage
-------------------
+WSGI Usage
+----------
 
 * Create ~/.brimd.conf::
 
@@ -113,8 +113,8 @@ Run ``brimd -h`` for more details on server control. It supports the standard in
 Also, see the included :ref:`brimd.conf-sample <brimdconfsample>` for a full set of configuration options available, such as the ip and port to use, number of subprocesses (workers), the user/group to run as, subdaemons to start, etc.
 
 
-Example WSGI Multi-Configuration Usage
---------------------------------------
+WSGI Multi-Configuration Usage
+------------------------------
 
 You can even set up multiple listening address or ports and control them with a single brimd, if you want. This can also be achieved with separate conf files and the -c and -p command line options to brimd, but most should find it easier to have one configuration with additional subconfigs. For example:
 
@@ -169,8 +169,8 @@ You can see the new section [wsgi#alternate] that defines the second listening p
 The included :ref:`brimd.conf-sample <brimdconfsample>` shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
-Example TCP Straight Socket Application Usage
----------------------------------------------
+TCP Straight Socket Application Usage
+-------------------------------------
 
 * Create ~/.brimd.conf::
 
@@ -216,8 +216,8 @@ Example TCP Straight Socket Application Usage
 The included :ref:`brimd.conf-sample <brimdconfsample>` shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
-Example UDP Application Usage
------------------------------
+UDP Application Usage
+---------------------
 
 * Create ~/.brimd.conf::
 
@@ -263,8 +263,8 @@ Example UDP Application Usage
 The included :ref:`brimd.conf-sample <brimdconfsample>` shows a full set of configuration options available for each subconfig and explains how the defaults usually fall back to the main conf.
 
 
-Example Daemon Usage
---------------------
+Daemon Usage
+------------
 
 The brimd server can manage additional daemons as well as the main WSGI server. You configure them much like WSGI apps, but with the daemons configuration value. There is a brim.daemon_sample.DaemonSample that can be a good start for writing new daemons.
 
@@ -500,8 +500,8 @@ With very low load, a single worker often gets all the requests. If you have Apa
     ...
 
 
-Extra WSGI env Items
-....................
+Extra WSGI Environment Items
+............................
 
 ==================  ===========================================================
 brim                This is the :py:class:`brim.server.Server` instance itself. Normally you don't need access to this, but some apps like :py:class:`brim.wsgi_stats.WSGIStats` do.
