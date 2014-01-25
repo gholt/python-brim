@@ -29,8 +29,9 @@ extensions = [
     'sphinx.ext.coverage']
 htmlhelp_basename = package.__name__ + 'doc'
 html_static_path = ['_static']
-html_theme = 'brim'
-html_theme_path = ['.']
+html_theme = 'default'
+html_style = 'brim.css'
+html_use_smartypants = False
 latex_documents = [(
     'index', package.__name__ + '.tex', project + 'Documentation', author,
     'manual')]
