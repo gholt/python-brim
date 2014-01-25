@@ -13,16 +13,24 @@ maintaining background daemons.
 :py:mod:`brim.http`             Utilities for working with HTTP.
 :py:mod:`brim.httpform`         Module for working with HTTP Form POSTs
                                 iteratively.
-:py:mod:`brim.log`              xxx
-:py:mod:`brim.server`           xxx
-:py:mod:`brim.service`          xxx
-:py:mod:`brim.tcp_echo`         xxx
-:py:mod:`brim.udp_echo`         xxx
-:py:mod:`brim.util`             xxx
-:py:mod:`brim.wsgi_basic_auth`  xxx
-:py:mod:`brim.wsgi_echo`        xxx
-:py:mod:`brim.wsgi_fs`          xxx
-:py:mod:`brim.wsgi_stats`       xxx
+:py:mod:`brim.log`              Logging utilities for brimd.
+:py:mod:`brim.server`           The main module that implements the
+                                Brim.Net Core Server.
+:py:mod:`brim.service`          Provides functions useful for background
+                                services.
+:py:mod:`brim.tcp_echo`         A simple straight TCP socket
+                                application.
+:py:mod:`brim.udp_echo`         A simple straight UDP datagram
+                                application.
+:py:mod:`brim.util`             Miscellaneous classes and functions.
+:py:mod:`brim.wsgi_basic_auth`  A WSGI application that offers Basic
+                                Auth capabilities.
+:py:mod:`brim.wsgi_echo`        A simple WSGI application that just
+                                echoes the request body.
+:py:mod:`brim.wsgi_fs`          A WSGI application that simply serves up
+                                files from the file system.
+:py:mod:`brim.wsgi_stats`       Reports the brimd server stats as a JSON
+                                reponse.
 ==============================  ========================================
 """
 """Copyright and License.

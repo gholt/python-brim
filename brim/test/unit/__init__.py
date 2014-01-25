@@ -1,4 +1,4 @@
-"""Contains unit tests for the Brim.Net Core Package."""
+"""Contains unit tests for the brim package."""
 """Copyright and License.
 
 Copyright 2012-2014 Gregory Holt
