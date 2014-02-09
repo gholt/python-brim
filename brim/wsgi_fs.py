@@ -35,6 +35,7 @@ limitations under the License.
 import mimetypes
 import os
 import time
+from cgi import escape
 
 from brim import http
 
@@ -128,7 +129,10 @@ class WSGIFS(object):
                 return http.HTTPMovedPermanently(
                     headers={'Location': env['PATH_INFO'] + '/'})(
                     env, start_response)
+            dirpath = path
             path = os.path.join(path, 'index.html')
+            if not os.path.exists(path):
+                return self.listing(dirpath, env, start_response)
         content_type = mimetypes.guess_type(path)[0] or \
             'application/octet-stream'
         stat = os.stat(path)
@@ -145,6 +149,77 @@ class WSGIFS(object):
         if env['REQUEST_METHOD'] == 'HEAD':
             return ''
         return _openiter(path, 65536, stat.st_size)
+
+    def listing(self, path, env, start_response):
+        if not path.startswith(self.serve_path + '/'):
+            return HTTPForbidden()(env, start_response)
+        rpath = '/' + self.path + '/' + path[len(self.serve_path):]
+        epath = escape(rpath)
+        body = (
+            '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 '
+            'Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n'
+            '<html>\n'
+            ' <head>\n'
+            '  <title>Listing of %s</title>\n'
+            '  <style type="text/css">\n'
+            '   h1 {font-size: 1em; font-weight: bold;}\n'
+            '   th {text-align: left; padding: 0px 1em 0px 1em;}\n'
+            '   td {padding: 0px 1em 0px 1em;}\n'
+            '   a {text-decoration: none;}\n'
+            '  </style>\n'
+            ' </head>\n'
+            ' <body>\n'
+            '  <h1 id="title">Listing of %s</h1>\n'
+            '  <table id="listing">\n'
+            '   <tr id="heading">\n'
+            '    <th class="colname">Name</th>\n'
+            '    <th class="colsize">Size</th>\n'
+            '    <th class="coldate">Date</th>\n'
+            '   </tr>\n' % (epath, epath))
+        if env['PATH_INFO'].count('/') > 1:
+            body += (
+                '   <tr id="parent" class="item">\n'
+                '    <td class="colname"><a href="../">../</a></td>\n'
+                '    <td class="colsize">&nbsp;</td>\n'
+                '    <td class="coldate">&nbsp;</td>\n'
+                '   </tr>\n')
+        listing = sorted(os.listdir(path))
+        for item in listing:
+            itempath = os.path.join(path, item)
+            if os.path.isdir(itempath):
+                body += (
+                    '   <tr class="item subdir">\n'
+                    '    <td class="colname"><a href="%s">%s</a></td>\n'
+                    '    <td class="colsize">&nbsp;</td>\n'
+                    '    <td class="coldate">&nbsp;</td>\n'
+                    '   </tr>\n' % (http.quote(item), escape(item)))
+        for item in listing:
+            itempath = os.path.join(path, item)
+            if os.path.isfile(itempath):
+                ext = os.path.splitext(item)[1].lstrip('.')
+                size = os.path.getsize(itempath)
+                mtime = os.path.getmtime(itempath)
+                body += (
+                    '   <tr class="item %s">\n'
+                    '    <td class="colname"><a href="%s">%s</a></td>\n'
+                    '    <td class="colsize">'
+                    '<script type="text/javascript">'
+                    'document.write(new Number(%s).toLocaleString());'
+                    '</script></td>\n'
+                    '    <td class="coldate">'
+                    '<script type="text/javascript">'
+                    'document.write(new Date(%s * 1000).toLocaleString());'
+                    '</script></td>\n'
+                    '   </tr>\n' %
+                    ('ext' + ext, http.quote(item), escape(item), size, mtime))
+        body += (
+            '  </table>\n'
+            ' </body>\n'
+            '</html>\n')
+        start_response('200 OK', {
+            'content-type': 'text/html; charset=UTF-8',
+            'content-length': str(len(body))}.items())
+        return [body]
 
     @classmethod
     def parse_conf(cls, name, conf):
@@ -166,7 +241,7 @@ class WSGIFS(object):
         """
         parsed_conf = {
             'path': conf.get(name, 'path', '/').strip('/'),
-            'serve_path': conf.get_path(name, 'serve_path')}
+            'serve_path': conf.get_path(name, 'serve_path').rstrip('/')}
         if not parsed_conf['serve_path']:
             raise Exception('[%s] serve_path must be set' % name)
         return parsed_conf
