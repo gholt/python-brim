@@ -153,7 +153,7 @@ class WSGIFS(object):
     def listing(self, path, env, start_response):
         if not path.startswith(self.serve_path + '/'):
             return HTTPForbidden()(env, start_response)
-        rpath = '/' + self.path + '/' + path[len(self.serve_path):]
+        rpath = '/' + self.path + '/' + path[len(self.serve_path) + 1:]
         epath = escape(rpath)
         body = (
             '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 '
@@ -166,6 +166,7 @@ class WSGIFS(object):
             '   th {text-align: left; padding: 0px 1em 0px 1em;}\n'
             '   td {padding: 0px 1em 0px 1em;}\n'
             '   a {text-decoration: none;}\n'
+            '   .colsize {text-align: right;}\n'
             '  </style>\n'
             ' </head>\n'
             ' <body>\n'
