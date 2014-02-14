@@ -691,3 +691,36 @@ def quote(value, safe='/'):
     if isinstance(value, unicode):
         value = value.encode('utf8')
     return _quote(value, safe)
+
+
+def normalize_url_path(url_path):
+    outside = 0
+    parts = []
+    for part in url_path.split('/'):
+        if part in ('', '.'):
+            pass
+        elif part == '..':
+            if parts:
+                parts.pop()
+            else:
+                outside += 1
+        else:
+            parts.append(part)
+    result = '/' if url_path.startswith('/') else ''
+    if outside:
+        result += '/'.join(['..'] * outside) + '/' + '/'.join(parts)
+    else:
+        result += '/'.join(parts)
+    if not result:
+        result = './'
+    if (url_path.endswith('/') or url_path.endswith('/.') or
+            url_path.endswith('/..')) and not result.endswith('/'):
+        result += '/'
+    return result
+
+
+def calculate_top_url_path(context_url_path):
+    context_url_path = normalize_url_path(context_url_path)
+    result = normalize_url_path(
+        '/'.join(['..'] * context_url_path.count('/')) or '.')
+    return result

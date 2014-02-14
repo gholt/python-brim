@@ -16,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from collections import MutableMapping
 from contextlib import contextmanager
 from errno import EAGAIN, EEXIST, ENOENT
 from fcntl import flock, LOCK_EX, LOCK_NB
@@ -92,3 +93,39 @@ def unlink(path):
     except OSError as err:
         if err.errno != ENOENT:
             raise
+
+
+class CaseInsensitiveDict(MutableMapping):
+    """Why isn't this in Python standard lib? Or is it and hiding from me?"""
+
+    def __init__(self, iterable=None, **kwargs):
+        self._dict = {}
+        if iterable is not None:
+            self.update(iterable)
+        if kwargs:
+            self.update(**kwargs)
+
+    def copy(self):
+        return CaseInsensitiveDict(self._dict.itervalues())
+
+    def __repr__(self):
+        return repr(dict(self._dict.itervalues()))
+
+    def __setitem__(self, key, value):
+        self._dict[key.lower()] = (key, value)
+
+    def __getitem__(self, key):
+        return self._dict[key.lower()][1]
+
+    def __delitem__(self, key):
+        del self._dict[key.lower()]
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __iter__(self):
+        return (k for k, v in self._dict.itervalues())
+
+    def __eq__(self, value):
+        return dict((k, v[1]) for k, v in self._dict.iteritems()) == \
+            dict((k.lower(), v) for k, v in value.iteritems())

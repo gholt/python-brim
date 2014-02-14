@@ -39,6 +39,7 @@ NOTICE = 25
 This level is to be used for logging HTTP requests only so that it can
 be easily filtered on to form access logs.
 """
+logging.NOTICE = NOTICE
 logging._levelNames[NOTICE] = 'NOTICE'
 SysLogHandler.priority_map['NOTICE'] = 'notice'
 
@@ -92,8 +93,8 @@ class _LogFormatter(logging.Formatter):
         logging.Formatter.__init__(self, '%(server)s %(message)s')
 
     def format(self, record):
-        msg = logging.Formatter.format(self, record)
-        if record.txn and record.levelno != NOTICE and record.txn not in msg:
+        msg = logging.Formatter.format(self, record).strip()
+        if record.txn and record.txn not in msg:
             msg = '%s txn:%s' % (msg, record.txn)
         return msg
 
@@ -116,7 +117,7 @@ def sysloggable_excinfo(*excinfo):
     return '%s %r' % (lines[-1], lines)
 
 
-def get_logger(route, name, level, facility, console):
+def get_logger(route, name, level, facility='LOG_USER', console=False):
     """Returns a Logger based on the information given.
 
     :param route: The str log route, which is often the same as the name
