@@ -152,7 +152,7 @@ class WSGIFS(object):
 
     def listing(self, path, env, start_response):
         if not path.startswith(self.serve_path + '/'):
-            return HTTPForbidden()(env, start_response)
+            return http.HTTPForbidden()(env, start_response)
         rpath = '/' + self.path + '/' + path[len(self.serve_path) + 1:]
         epath = escape(rpath)
         body = (

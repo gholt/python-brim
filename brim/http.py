@@ -694,6 +694,11 @@ def quote(value, safe='/'):
 
 
 def normalize_url_path(url_path):
+    """Returns a url path resolved to its minimal form.
+
+    Note: If the given url_path ends with ``/``, ``.``, or ``..`` the
+    result will have a trailing ``/``.
+    """
     outside = 0
     parts = []
     for part in url_path.split('/'):
@@ -720,6 +725,25 @@ def normalize_url_path(url_path):
 
 
 def calculate_top_url_path(context_url_path):
+    """Returns a url_path to reach the top of the structure.
+
+    The resulting path will always end with a ``/`` and indicates the
+    url path needed to reach the top of the structure indicated by
+    the context, from the context.
+
+    Examples::
+
+        >>> calculate_top_url_path('some/path/')
+        '../../'
+        >>> calculate_top_url_path('some/path/index.html')
+        '../../'
+        >>> calculate_top_url_path('some/path/name-no-ext')
+        '../../'
+        >>> calculate_top_url_path('some/../path/')
+        '../'
+        >>> calculate_top_url_path('../../path/')
+        '../../../'
+    """
     context_url_path = normalize_url_path(context_url_path)
     result = normalize_url_path(
         '/'.join(['..'] * context_url_path.count('/')) or '.')

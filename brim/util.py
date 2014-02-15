@@ -96,7 +96,15 @@ def unlink(path):
 
 
 class CaseInsensitiveDict(MutableMapping):
-    """Why isn't this in Python standard lib? Or is it and hiding from me?"""
+    """Simple case-insensitive dict.
+
+    Why isn't this in Python standard lib? Or is it and hiding from me?
+
+    Expects only strings as keys, or at least something that behaves
+    like a string and has a lower() method.
+
+    Retains the case of each key as most recently set.
+    """
 
     def __init__(self, iterable=None, **kwargs):
         self._dict = {}
