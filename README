@@ -3,6 +3,8 @@ README
 
 Brim.Net Core Package
 
+A general-use Python 2 programming library I'd worked on for a time, but I don't expect to improve any longer; maintenance is a possibility though.
+
 This is the core package for Brim.Net Python-based applications.
 
 It provides some reusable utility code and provides brimd, a launcher offering
