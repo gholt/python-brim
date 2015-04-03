@@ -3,9 +3,9 @@ Brim.Net Core Package
 
 .. include:: ../version.rst
 
-Latest documentation is always available at http://gholt.github.io/brim/
+Latest documentation is always available at http://gholt.github.io/python-brim/
 
-Source code available at http://github.com/gholt/brim/
+Source code available at http://github.com/gholt/python-brim/
 
     Copyright 2012-2014 Gregory Holt
 
@@ -32,7 +32,7 @@ Source code available at http://github.com/gholt/brim/
 
 .. warning::
 
-    This is a prerelease version of this project. As such, even as the author I don't completely trust this code yet. It works for the specific cases I've tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible "oddities", please file issues on github: http://github.com/gholt/brim Thanks, and be careful!
+    This is a prerelease version of this project. As such, even as the author I don't completely trust this code yet. It works for the specific cases I've tested, but it needs more use cases and time to prove itself reliable. If you find any problems or possible "oddities", please file issues on github: http://github.com/gholt/python-brim Thanks, and be careful!
 
 
 API
