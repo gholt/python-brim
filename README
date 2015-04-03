@@ -12,9 +12,9 @@ ease of deployment of WSGI applications (currently just using the Eventlet WSGI
 server), straight TCP and UDP socket applications, and maintaining background
 daemons.
 
-Source code available at http://github.com/gholt/brim/
+Source code available at http://github.com/gholt/python-brim/
 
-For more in-depth documentation see http://gholt.github.io/brim/
+For more in-depth documentation see http://gholt.github.io/python-brim/
 
 Copyright 2012-2014 Gregory Holt
 
